@@ -46,7 +46,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: KevinDeBenedetti/.github/.github/actions/setup-node@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
         with:
           working-directory: ${{ inputs.node-working-directory }}
 
@@ -65,7 +65,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: KevinDeBenedetti/.github/.github/actions/setup-python@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@main
         with:
           working-directory: ${{ inputs.python-working-directory }}
 

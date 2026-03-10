@@ -36,7 +36,7 @@ Runs lint, typecheck, tests, and build. Auto-detects **pnpm** or **bun** from th
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/.github/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
     with:
       node-version: '20'        # default: '20'
       working-directory: '.'    # default: '.'
@@ -59,7 +59,7 @@ Runs ruff lint/format, ty type-checking, and pytest. Uses **uv** for dependency 
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/.github/.github/workflows/ci-python.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
     with:
       python-version: '3.12'    # default: '3.12'
       working-directory: '.'
@@ -80,7 +80,7 @@ Builds a multi-platform Docker image and pushes it to GitHub Container Registry.
 ```yaml
 jobs:
   docker:
-    uses: KevinDeBenedetti/.github/.github/workflows/deploy-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-docker.yml@main
     with:
       image-name: my-api         # defaults to repo name
       context: '.'
@@ -101,7 +101,7 @@ Builds a static site and deploys it via the official Pages action.
 ```yaml
 jobs:
   pages:
-    uses: KevinDeBenedetti/.github/.github/workflows/deploy-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
     with:
       working-directory: '.'
       node-version: '20'
@@ -120,7 +120,7 @@ Deploys a preview or production build through the Vercel CLI.
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/.github/.github/workflows/deploy-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
     with:
       environment: preview       # 'preview' | 'production'
       working-directory: '.'
@@ -142,7 +142,7 @@ Creates release PRs and GitHub Releases using [release-please](https://github.co
 ```yaml
 jobs:
   release:
-    uses: KevinDeBenedetti/.github/.github/workflows/release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
     with:
       release-type: node         # 'node' | 'python' | 'simple' | …
       # Or use a config file:
@@ -165,7 +165,7 @@ Runs dependency audits, secret scanning, and CodeQL SAST.
 ```yaml
 jobs:
   security:
-    uses: KevinDeBenedetti/.github/.github/workflows/security.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@main
     with:
       run-node-audit: true
       node-working-directory: '.'
@@ -184,7 +184,7 @@ jobs:
 Installs Node.js and the right package manager (pnpm or bun) with cache restoration.
 
 ```yaml
-- uses: KevinDeBenedetti/.github/.github/actions/setup-node@main
+- uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
   with:
     node-version: '20'
     working-directory: '.'
@@ -201,7 +201,7 @@ Installs Node.js and the right package manager (pnpm or bun) with cache restorat
 Installs Python and uv, then runs `uv sync --frozen`.
 
 ```yaml
-- uses: KevinDeBenedetti/.github/.github/actions/setup-python@main
+- uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@main
   with:
     python-version: '3.12'
     working-directory: '.'
@@ -217,7 +217,7 @@ Installs Python and uv, then runs `uv sync --frozen`.
 Detects which subdirectories under `apps/` changed, outputting a JSON array for use in matrix jobs.
 
 ```yaml
-- uses: KevinDeBenedetti/.github/.github/actions/detect-changes@main
+- uses: KevinDeBenedetti/github-workflows/.github/actions/detect-changes@main
   id: changes
   with:
     apps-directory: apps
