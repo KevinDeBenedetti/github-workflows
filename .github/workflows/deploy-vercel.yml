@@ -53,7 +53,7 @@ jobs:
           working-directory: ${{ inputs.working-directory }}
 
       - name: Install Vercel CLI
-        run: pnpm add -g vercel@latest
+        run: npm install -g vercel@latest
 
       - name: Pull Vercel environment
         working-directory: ${{ inputs.working-directory }}
