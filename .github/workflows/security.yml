@@ -23,6 +23,11 @@ on:
         type: string
         required: false
         default: '.'
+      run-secret-scan:
+        description: Run Gitleaks secret scanning
+        type: boolean
+        required: false
+        default: true
       run-codeql:
         description: Run CodeQL SAST analysis
         type: boolean
@@ -76,7 +81,12 @@ jobs:
   # ── Secret scanning ─────────────────────────────────────────────────────────
   secret-scan:
     name: Scan for leaked secrets
+    if: inputs.run-secret-scan
     runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
 
     steps:
       - name: Checkout (full history)
@@ -88,6 +98,14 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+      - name: Upload SARIF report
+        if: failure()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+          category: gitleaks
 
   # ── CodeQL SAST ─────────────────────────────────────────────────────────────
   codeql:
