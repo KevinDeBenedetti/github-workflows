@@ -88,8 +88,6 @@ jobs:
       actions: read
       contents: read
       pull-requests: read
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout (full history)
@@ -97,11 +95,25 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install Gitleaks
+        run: |
+          GITLEAKS_VERSION="8.24.3"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar xz -C /usr/local/bin gitleaks
+
       - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2.3.9
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -t "$BEFORE" 2>/dev/null; then
+            LOG_OPTS="--no-merges --first-parent ${BEFORE}..HEAD"
+          else
+            LOG_OPTS="--no-merges"
+          fi
+          gitleaks git --redact -v --exit-code=1 \
+            --report-format=sarif --report-path=results.sarif \
+            --log-opts="$LOG_OPTS"
 
       - name: Upload SARIF report
         if: failure() && hashFiles('results.sarif') != ''
