@@ -76,7 +76,7 @@ jobs:
 
       - name: pip-audit
         working-directory: ${{ inputs.python-working-directory }}
-        run: uv run pip-audit
+        run: uvx pip-audit
 
   # ── Secret scanning ─────────────────────────────────────────────────────────
   secret-scan:
