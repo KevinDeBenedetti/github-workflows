@@ -24,18 +24,18 @@ runs:
   using: composite
   steps:
     - name: Install uv
-      uses: astral-sh/setup-uv@v4
+      uses: astral-sh/setup-uv@v7
       with:
         version: latest
 
     - name: Setup Python ${{ inputs.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ inputs.python-version }}
 
     - name: Restore uv cache
       id: cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cache/uv
         key: uv-${{ runner.os }}-${{ inputs.python-version }}-${{ hashFiles(format('{0}/uv.lock', inputs.working-directory)) }}
