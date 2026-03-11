@@ -81,7 +81,7 @@ jobs:
 
       - name: Type check (ty)
         if: inputs.run-typecheck
-        run: uvx ty check --output-format github --quiet
+        run: uv run ty check --output-format github --quiet
 
       - name: Test (pytest)
         if: inputs.run-test && !inputs.run-coverage
