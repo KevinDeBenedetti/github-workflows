@@ -1,0 +1,26 @@
+name: ShellCheck
+description: Run ShellCheck on all shell scripts in the repository
+
+inputs:
+  severity:
+    description: 'Minimum severity level: error | warning | info | style'
+    required: false
+    default: warning
+  exclude-paths:
+    description: Path glob passed to find -not -path to exclude from analysis
+    required: false
+    default: '*/test_helper/*'
+
+runs:
+  using: composite
+  steps:
+    - name: Run ShellCheck
+      shell: bash
+      run: |
+        find . -type f -name "*.sh" \
+          -not -path "${{ inputs.exclude-paths }}" \
+          -exec shellcheck \
+            --severity=${{ inputs.severity }} \
+            --shell=bash \
+            --format=gcc \
+            {} +

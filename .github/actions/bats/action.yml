@@ -1,0 +1,21 @@
+name: Bats
+description: Install Bats and run shell unit tests
+
+inputs:
+  tests-dir:
+    description: Directory (or file) containing .bats test files
+    required: false
+    default: tests/
+
+runs:
+  using: composite
+  steps:
+    - name: Install Bats
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq bats
+
+    - name: Run Bats tests
+      shell: bash
+      run: bats ${{ inputs.tests-dir }}

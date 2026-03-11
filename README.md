@@ -11,12 +11,16 @@ All workflows are designed as `workflow_call` targets — they expose typed inpu
 ```
 .github/
   actions/
+    bats/             # Install and run Bats shell tests
     detect-changes/   # Monorepo changed-app detection
     setup-node/       # Node.js + pnpm/bun setup with cache
     setup-python/     # Python + uv setup with cache
+    shellcheck/       # Run ShellCheck on all .sh files
+    yamllint/         # Validate YAML files with yamllint
   workflows/
     ci-node.yml       # Lint → typecheck → test → build (Node)
     ci-python.yml     # Lint → format → typecheck → test (Python)
+    ci-shell.yml      # ShellCheck → yamllint → Bats → Docker tests
     deploy-docker.yml # Build & push image to GHCR
     deploy-pages.yml  # Build & deploy to GitHub Pages
     deploy-vercel.yml # Deploy preview or production to Vercel
@@ -69,6 +73,30 @@ jobs:
       run-test: true            # pytest
       run-coverage: false
       coverage-fail-under: 80
+```
+
+---
+
+### `ci-shell.yml` — CI for shell script projects
+
+Runs ShellCheck, yamllint, Bats unit tests, and optional Docker integration tests.
+
+```yaml
+jobs:
+  ci:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
+    with:
+      run-shellcheck: true
+      shellcheck-severity: warning       # error | warning | info | style
+      shellcheck-exclude-paths: '*/test_helper/*'
+      run-yamllint: true
+      yamllint-paths: .github/workflows/ # space-separated paths
+      run-bats: true
+      bats-tests-dir: tests/
+      bats-submodules: true
+      run-docker: true                   # optional Docker integration tests
+      docker-file: tests/docker/Dockerfile.test
+      docker-targets: '["test-bats","test-init","test-dotfiles"]'
 ```
 
 ---
@@ -209,6 +237,45 @@ Installs Python and uv, then runs `uv sync --frozen`.
 ```
 
 **Outputs:** `cache-hit`.
+
+---
+
+### `shellcheck`
+
+Runs ShellCheck on all `.sh` files, with configurable severity and exclude paths.
+
+```yaml
+- uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@main
+  with:
+    severity: warning          # error | warning | info | style
+    exclude-paths: '*/test_helper/*'
+```
+
+---
+
+### `yamllint`
+
+Installs yamllint and validates YAML files.
+
+```yaml
+- uses: KevinDeBenedetti/github-workflows/.github/actions/yamllint@main
+  with:
+    paths: .github/workflows/  # space-separated paths
+    strict: 'true'
+    config-file: ''            # optional: path to .yamllint.yml
+```
+
+---
+
+### `bats`
+
+Installs Bats via apt and runs `.bats` test files.
+
+```yaml
+- uses: KevinDeBenedetti/github-workflows/.github/actions/bats@main
+  with:
+    tests-dir: tests/          # directory or single .bats file
+```
 
 ---
 

@@ -1,0 +1,139 @@
+name: CI — Shell
+
+on:
+  workflow_call:
+    inputs:
+      run-shellcheck:
+        description: Run ShellCheck on all .sh files
+        type: boolean
+        required: false
+        default: true
+      shellcheck-severity:
+        description: 'Minimum ShellCheck severity: error | warning | info | style'
+        type: string
+        required: false
+        default: warning
+      shellcheck-exclude-paths:
+        description: Path glob to exclude from ShellCheck (e.g. '*/test_helper/*')
+        type: string
+        required: false
+        default: '*/test_helper/*'
+      run-yamllint:
+        description: Run yamllint on YAML files
+        type: boolean
+        required: false
+        default: true
+      yamllint-paths:
+        description: Space-separated paths to validate with yamllint
+        type: string
+        required: false
+        default: .github/workflows/
+      run-bats:
+        description: Run Bats unit tests
+        type: boolean
+        required: false
+        default: true
+      bats-tests-dir:
+        description: Directory containing .bats test files
+        type: string
+        required: false
+        default: tests/
+      bats-submodules:
+        description: Checkout git submodules required by Bats helpers
+        type: boolean
+        required: false
+        default: true
+      run-docker:
+        description: Run Docker integration tests
+        type: boolean
+        required: false
+        default: false
+      docker-file:
+        description: Path to the test Dockerfile
+        type: string
+        required: false
+        default: tests/docker/Dockerfile.test
+      docker-targets:
+        description: >
+          JSON array of --target names to build.
+          Required when run-docker is true (e.g. '["test-bats","test-init"]').
+        type: string
+        required: false
+        default: '[]'
+
+concurrency:
+  group: ci-shell-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── ShellCheck ───────────────────────────────────────────────────────────────
+  shellcheck:
+    name: ShellCheck
+    if: inputs.run-shellcheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: ShellCheck
+        uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@main
+        with:
+          severity: ${{ inputs.shellcheck-severity }}
+          exclude-paths: ${{ inputs.shellcheck-exclude-paths }}
+
+  # ── YAML validation ──────────────────────────────────────────────────────────
+  validate-yaml:
+    name: Validate YAML
+    if: inputs.run-yamllint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: yamllint
+        uses: KevinDeBenedetti/github-workflows/.github/actions/yamllint@main
+        with:
+          paths: ${{ inputs.yamllint-paths }}
+
+  # ── Bats tests ───────────────────────────────────────────────────────────────
+  bats:
+    name: Bats tests
+    if: inputs.run-bats
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: ${{ inputs.bats-submodules }}
+
+      - name: Bats
+        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@main
+        with:
+          tests-dir: ${{ inputs.bats-tests-dir }}
+
+  # ── Docker integration tests ─────────────────────────────────────────────────
+  # Matrix jobs cannot be extracted to composite actions — kept inline.
+  docker-test:
+    name: Docker — ${{ matrix.target }}
+    if: inputs.run-docker
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(inputs.docker-targets) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: ${{ inputs.bats-submodules }}
+
+      - name: Build ${{ matrix.target }}
+        run: |
+          docker build \
+            -f ${{ inputs.docker-file }} \
+            --target ${{ matrix.target }} \
+            -t dotfiles-${{ matrix.target }} .
