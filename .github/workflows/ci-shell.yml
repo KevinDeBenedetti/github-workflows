@@ -65,6 +65,16 @@ on:
         type: string
         required: false
         default: '[]'
+      run-link-check:
+        description: Check markdown files for broken relative links (offline, no HTTP requests)
+        type: boolean
+        required: false
+        default: false
+      link-check-paths:
+        description: Space-separated glob patterns of markdown files to check
+        type: string
+        required: false
+        default: 'docs/**/*.md'
 
 concurrency:
   group: ci-shell-${{ github.workflow }}-${{ github.ref }}
@@ -143,3 +153,19 @@ jobs:
             -f ${{ inputs.docker-file }} \
             --target ${{ matrix.target }} \
             -t dotfiles-${{ matrix.target }} .
+
+  # ── Markdown link check ──────────────────────────────────────────────────────
+  link-check:
+    name: Link check
+    if: inputs.run-link-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check markdown links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress ${{ inputs.link-check-paths }}
+          fail: true

@@ -55,6 +55,16 @@ on:
         type: string
         required: false
         default: build
+      run-link-check:
+        description: Check markdown files for broken relative links before building (offline, no HTTP requests)
+        type: boolean
+        required: false
+        default: false
+      link-check-paths:
+        description: Space-separated glob patterns of markdown files to check
+        type: string
+        required: false
+        default: 'docs/**/*.md'
 
 concurrency:
   group: ci-node-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
@@ -104,6 +114,13 @@ jobs:
         if: inputs.run-test
         working-directory: ${{ inputs.working-directory }}
         run: ${{ steps.run-alias.outputs.cmd }} test --passWithNoTests
+
+      - name: Check markdown links
+        if: inputs.run-link-check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --offline --no-progress ${{ inputs.link-check-paths }}
+          fail: true
 
       - name: Build
         if: inputs.run-build
