@@ -1,0 +1,41 @@
+name: kubeconform
+description: Validate Kubernetes manifests with kubeconform
+
+inputs:
+  paths:
+    description: Directory containing Kubernetes manifests
+    required: false
+    default: kubernetes/
+  exclude:
+    description: Filename pattern to exclude from find (e.g. '*-values.yaml')
+    required: false
+    default: '*-values.yaml'
+  include-crds-catalog:
+    description: >
+      Also validate CRDs against the Datree CRDs-catalog
+      (adds cert-manager, Traefik, etc. schemas)
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Install kubeconform
+      shell: bash
+      run: |
+        curl -sSfL \
+          https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz \
+          | tar xz -C /usr/local/bin kubeconform
+
+    - name: Validate Kubernetes manifests
+      shell: bash
+      run: |
+        SCHEMA_ARGS=("-schema-location" "default")
+        if [ "${{ inputs.include-crds-catalog }}" = "true" ]; then
+          SCHEMA_ARGS+=(
+            "-schema-location"
+            "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
+          )
+        fi
+        find ${{ inputs.paths }} -name '*.yaml' ! -name '${{ inputs.exclude }}' \
+          | xargs kubeconform -strict -summary "${SCHEMA_ARGS[@]}"

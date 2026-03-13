@@ -1,0 +1,90 @@
+name: CI — Kubernetes
+
+on:
+  workflow_call:
+    inputs:
+      # ── kubeconform ────────────────────────────────────────────────────────
+      run-kubeconform:
+        description: Validate Kubernetes manifests with kubeconform
+        type: boolean
+        required: false
+        default: true
+      kubeconform-paths:
+        description: Directory containing manifests to validate
+        type: string
+        required: false
+        default: kubernetes/
+      kubeconform-exclude:
+        description: Filename pattern to exclude from validation (e.g. '*-values.yaml')
+        type: string
+        required: false
+        default: '*-values.yaml'
+      kubeconform-include-crds-catalog:
+        description: >
+          Also validate against the Datree CRDs-catalog
+          (enables cert-manager, Traefik, and other CRD schemas)
+        type: boolean
+        required: false
+        default: true
+
+      # ── .env.example ───────────────────────────────────────────────────────
+      run-env-example:
+        description: Check that .env.example contains all required keys
+        type: boolean
+        required: false
+        default: false
+      env-example-required-keys:
+        description: Space-separated list of keys that must be present in .env.example
+        type: string
+        required: false
+        default: ''
+      env-example-file:
+        description: Path to the .env.example file
+        type: string
+        required: false
+        default: .env.example
+
+concurrency:
+  group: ci-kubernetes-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Kubernetes manifest schema validation ─────────────────────────────────
+  kubeconform:
+    name: Validate Kubernetes manifests
+    if: inputs.run-kubeconform
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: kubeconform
+        uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@main
+        with:
+          paths: ${{ inputs.kubeconform-paths }}
+          exclude: ${{ inputs.kubeconform-exclude }}
+          include-crds-catalog: ${{ inputs.kubeconform-include-crds-catalog }}
+
+  # ── .env.example completeness check ──────────────────────────────────────
+  env-example:
+    name: .env.example check
+    if: inputs.run-env-example
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Ensure required keys are documented in .env.example
+        run: |
+          REQUIRED="${{ inputs.env-example-required-keys }}"
+          MISSING=()
+          for key in $REQUIRED; do
+            grep -q "^${key}=" "${{ inputs.env-example-file }}" || MISSING+=("$key")
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "❌ Missing keys in ${{ inputs.env-example-file }}: ${MISSING[*]}"
+            exit 1
+          fi
+          echo "✅ All required keys present in ${{ inputs.env-example-file }}"
