@@ -88,6 +88,8 @@ runs:
     - name: Setup Bun
       if: steps.resolve.outputs.pm == 'bun'
       uses: oven-sh/setup-bun@v2
+      env:
+        FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       with:
         bun-version: latest
 
