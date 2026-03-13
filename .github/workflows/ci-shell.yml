@@ -28,6 +28,16 @@ on:
         type: string
         required: false
         default: .github/workflows/
+      yamllint-config-file:
+        description: Path to a .yamllint.yaml config file (optional; overrides default yamllint rules)
+        type: string
+        required: false
+        default: ''
+      yamllint-strict:
+        description: Enable strict mode — warnings become errors (disable when using a custom config file)
+        type: boolean
+        required: false
+        default: true
       run-bats:
         description: Run Bats unit tests
         type: boolean
@@ -96,6 +106,8 @@ jobs:
         uses: KevinDeBenedetti/github-workflows/.github/actions/yamllint@main
         with:
           paths: ${{ inputs.yamllint-paths }}
+          config-file: ${{ inputs.yamllint-config-file }}
+          strict: ${{ inputs.yamllint-strict }}
 
   # ── Bats tests ───────────────────────────────────────────────────────────────
   bats:
