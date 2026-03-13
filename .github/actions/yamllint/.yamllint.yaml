@@ -1,0 +1,27 @@
+# =============================================================================
+# Default yamllint config — bundled inside the yamllint composite action.
+# Used automatically when no config-file input is provided.
+#
+# Repos with specific needs (e.g. Kubernetes multi-doc YAML) can override
+# by passing config-file: .yamllint.yaml pointing to a local file.
+# =============================================================================
+extends: default
+
+rules:
+  # Long lines are common in CI workflow files (step names, run commands)
+  line-length:
+    max: 120
+    level: warning
+
+  # Don't require --- at top of every file
+  document-start:
+    present: false
+
+  # Allow inline comments after code
+  comments:
+    min-spaces-from-content: 1
+
+  # Allow 'true'/'false'/'yes'/'no' as booleans in workflow files
+  truthy:
+    allowed-values: ['true', 'false', 'yes', 'no']
+    check-keys: false

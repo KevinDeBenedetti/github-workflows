@@ -30,7 +30,11 @@ runs:
           ARGS="$ARGS --strict"
         fi
         if [ -n "${{ inputs.config-file }}" ]; then
+          # Repo-specific config — use as-is
           ARGS="$ARGS -c ${{ inputs.config-file }}"
+        else
+          # Fall back to the bundled default config shipped with this action
+          ARGS="$ARGS -c ${{ github.action_path }}/.yamllint.yaml"
         fi
         # shellcheck disable=SC2086
         yamllint $ARGS ${{ inputs.paths }}
