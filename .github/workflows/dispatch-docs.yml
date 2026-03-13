@@ -1,0 +1,39 @@
+name: Dispatch — Docs Rebuild
+
+on:
+  workflow_call:
+    inputs:
+      target-repo:
+        description: 'Repository to dispatch to (owner/repo)'
+        type: string
+        required: false
+        default: 'KevinDeBenedetti/kevindebenedetti.github.io'
+      event-type:
+        description: 'repository_dispatch event type'
+        type: string
+        required: false
+        default: 'docs-updated'
+    secrets:
+      dispatch-token:
+        description: 'PAT with repo write access on the target repository'
+        required: true
+
+jobs:
+  dispatch:
+    name: Dispatch docs rebuild
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger docs rebuild
+        env:
+          GH_TOKEN: ${{ secrets.dispatch-token }}
+          TARGET: ${{ inputs.target-repo }}
+          EVENT: ${{ inputs.event-type }}
+          SOURCE: ${{ github.repository }}
+          REF: ${{ github.ref }}
+        run: |
+          gh api "repos/${TARGET}/dispatches" \
+            --method POST \
+            --input - << EOF
+          {"event_type":"${EVENT}","client_payload":{"source":"${SOURCE}","ref":"${REF}"}}
+          EOF

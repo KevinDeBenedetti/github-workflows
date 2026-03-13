@@ -28,10 +28,6 @@ on:
         description: URL of the deployed GitHub Pages site
         value: ${{ jobs.deploy.outputs.page-url }}
 
-concurrency:
-  group: deploy-pages-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
   build:
     name: Build (${{ inputs.working-directory }})
