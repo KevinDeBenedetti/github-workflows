@@ -85,9 +85,9 @@ jobs:
         run: |
           PM="${{ steps.setup.outputs.package-manager }}"
           if [ "$PM" = "bun" ]; then
-            echo "cmd=bun run" >> $GITHUB_OUTPUT
+            echo "cmd=bun run" >> "$GITHUB_OUTPUT"
           else
-            echo "cmd=pnpm" >> $GITHUB_OUTPUT
+            echo "cmd=pnpm" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Lint
@@ -136,8 +136,8 @@ jobs:
             *)     OUT="dist"    ;;
           esac
 
-          echo "path=${DIR}/${OUT}" >> $GITHUB_OUTPUT
-          echo "framework=$FW"     >> $GITHUB_OUTPUT
+          echo "path=${DIR}/${OUT}" >> "$GITHUB_OUTPUT"
+          echo "framework=$FW"     >> "$GITHUB_OUTPUT"
           echo "🏗️ Framework: $FW → output: ${DIR}/${OUT}"
 
       - name: Upload build artifact

@@ -76,6 +76,8 @@ jobs:
 
       - name: Summary
         run: |
-          echo "### 📄 GitHub Pages Deployed" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "🌍 **URL:** ${{ steps.pages.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 📄 GitHub Pages Deployed"
+            echo ""
+            echo "🌍 **URL:** ${{ steps.pages.outputs.page_url }}"
+          } >> "$GITHUB_STEP_SUMMARY"

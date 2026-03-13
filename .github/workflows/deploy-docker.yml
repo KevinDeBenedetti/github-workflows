@@ -72,7 +72,7 @@ jobs:
           if [ -z "$NAME" ]; then
             NAME="${{ github.event.repository.name }}"
           fi
-          echo "full=${REGISTRY}/${{ github.repository_owner }}/${NAME}" >> $GITHUB_OUTPUT
+          echo "full=${REGISTRY}/${{ github.repository_owner }}/${NAME}" >> "$GITHUB_OUTPUT"
 
       - name: Docker meta (tags + labels)
         id: meta
@@ -116,10 +116,12 @@ jobs:
 
       - name: Export digest summary
         run: |
-          echo "### 🐳 Docker Image" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Key | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Image | \`${{ steps.image.outputs.full }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Digest | \`${{ steps.build.outputs.digest }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | \`${{ inputs.platforms }}\` |" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 🐳 Docker Image"
+            echo ""
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Image | \`${{ steps.image.outputs.full }}\` |"
+            echo "| Digest | \`${{ steps.build.outputs.digest }}\` |"
+            echo "| Platform | \`${{ inputs.platforms }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

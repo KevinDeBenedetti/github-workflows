@@ -18,26 +18,21 @@ on:
         type: string
         required: false
         default: '*/test_helper/*'
-      run-yamllint:
-        description: Run yamllint on YAML files
+      run-actionlint:
+        description: Run actionlint on GitHub Actions workflow files
         type: boolean
         required: false
         default: true
-      yamllint-paths:
-        description: Space-separated paths to validate with yamllint
+      actionlint-paths:
+        description: Space-separated paths to validate with actionlint
         type: string
         required: false
         default: .github/workflows/
-      yamllint-config-file:
-        description: Path to a .yamllint.yaml config file (optional; overrides default yamllint rules)
+      actionlint-flags:
+        description: Extra flags passed to actionlint (e.g. -ignore 'SC2086')
         type: string
         required: false
         default: ''
-      yamllint-strict:
-        description: Enable strict mode — warnings become errors (disable when using a custom config file)
-        type: boolean
-        required: false
-        default: true
       run-bats:
         description: Run Bats unit tests
         type: boolean
@@ -95,19 +90,18 @@ jobs:
   # ── YAML validation ──────────────────────────────────────────────────────────
   validate-yaml:
     name: Validate YAML
-    if: inputs.run-yamllint
+    if: inputs.run-actionlint
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: yamllint
-        uses: KevinDeBenedetti/github-workflows/.github/actions/yamllint@main
+      - name: actionlint
+        uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@main
         with:
-          paths: ${{ inputs.yamllint-paths }}
-          config-file: ${{ inputs.yamllint-config-file }}
-          strict: ${{ inputs.yamllint-strict }}
+          paths: ${{ inputs.actionlint-paths }}
+          flags: ${{ inputs.actionlint-flags }}
 
   # ── Bats tests ───────────────────────────────────────────────────────────────
   bats:

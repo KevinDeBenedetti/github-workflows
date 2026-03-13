@@ -82,7 +82,7 @@ jobs:
           URL=$(vercel deploy --prebuilt \
             ${{ inputs.environment == 'production' && '--prod' || '' }} \
             --token=${{ secrets.VERCEL_TOKEN }})
-          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "🚀 Deployed to: $URL"
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

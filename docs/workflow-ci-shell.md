@@ -1,6 +1,6 @@
 # CI — Shell
 
-Runs **ShellCheck → yamllint → Bats → Docker** for shell script projects.
+Runs **ShellCheck → actionlint → Bats → Docker** for shell script projects.
 Each stage is independently toggleable.
 
 ## Usage
@@ -11,7 +11,7 @@ jobs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
     with:
       run-shellcheck: true
-      run-yamllint: true
+      run-actionlint: true
       run-bats: true
       run-docker: false
 ```
@@ -23,8 +23,9 @@ jobs:
 | `run-shellcheck`           | boolean | `true`                         | Run ShellCheck on all `.sh` files                                            |
 | `shellcheck-severity`      | string  | `warning`                      | Minimum severity: `error` \| `warning` \| `info` \| `style`                  |
 | `shellcheck-exclude-paths` | string  | `*/test_helper/*`              | Glob passed to `find -not -path` to exclude from analysis                    |
-| `run-yamllint`             | boolean | `true`                         | Run yamllint on YAML files                                                   |
-| `yamllint-paths`           | string  | `.github/workflows/`           | Space-separated paths to validate                                            |
+| `run-actionlint`           | boolean | `true`                         | Run actionlint on GitHub Actions workflow files                              |
+| `actionlint-paths`         | string  | `.github/workflows/`           | Space-separated paths to validate                                            |
+| `actionlint-flags`         | string  | `''`                           | Extra flags passed to actionlint                                             |
 | `run-bats`                 | boolean | `true`                         | Run Bats unit tests                                                          |
 | `bats-tests-dir`           | string  | `tests/`                       | Directory (or file) containing `.bats` test files                            |
 | `bats-submodules`          | boolean | `true`                         | Checkout git submodules required by Bats helpers                             |
@@ -37,7 +38,7 @@ jobs:
 | Job             | Condition                                         |
 | --------------- | ------------------------------------------------- |
 | `shellcheck`    | `run-shellcheck: true`                            |
-| `validate-yaml` | `run-yamllint: true`                              |
+| `validate-yaml` | `run-actionlint: true`                            |
 | `bats`          | `run-bats: true`                                  |
 | `docker-test`   | `run-docker: true` (matrix over `docker-targets`) |
 
@@ -45,4 +46,4 @@ jobs:
 
 - Docker targets run in parallel via a matrix strategy with `fail-fast: false`.
 - The `bats-submodules` flag applies to both the `bats` and `docker-test` jobs.
-- ShellCheck and yamllint use their own composite actions: [`shellcheck`](../.github/actions/shellcheck/action.yml), [`yamllint`](../.github/actions/yamllint/action.yml).
+- ShellCheck and actionlint use their own composite actions: [`shellcheck`](../.github/actions/shellcheck/action.yml), [`actionlint`](../.github/actions/actionlint/action.yml).

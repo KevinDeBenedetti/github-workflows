@@ -1,0 +1,33 @@
+name: actionlint
+description: Validate GitHub Actions workflow files with actionlint
+
+inputs:
+  paths:
+    description: Space-separated list of workflow files or directories to validate
+    required: false
+    default: .github/workflows/
+  flags:
+    description: Extra flags passed to actionlint (e.g. -ignore 'SC2086')
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Install actionlint
+      shell: bash
+      run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+
+    - name: Run actionlint
+      shell: bash
+      run: |
+        FILES=""
+        for p in ${{ inputs.paths }}; do
+          if [ -d "$p" ]; then
+            FILES="$FILES $(find "$p" -name '*.yml' -o -name '*.yaml')"
+          else
+            FILES="$FILES $p"
+          fi
+        done
+        # shellcheck disable=SC2086
+        ./actionlint ${{ inputs.flags }} $FILES
