@@ -1,4 +1,4 @@
-# prek.toml — https://prek.j178.dev
+# prek.toml — drop this file at your project root
 # install: brew install j178/tap/prek && prek install
 # run:     prek run --all-files | update: prek autoupdate
 
@@ -18,21 +18,3 @@ hooks = [
   { id = "detect-private-key" },
   { id = "mixed-line-ending", args = ["--fix=lf"] },
 ]
-
-[[repos]]
-repo = "https://github.com/rhysd/actionlint"
-rev = "v1.7.10"
-hooks = [
-  { id = "actionlint" },
-]
-
-[[repos]]
-repo = "local"
-
-[[repos.hooks]]
-id = "check-docs-links"
-name = "No relative links escaping docs/"
-language = "script"
-entry = ".github/actions/check-docs-links/check-docs-links.sh"
-files = "^docs/.*\\.md$"
-pass_filenames = true

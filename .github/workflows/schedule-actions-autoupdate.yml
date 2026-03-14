@@ -1,0 +1,11 @@
+name: Actions autoupdate (self)
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  autoupdate:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/actions-autoupdate.yml@main
+    secrets: inherit

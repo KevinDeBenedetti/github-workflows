@@ -1,0 +1,149 @@
+name: Actions autoupdate
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: Branch name for the autoupdate PR
+        type: string
+        required: false
+        default: chore/actions-autoupdate
+      labels:
+        description: Comma-separated labels to add to the PR (e.g. 'dependencies,chore')
+        type: string
+        required: false
+        default: ''
+      git-name:
+        description: >
+          Git committer/author name for the autoupdate commit.
+          Falls back to the GIT_USER_NAME repository variable, then 'github-actions[bot]'.
+        type: string
+        required: false
+        default: ''
+      git-email:
+        description: >
+          Git committer/author email for the autoupdate commit.
+          Falls back to the GIT_USER_EMAIL repository variable, then the Actions noreply address.
+        type: string
+        required: false
+        default: ''
+    secrets:
+      PAT_TOKEN:
+        description: >
+          Personal Access Token — PRs and commits will be opened as this user.
+          Must have contents:write and pull-requests:write.
+        required: true
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch name for the autoupdate PR
+        type: string
+        required: false
+        default: chore/actions-autoupdate
+      labels:
+        description: Comma-separated labels to add to the PR
+        type: string
+        required: false
+        default: ''
+      git-name:
+        description: Git committer/author name (overrides GIT_USER_NAME variable)
+        type: string
+        required: false
+        default: ''
+      git-email:
+        description: Git committer/author email (overrides GIT_USER_EMAIL variable)
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  # ── Bump all action versions and open a PR ──────────────────────────────────
+  autoupdate:
+    name: Actions autoupdate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Update action versions
+        id: update
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          updates=""
+          mapfile -t files < <(find .github -name "*.yml" -type f | sort)
+
+          declare -A seen
+          while IFS= read -r match; do
+            action="${match%@*}"
+            version="${match##*@}"
+            repo=$(echo "$action" | cut -d'/' -f1-2)
+
+            key="${action}@${version}"
+            [[ "${seen[$key]+_}" ]] && continue
+            seen[$key]=1
+
+            latest=$(gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2>/dev/null || true)
+            if [[ -z "$latest" ]]; then
+              latest=$(gh api "repos/${repo}/tags" \
+                --jq 'first(.[] | select(.name | test("^v[0-9]"))) | .name' 2>/dev/null || true)
+            fi
+            [[ -z "$latest" ]] && continue
+
+            # Major-only pin (e.g. @v5): bump only when the major version changes.
+            # Full semver pin (e.g. @v1.2.3): update to the exact latest tag.
+            if [[ "$version" =~ ^v[0-9]+$ ]]; then
+              latest_major=$(echo "$latest" | grep -oE '[0-9]+' | head -1)
+              new_version="v${latest_major}"
+            else
+              new_version="$latest"
+            fi
+
+            [[ "$version" == "$new_version" ]] && continue
+
+            echo "Updating ${action}: ${version} → ${new_version}"
+            for f in "${files[@]}"; do
+              sed -i "s|uses: ${action}@${version}|uses: ${action}@${new_version}|g" "$f"
+            done
+            updates="${updates}\n- \`${action}\`: \`${version}\` → \`${new_version}\`"
+          done < <(grep -rohE \
+            'uses: [a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)?@v[0-9][^ ]*' \
+            .github/ --include="*.yml" | sed 's/uses: //' | sort -u)
+
+          {
+            echo "updates<<EOF"
+            if [[ -n "$updates" ]]; then
+              printf "%b" "$updates"
+            else
+              echo "_All actions are already up to date._"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          committer: >-
+            ${{ inputs.git-name || vars.GIT_USER_NAME || 'github-actions[bot]' }}
+            <${{ inputs.git-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}>
+          author: >-
+            ${{ inputs.git-name || vars.GIT_USER_NAME || 'github-actions[bot]' }}
+            <${{ inputs.git-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}>
+          commit-message: "chore: actions autoupdate"
+          branch: ${{ inputs.branch || 'chore/actions-autoupdate' }}
+          title: "chore: actions autoupdate"
+          body: |
+            Automated GitHub Actions version update via `gh api`.
+
+            **Changes:**
+            ${{ steps.update.outputs.updates }}
+
+            Triggered by: `${{ github.event_name }}`
+          labels: ${{ inputs.labels }}

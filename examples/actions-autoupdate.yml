@@ -1,0 +1,26 @@
+# GitHub Actions version autoupdate
+#
+# Drop this file into .github/workflows/ in any repository.
+# Required secret (repo or org level):
+#   PAT_TOKEN  — Personal Access Token (human account)
+#               All update PRs will be opened as this user.
+#
+# Optional repository variables:
+#   GIT_USER_NAME   — git committer/author name  (default: github-actions[bot])
+#   GIT_USER_EMAIL  — git committer/author email
+
+name: Actions autoupdate
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  autoupdate:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/actions-autoupdate.yml@main
+    secrets: inherit
+    # Optional overrides:
+    # with:
+    #   branch: chore/actions-autoupdate
+    #   labels: dependencies,chore
