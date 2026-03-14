@@ -1,0 +1,11 @@
+name: Check docs links
+description: >
+  Validate that no relative links in docs/ escape the docs/ directory.
+  Links to files outside docs/ must use absolute GitHub URLs.
+
+runs:
+  using: composite
+  steps:
+    - name: Check docs links
+      shell: bash
+      run: bash "${{ github.action_path }}/check-docs-links.sh"

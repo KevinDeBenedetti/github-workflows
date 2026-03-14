@@ -1,0 +1,9 @@
+- id: check-docs-links
+  name: No relative links escaping docs/
+  description: >
+    Ensures relative links in docs/ don't escape the docs/ directory.
+    Links to files outside docs/ must use absolute GitHub URLs.
+  language: script
+  entry: .github/actions/check-docs-links/check-docs-links.sh
+  files: ^docs/.*\.md$
+  pass_filenames: true

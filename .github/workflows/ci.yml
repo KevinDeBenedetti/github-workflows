@@ -21,3 +21,4 @@ jobs:
       run-bats: false
       run-link-check: true
       link-check-paths: 'docs/**/*.md'
+      run-docs-link-check: true

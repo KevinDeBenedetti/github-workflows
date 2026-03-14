@@ -42,6 +42,6 @@ repo = "local"
 id = "check-docs-links"
 name = "No relative links escaping docs/"
 language = "script"
-entry = "scripts/check-docs-links.sh"
+entry = ".github/actions/check-docs-links/check-docs-links.sh"
 files = "^docs/.*\\.md$"
 pass_filenames = true
