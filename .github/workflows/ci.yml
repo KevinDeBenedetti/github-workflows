@@ -11,14 +11,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  actionlint:
-    name: actionlint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-
-      - name: actionlint
-        uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@main
-        with:
-          paths: .github/workflows/
+  ci:
+    name: CI
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
+    with:
+      run-shellcheck: false
+      run-actionlint: true
+      actionlint-paths: .github/workflows/
+      run-bats: false
+      run-link-check: true
+      link-check-paths: 'docs/**/*.md'

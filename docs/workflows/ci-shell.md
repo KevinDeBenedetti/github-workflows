@@ -13,6 +13,8 @@ jobs:
       run-shellcheck: true
       run-actionlint: true
       run-bats: true
+      run-link-check: true
+      link-check-paths: 'docs/**/*.md'
       run-docker: false
 ```
 
@@ -41,9 +43,11 @@ jobs:
 | `validate-yaml` | `run-actionlint: true`                            |
 | `bats`          | `run-bats: true`                                  |
 | `docker-test`   | `run-docker: true` (matrix over `docker-targets`) |
+| `link-check`    | `run-link-check: true`                            |
 
 ## Notes
 
 - Docker targets run in parallel via a matrix strategy with `fail-fast: false`.
 - The `bats-submodules` flag applies to both the `bats` and `docker-test` jobs.
-- ShellCheck and actionlint use their own composite actions: [`shellcheck`](../../.github/actions/shellcheck/action.yml), [`actionlint`](../../.github/actions/actionlint/action.yml).
+- ShellCheck and actionlint use their own composite actions: [`shellcheck`](../../.github/actions/shellcheck/action.yml), [`actionlint`](../../.github/actions/actionlint/action.yml). actionlint covers YAML syntax, expression type checking, and action input validation — no separate yamllint needed.
+- `link-check` runs [lychee](https://github.com/lycheeverse/lychee) in offline mode — no external HTTP requests are made.
