@@ -16,10 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Install actionlint
-        run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
-
-      - name: Lint workflows
-        run: ./actionlint .github/workflows/*.yml
+      - name: actionlint
+        uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@main
+        with:
+          paths: .github/workflows/

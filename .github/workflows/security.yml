@@ -48,16 +48,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Setup Node.js
+        id: setup
         uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
         with:
           working-directory: ${{ inputs.node-working-directory }}
 
-      - name: pnpm audit
+      - name: Audit dependencies
         working-directory: ${{ inputs.node-working-directory }}
-        run: pnpm audit --audit-level=high
+        run: |
+          if [ "${{ steps.setup.outputs.package-manager }}" = "bun" ]; then
+            bun pm audit --summary
+          else
+            pnpm audit --audit-level=high
+          fi
 
   # ── Dependency audit (Python) ───────────────────────────────────────────────
   audit-python:
@@ -67,7 +73,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Setup Python
         uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@main
@@ -91,7 +97,7 @@ jobs:
 
     steps:
       - name: Checkout (full history)
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
           fetch-depth: 0
 
@@ -117,7 +123,7 @@ jobs:
 
       - name: Upload SARIF report
         if: failure() && hashFiles('results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
         with:
           sarif_file: results.sarif
           category: gitleaks
@@ -138,17 +144,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
         with:
           languages: ${{ matrix.language }}
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98 # v4
         with:
           category: /language:${{ matrix.language }}

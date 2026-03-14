@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/.github/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
     with:
       node-version: '20'
     secrets: inherit
@@ -16,7 +16,7 @@ jobs:
   deploy-preview:
     needs: ci
     if: github.event_name == 'pull_request'
-    uses: KevinDeBenedetti/.github/.github/workflows/deploy-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
     with:
       environment: preview
     secrets: inherit
@@ -24,7 +24,7 @@ jobs:
   deploy-production:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/.github/.github/workflows/deploy-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
     with:
       environment: production
     secrets: inherit
@@ -32,5 +32,5 @@ jobs:
   release:
     needs: deploy-production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/.github/.github/workflows/release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
     secrets: inherit

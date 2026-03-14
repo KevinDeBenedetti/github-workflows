@@ -16,7 +16,11 @@ runs:
   steps:
     - name: Install actionlint
       shell: bash
-      run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+      run: |
+        ACTIONLINT_VERSION="1.7.11"
+        curl -sSfL \
+          "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
+          | tar xz -C /usr/local/bin actionlint
 
     - name: Run actionlint
       shell: bash

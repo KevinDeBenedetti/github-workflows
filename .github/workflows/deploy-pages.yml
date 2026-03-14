@@ -14,10 +14,10 @@ on:
         required: false
         default: '20'
       build-command:
-        description: Build command to run
+        description: Build command to run (leave empty to auto-detect from package manager)
         type: string
         required: false
-        default: 'pnpm build'
+        default: ''
       output-directory:
         description: Build output directory relative to working-directory
         type: string
@@ -35,9 +35,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Setup Node.js
+        id: setup
         uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
         with:
           node-version: ${{ inputs.node-version }}
@@ -45,10 +46,15 @@ jobs:
 
       - name: Build
         working-directory: ${{ inputs.working-directory }}
-        run: ${{ inputs.build-command }}
+        run: |
+          CMD="${{ inputs.build-command }}"
+          if [ -z "$CMD" ]; then
+            CMD="${{ steps.setup.outputs.package-manager }} run build"
+          fi
+          eval "$CMD"
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: ${{ inputs.working-directory }}/${{ inputs.output-directory }}
 
@@ -68,7 +74,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
 
       - name: Summary
         run: |
