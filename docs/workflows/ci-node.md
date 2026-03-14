@@ -32,7 +32,7 @@ jobs:
 ## Steps
 
 1. Checkout
-2. Setup Node.js + package manager (via [`setup-node`](../.github/actions/setup-node/action.yml))
+2. Setup Node.js + package manager (via [`setup-node`](../../.github/actions/setup-node/action.yml))
 3. Lint
 4. Typecheck
 5. Test (`--passWithNoTests`)

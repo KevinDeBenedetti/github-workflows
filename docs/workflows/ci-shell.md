@@ -46,4 +46,4 @@ jobs:
 
 - Docker targets run in parallel via a matrix strategy with `fail-fast: false`.
 - The `bats-submodules` flag applies to both the `bats` and `docker-test` jobs.
-- ShellCheck and actionlint use their own composite actions: [`shellcheck`](../.github/actions/shellcheck/action.yml), [`actionlint`](../.github/actions/actionlint/action.yml).
+- ShellCheck and actionlint use their own composite actions: [`shellcheck`](../../.github/actions/shellcheck/action.yml), [`actionlint`](../../.github/actions/actionlint/action.yml).
