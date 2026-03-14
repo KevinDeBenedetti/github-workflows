@@ -18,9 +18,12 @@ runs:
       shell: bash
       run: |
         ACTIONLINT_VERSION="1.7.11"
+        INSTALL_DIR="$RUNNER_TEMP/actionlint"
+        mkdir -p "$INSTALL_DIR"
         curl -sSfL \
           "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz" \
-          | tar xz -C /usr/local/bin actionlint
+          | tar xz -C "$INSTALL_DIR" actionlint
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 
     - name: Run actionlint
       shell: bash
@@ -28,10 +31,10 @@ runs:
         FILES=""
         for p in ${{ inputs.paths }}; do
           if [ -d "$p" ]; then
-            FILES="$FILES $(find "$p" -name '*.yml' -o -name '*.yaml')"
+            FILES="$FILES $(find "$p" \( -name '*.yml' -o -name '*.yaml' \))"
           else
             FILES="$FILES $p"
           fi
         done
         # shellcheck disable=SC2086
-        ./actionlint ${{ inputs.flags }} $FILES
+        actionlint ${{ inputs.flags }} $FILES
