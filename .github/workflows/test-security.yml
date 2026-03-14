@@ -20,6 +20,11 @@ concurrency:
 jobs:
   test:
     uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
+      security-events: write
     with:
       run-node-audit: false
       run-python-audit: false
