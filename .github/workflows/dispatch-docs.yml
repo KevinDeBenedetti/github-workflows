@@ -14,7 +14,7 @@ on:
         required: false
         default: 'docs-updated'
     secrets:
-      dispatch-token:
+      PAT_TOKEN:
         description: 'PAT with repo write access on the target repository'
         required: true
 
@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Trigger docs rebuild
         env:
-          GH_TOKEN: ${{ secrets.dispatch-token }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           TARGET: ${{ inputs.target-repo }}
           EVENT: ${{ inputs.event-type }}
           SOURCE: ${{ github.repository }}

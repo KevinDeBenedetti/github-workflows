@@ -22,3 +22,10 @@ jobs:
       run-link-check: true
       link-check-paths: 'docs/**/*.md'
       run-docs-link-check: true
+
+  dispatch:
+    name: Dispatch docs rebuild
+    needs: [ci]
+    if: github.event_name == 'push'
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/dispatch-docs.yml@main
+    secrets: inherit
