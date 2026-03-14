@@ -33,3 +33,15 @@ rev = "v1.7.10"
 hooks = [
   { id = "actionlint" },
 ]
+
+# ─── Docs link safety ────────────────────────────────────────────────────────
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "check-docs-links"
+name = "No relative links escaping docs/"
+language = "script"
+entry = "scripts/check-docs-links.sh"
+files = "^docs/.*\\.md$"
+pass_filenames = true

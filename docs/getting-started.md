@@ -193,7 +193,7 @@ steps:
 
 ## Examples
 
-Complete ready-to-use caller files live in [`examples/`](../examples/):
+Complete ready-to-use caller files live in [`examples/`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/examples):
 
 | File | Stack |
 |---|---|

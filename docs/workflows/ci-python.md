@@ -31,7 +31,7 @@ jobs:
 ## Steps
 
 1. Checkout
-2. Setup Python + uv (via [`setup-python`](../../.github/actions/setup-python/action.yml))
+2. Setup Python + uv (via [`setup-python`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/setup-python))
 3. Lint (`ruff check --output-format github`)
 4. Format check (`ruff format --check`)
 5. Type check (`ty check --output-format github`)

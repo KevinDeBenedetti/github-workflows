@@ -6,7 +6,7 @@ Replaces native GitHub Dependabot version-update PRs. Dependabot security alerts
 
 ## Usage
 
-**1. Add the caller workflow** (copy [`examples/renovate.yml`](../../examples/renovate.yml)):
+**1. Add the caller workflow** (copy [`examples/renovate.yml`](https://github.com/KevinDeBenedetti/github-workflows/blob/main/examples/renovate.yml)):
 
 ```yaml
 # .github/workflows/renovate.yml  (in your repo)
@@ -32,7 +32,7 @@ jobs:
 }
 ```
 
-This pulls in the [`default.json`](../../default.json) preset: grouped minor/patch PRs, `major-update` label on majors, auto-assigned to `KevinDeBenedetti`.
+This pulls in the [`default.json`](https://github.com/KevinDeBenedetti/github-workflows/blob/main/default.json) preset: grouped minor/patch PRs, `major-update` label on majors, auto-assigned to `KevinDeBenedetti`.
 
 ## Inputs
 
