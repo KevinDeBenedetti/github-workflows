@@ -49,6 +49,45 @@ on:
         required: false
         default: 'uv run pytest --tb=short -q'
 
+  workflow_dispatch:
+    inputs:
+      python-version:
+        description: Python version
+        type: string
+        default: '3.12'
+      working-directory:
+        description: Path to the app (e.g. apps/api)
+        type: string
+        default: '.'
+      run-lint:
+        description: Run ruff linter
+        type: boolean
+        default: true
+      run-format:
+        description: Check formatting with ruff format
+        type: boolean
+        default: true
+      run-typecheck:
+        description: Run ty type checker
+        type: boolean
+        default: false
+      run-test:
+        description: Run pytest
+        type: boolean
+        default: true
+      run-coverage:
+        description: Enable test coverage report (pytest-cov)
+        type: boolean
+        default: false
+      coverage-fail-under:
+        description: Minimum coverage percentage to pass
+        type: string
+        default: '80'
+      test-command:
+        description: Custom pytest command (ignored when run-coverage is true)
+        type: string
+        default: 'uv run pytest --tb=short -q'
+
 concurrency:
   group: ci-python-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
   cancel-in-progress: true

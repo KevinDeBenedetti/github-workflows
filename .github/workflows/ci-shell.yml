@@ -76,6 +76,65 @@ on:
         required: false
         default: 'docs/**/*.md'
 
+  workflow_dispatch:
+    inputs:
+      run-shellcheck:
+        description: Run ShellCheck on all .sh files
+        type: boolean
+        default: true
+      shellcheck-severity:
+        description: 'Minimum ShellCheck severity: error | warning | info | style'
+        type: string
+        default: warning
+      shellcheck-exclude-paths:
+        description: Path glob to exclude from ShellCheck (e.g. '*/test_helper/*')
+        type: string
+        default: '*/test_helper/*'
+      run-actionlint:
+        description: Run actionlint on GitHub Actions workflow files
+        type: boolean
+        default: true
+      actionlint-paths:
+        description: Space-separated paths to validate with actionlint
+        type: string
+        default: .github/workflows/
+      actionlint-flags:
+        description: Extra flags passed to actionlint (e.g. -ignore 'SC2086')
+        type: string
+        default: ''
+      run-bats:
+        description: Run Bats unit tests
+        type: boolean
+        default: true
+      bats-tests-dir:
+        description: Directory containing .bats test files
+        type: string
+        default: tests/
+      bats-submodules:
+        description: Checkout git submodules required by Bats helpers
+        type: boolean
+        default: true
+      run-docker:
+        description: Run Docker integration tests
+        type: boolean
+        default: false
+      docker-file:
+        description: Path to the test Dockerfile
+        type: string
+        default: tests/docker/Dockerfile.test
+      docker-targets:
+        description: 'JSON array of --target names to build (e.g. ''["test-bats","test-init"]'')'
+        type: string
+        default: '[]'
+      run-link-check:
+        description: Check markdown files for broken relative links (offline, no HTTP requests)
+        type: boolean
+        default: false
+      link-check-paths:
+        description: Space-separated glob patterns of markdown files to check
+        type: string
+        default: 'docs/**/*.md'
+
 concurrency:
   group: ci-shell-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

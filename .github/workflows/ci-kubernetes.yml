@@ -44,6 +44,37 @@ on:
         required: false
         default: .env.example
 
+  workflow_dispatch:
+    inputs:
+      run-kubeconform:
+        description: Validate Kubernetes manifests with kubeconform
+        type: boolean
+        default: true
+      kubeconform-paths:
+        description: Directory containing manifests to validate
+        type: string
+        default: kubernetes/
+      kubeconform-exclude:
+        description: Filename pattern to exclude from validation (e.g. '*-values.yaml')
+        type: string
+        default: '*-values.yaml'
+      kubeconform-include-crds-catalog:
+        description: Also validate against the Datree CRDs-catalog
+        type: boolean
+        default: true
+      run-env-example:
+        description: Check that .env.example contains all required keys
+        type: boolean
+        default: false
+      env-example-required-keys:
+        description: Space-separated list of keys that must be present in .env.example
+        type: string
+        default: ''
+      env-example-file:
+        description: Path to the .env.example file
+        type: string
+        default: .env.example
+
 concurrency:
   group: ci-kubernetes-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

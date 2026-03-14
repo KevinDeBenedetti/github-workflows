@@ -39,6 +39,37 @@ on:
         required: false
         default: '["javascript","typescript"]'
 
+  workflow_dispatch:
+    inputs:
+      run-node-audit:
+        description: Run pnpm audit on Node.js apps
+        type: boolean
+        default: true
+      node-working-directory:
+        description: Path to Node.js app
+        type: string
+        default: '.'
+      run-python-audit:
+        description: Run pip-audit on Python apps
+        type: boolean
+        default: false
+      python-working-directory:
+        description: Path to Python app
+        type: string
+        default: '.'
+      run-secret-scan:
+        description: Run Gitleaks secret scanning
+        type: boolean
+        default: true
+      run-codeql:
+        description: Run CodeQL SAST analysis
+        type: boolean
+        default: true
+      codeql-languages:
+        description: 'JSON array of languages for CodeQL (e.g. ''["javascript","typescript"]'')'
+        type: string
+        default: '["javascript","typescript"]'
+
 jobs:
   # ── Dependency audit (Node) ─────────────────────────────────────────────────
   audit-node:

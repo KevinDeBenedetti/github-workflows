@@ -66,6 +66,57 @@ on:
         required: false
         default: 'docs/**/*.md'
 
+  workflow_dispatch:
+    inputs:
+      node-version:
+        description: Node.js version
+        type: string
+        default: '20'
+      working-directory:
+        description: Path to the app (e.g. apps/web, or "." for standalone)
+        type: string
+        default: '.'
+      package-manager:
+        description: '"pnpm" | "bun" | "auto" (default — detects from lockfile)'
+        type: string
+        default: auto
+      framework:
+        description: 'Hint for build output path: "next" | "nuxt" | "vite" | "auto"'
+        type: string
+        default: auto
+      run-lint:
+        description: Run lint script
+        type: boolean
+        default: true
+      run-typecheck:
+        description: Run typecheck script
+        type: boolean
+        default: true
+      run-test:
+        description: Run test suite
+        type: boolean
+        default: true
+      run-build:
+        description: Run build script
+        type: boolean
+        default: true
+      upload-build:
+        description: Upload build output as artifact
+        type: boolean
+        default: false
+      build-artifact-name:
+        description: Name for the uploaded build artifact
+        type: string
+        default: build
+      run-link-check:
+        description: Check markdown files for broken relative links before building (offline, no HTTP requests)
+        type: boolean
+        default: false
+      link-check-paths:
+        description: Space-separated glob patterns of markdown files to check
+        type: string
+        default: 'docs/**/*.md'
+
 concurrency:
   group: ci-node-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
   cancel-in-progress: true
