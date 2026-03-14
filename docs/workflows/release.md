@@ -12,17 +12,21 @@ jobs:
     with:
       config-file: release-please-config.json
       manifest-file: .release-please-manifest.json
+      git-user-name: ${{ secrets.GITHUB_USERNAME }}
+      git-user-email: ${{ secrets.GITHUB_EMAIL }}
     secrets:
       RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
 ```
 
 ## Inputs
 
-| Input           | Type   | Default                         | Description                                                                                       |
-| --------------- | ------ | ------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `release-type`  | string | `''`                            | release-please release type (e.g. `node`, `python`, `simple`). Ignored when `config-file` is set. |
-| `config-file`   | string | `release-please-config.json`    | Path to `release-please-config.json`                                                              |
-| `manifest-file` | string | `.release-please-manifest.json` | Path to `.release-please-manifest.json`                                                           |
+| Input            | Type   | Default                                        | Description                                                                                       |
+| ---------------- | ------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `release-type`   | string | `''`                                           | release-please release type (e.g. `node`, `python`, `simple`). Ignored when `config-file` is set. |
+| `config-file`    | string | `release-please-config.json`                   | Path to `release-please-config.json`                                                              |
+| `manifest-file`  | string | `.release-please-manifest.json`                | Path to `.release-please-manifest.json`                                                           |
+| `git-user-name`  | string | `github-actions[bot]`                          | Name used for the git tagger identity when moving the major version tag                           |
+| `git-user-email` | string | `github-actions[bot]@users.noreply.github.com` | Email used for the git tagger identity when moving the major version tag                          |
 
 ## Secrets
 

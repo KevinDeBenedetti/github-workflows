@@ -44,8 +44,11 @@ secrets: inherit
 | `deploy-docker.yml` | `image-name` (repo name), `context` (.), `platforms` (linux/amd64,linux/arm64), `push` (true), `tag-latest` (false) |
 | `deploy-pages.yml`  | `working-directory` (.), `node-version` (20), `output-directory` (dist)     |
 | `deploy-vercel.yml` | `environment` (preview), `working-directory` (.), `node-version` (20); secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` |
-| `release.yml`       | `release-type` (""), `config-file` (release-please-config.json); outputs: `released`, `tag` |
+| `release.yml`       | `release-type` (""), `config-file` (release-please-config.json), `git-user-name` (github-actions[bot]), `git-user-email` (github-actions[bot]@…); outputs: `released`, `tag` |
 | `security.yml`      | `run-node-audit` (true), `run-python-audit` (false), `run-secret-scan` (true), `run-codeql` (true), `codeql-languages` (["javascript","typescript"]) |
+| `dependabot-automerge.yml` | `merge-method` (squash), `major-label` (major-update); secret: `PAT_TOKEN` (required — personal account token) |
+| `check-bot-commits.yml` | `allowed-bots` ([]), `fail-on-bot-commits` (true); guards PRs against bot-authored commits |
+| `renovate.yml`          | `configuration-file` (''); secret: `PAT_TOKEN` (required); opens all dependency PRs as personal user |
 
 ## Composite actions
 

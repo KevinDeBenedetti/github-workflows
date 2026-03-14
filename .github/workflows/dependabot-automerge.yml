@@ -1,0 +1,66 @@
+name: Dependabot Auto-merge
+
+on:
+  workflow_call:
+    inputs:
+      merge-method:
+        description: '"squash" | "merge" | "rebase"'
+        type: string
+        required: false
+        default: squash
+      major-label:
+        description: Label to apply on major-version PRs for manual review
+        type: string
+        required: false
+        default: major-update
+    secrets:
+      PAT_TOKEN:
+        description: >
+          Personal Access Token used to approve and merge PRs.
+          Must belong to a human account so no bot identity appears in commits.
+        required: true
+
+jobs:
+  # ── Dependabot auto-merge ───────────────────────────────────────────────────
+  automerge:
+    name: Auto-merge (${{ github.event.pull_request.title }})
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2.5.0
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+
+      # ── minor / patch → approve + enable auto-merge ────────────────────────
+      - name: Approve and auto-merge (minor / patch)
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          MERGE_METHOD: ${{ inputs.merge-method }}
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto "--${MERGE_METHOD}" "$PR_URL"
+          echo "✅ Auto-merge enabled for ${{ steps.metadata.outputs.update-type }} update."
+
+      # ── major → label for manual review, no auto-merge ────────────────────
+      - name: Label major update for manual review
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          LABEL: ${{ inputs.major-label }}
+        run: |
+          gh label create "$LABEL" --color "e11d48" --description "Major version update — requires manual review" --force || true
+          gh pr edit "$PR_URL" --add-label "$LABEL"
+          gh pr comment "$PR_URL" --body \
+            "⚠️ **Major update detected.** This PR has been labelled \`$LABEL\` and requires manual review before merging."
+          echo "🏷️  Labelled major update PR for manual review."

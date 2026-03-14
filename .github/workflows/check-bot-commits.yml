@@ -1,0 +1,83 @@
+name: Check Bot Commits
+
+on:
+  workflow_call:
+    inputs:
+      allowed-bots:
+        description: >
+          JSON array of bot logins whose commits are permitted
+          (e.g. '["dependabot[bot]"]'). Empty by default — all bot commits fail.
+        type: string
+        required: false
+        default: '[]'
+      fail-on-bot-commits:
+        description: Fail the workflow when bot commits are found (set false to warn only)
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  # ── Guard: no bot-authored commits in PRs ──────────────────────────────────
+  check-authors:
+    name: Check for bot-authored commits
+    if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Check commit authors
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ALLOWED_BOTS: ${{ inputs.allowed-bots }}
+          FAIL_ON_BOT: ${{ inputs.fail-on-bot-commits }}
+        run: |
+          set -euo pipefail
+
+          # Collect all commit authors for this PR (login preferred, fallback to name)
+          AUTHORS=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/commits" \
+            --jq '.[].author.login // .[].commit.author.name' 2>/dev/null || true)
+
+          if [ -z "$AUTHORS" ]; then
+            echo "No commit authors found (or PR has no commits yet). Skipping."
+            exit 0
+          fi
+
+          BOT_FOUND=false
+          BOT_LIST=""
+
+          while IFS= read -r author; do
+            # Bot accounts end with [bot] on GitHub
+            if [[ "$author" == *"[bot]" ]]; then
+              # Check against the allow-list
+              if echo "$ALLOWED_BOTS" | jq -e --arg a "$author" '. | index($a) != null' \
+                  > /dev/null 2>&1; then
+                echo "  ✅ Allowed bot: $author"
+              else
+                echo "  ❌ Unauthorised bot commit from: $author"
+                BOT_FOUND=true
+                BOT_LIST="${BOT_LIST}\n- \`${author}\`"
+              fi
+            else
+              echo "  👤 Human author: $author"
+            fi
+          done <<< "$AUTHORS"
+
+          if [ "$BOT_FOUND" = "true" ]; then
+            echo ""
+            echo "Bot commits detected in this PR:"
+            printf "%b\n" "$BOT_LIST"
+            echo ""
+            echo "To fix: rebase and squash bot commits, or add the bot to allowed-bots."
+            if [ "$FAIL_ON_BOT" = "true" ]; then
+              exit 1
+            else
+              echo "::warning::Bot commits found but fail-on-bot-commits is false — continuing."
+            fi
+          else
+            echo ""
+            echo "✅ All commits are from human contributors."
+          fi

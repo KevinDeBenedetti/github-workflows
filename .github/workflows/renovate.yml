@@ -1,0 +1,40 @@
+name: Renovate
+
+on:
+  workflow_call:
+    inputs:
+      configuration-file:
+        description: >
+          Path to the Renovate config file in the calling repository.
+          Leave empty to let Renovate auto-discover (renovate.json, .github/renovate.json, etc.).
+        type: string
+        required: false
+        default: ''
+    secrets:
+      PAT_TOKEN:
+        description: >
+          Personal Access Token — all dependency-update PRs will be opened as this
+          user (your personal account). Must have contents:write and pull-requests:write.
+        required: true
+
+jobs:
+  # ── Renovate dependency updates ─────────────────────────────────────────────
+  renovate:
+    name: Renovate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Run Renovate
+        uses: renovatebot/github-action@0b17c4eb901eca44d018fb25744a50a74b2042df # v46.1.4
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          configurationFile: ${{ inputs.configuration-file }}
+        env:
+          # Ensure git identity matches the PAT owner
+          GIT_AUTHOR_NAME: Kevin De Benedetti
+          GIT_AUTHOR_EMAIL: contact@kevindb.dev
+          GIT_COMMITTER_NAME: Kevin De Benedetti
+          GIT_COMMITTER_EMAIL: contact@kevindb.dev

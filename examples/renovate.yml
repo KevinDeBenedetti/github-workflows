@@ -1,0 +1,25 @@
+# Renovate dependency updates
+#
+# Drop this file into .github/workflows/ in any repository.
+# Required secret (repo or org level):
+#   PAT_TOKEN  — Personal Access Token (human account)
+#               All dependency-update PRs will be opened as this user.
+#
+# Recommended: add a renovate.json to your repo root:
+#   { "$schema": "...", "extends": ["github>KevinDeBenedetti/github-workflows"] }
+# This extends the shared base config (grouping, labels, etc.).
+
+name: Renovate
+
+on:
+  schedule:
+    - cron: '0 3 * * 1'  # Every Monday at 03:00 UTC
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  renovate:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/renovate.yml@main
+    secrets: inherit
+    # Optional: point to a custom config file
+    # with:
+    #   configuration-file: .github/renovate.json

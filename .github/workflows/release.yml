@@ -18,6 +18,20 @@ on:
         type: string
         required: false
         default: .release-please-manifest.json
+      git-user-name:
+        description: >
+          Name used for the git tagger identity when moving the major version tag
+          (e.g. "Kevin De Benedetti"). Defaults to "github-actions[bot]".
+        type: string
+        required: false
+        default: 'Kevin De Benedetti'
+      git-user-email:
+        description: >
+          Email used for the git tagger identity when moving the major version tag
+          (e.g. "you@example.com"). Defaults to the GitHub Actions bot email.
+        type: string
+        required: false
+        default: 'contact@kevindb.dev'
     secrets:
       RELEASE_TOKEN:
         description: PAT with write access (defaults to GITHUB_TOKEN if not set)
@@ -65,10 +79,13 @@ jobs:
 
       - name: Move major version tag
         # e.g. v1.2.3 → also updates tag v1
+        env:
+          GIT_USER_NAME: ${{ inputs.git-user-name }}
+          GIT_USER_EMAIL: ${{ inputs.git-user-email }}
         run: |
           TAG="${{ needs.release.outputs.tag }}"
           MAJOR=$(echo "$TAG" | cut -d. -f1)  # e.g. "v1"
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name  "$GIT_USER_NAME"
+          git config user.email "$GIT_USER_EMAIL"
           git tag -fa "$MAJOR" -m "Release $TAG"
           git push origin "$MAJOR" --force

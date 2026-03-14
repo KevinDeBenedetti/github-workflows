@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/configuration-options.json",
+  "description": "Base Renovate preset for KevinDeBenedetti repos. Extend with: \"github>KevinDeBenedetti/github-workflows\"",
+  "extends": ["config:recommended"],
+  "onboarding": false,
+  "requireConfig": "optional",
+  "labels": ["dependencies"],
+  "assignees": ["KevinDeBenedetti"],
+  "reviewers": ["KevinDeBenedetti"],
+  "packageRules": [
+    {
+      "description": "Group minor and patch updates into a single PR",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "minor and patch updates",
+      "automerge": false
+    },
+    {
+      "description": "Label major updates for manual review (mirrors dependabot-automerge behaviour)",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major-update"],
+      "automerge": false
+    }
+  ]
+}
