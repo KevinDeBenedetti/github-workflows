@@ -15,7 +15,10 @@ on:
         default: 'docs-updated'
     secrets:
       PAT_TOKEN:
-        description: 'PAT with repo write access on the target repository'
+        description: >
+          Fine-grained PAT with actions:write on the target repository.
+          Can be shared with the repo-level PAT_TOKEN if that token already
+          has actions:write on the target.
         required: true
 
 jobs:
