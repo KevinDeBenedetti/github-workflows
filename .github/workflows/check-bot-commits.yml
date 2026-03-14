@@ -6,7 +6,7 @@ on:
       allowed-bots:
         description: >
           JSON array of bot logins whose commits are permitted
-          (e.g. '["dependabot[bot]"]'). Empty by default — all bot commits fail.
+          (e.g. '["dependabot[bot]","renovate[bot]"]'). Empty by default — all bot commits fail.
         type: string
         required: false
         default: '[]'
@@ -37,41 +37,72 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Collect all commit authors for this PR (login preferred, fallback to name)
-          AUTHORS=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/commits" \
-            --jq '.[].author.login // .[].commit.author.name' 2>/dev/null || true)
+          # Fetch full commit metadata: login, GitHub account type, and git author name/email
+          COMMITS=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/commits" \
+            --jq '.[] | {
+              login:  (.author.login  // .commit.author.name),
+              type:   (.author.type   // "Unknown"),
+              name:   .commit.author.name,
+              email:  .commit.author.email
+            }' 2>/dev/null || true)
 
-          if [ -z "$AUTHORS" ]; then
-            echo "No commit authors found (or PR has no commits yet). Skipping."
+          if [ -z "$COMMITS" ]; then
+            echo "No commits found (or PR has no commits yet). Skipping."
             exit 0
           fi
 
           BOT_FOUND=false
           BOT_LIST=""
+          SUMMARY="## 🤖 Bot Commit Check\n\n| Author | Type | Verdict |\n|--------|------|---------|"
 
-          while IFS= read -r author; do
-            # Bot accounts end with [bot] on GitHub
-            if [[ "$author" == *"[bot]" ]]; then
-              # Check against the allow-list
-              if echo "$ALLOWED_BOTS" | jq -e --arg a "$author" '. | index($a) != null' \
+          while IFS= read -r line; do
+            login=$(echo "$line" | jq -r '.login')
+            type=$(echo "$line"  | jq -r '.type')
+            name=$(echo "$line"  | jq -r '.name')
+            email=$(echo "$line" | jq -r '.email')
+
+            # Primary: GitHub API type field ("Bot" is set by GitHub for bot accounts)
+            # Fallback: [bot] suffix in login, or bot noreply email pattern
+            is_bot=false
+            if [[ "$type" == "Bot" ]]; then
+              is_bot=true
+            elif [[ "$login" == *"[bot]" ]]; then
+              is_bot=true
+            elif [[ "$email" =~ \+.*\[bot\]@users\.noreply\.github\.com$ ]]; then
+              is_bot=true
+            fi
+
+            if [ "$is_bot" = "true" ]; then
+              if echo "$ALLOWED_BOTS" | jq -e --arg a "$login" '. | index($a) != null' \
                   > /dev/null 2>&1; then
-                echo "  ✅ Allowed bot: $author"
+                echo "  ✅ Allowed bot: $login ($email)"
+                SUMMARY="${SUMMARY}\n| \`${login}\` | Bot (allowed) | ✅ |"
               else
-                echo "  ❌ Unauthorised bot commit from: $author"
+                echo "  ❌ Unauthorised bot commit: $login <$email>"
                 BOT_FOUND=true
-                BOT_LIST="${BOT_LIST}\n- \`${author}\`"
+                BOT_LIST="${BOT_LIST}\n- \`${login}\` (\`${email}\`)"
+                SUMMARY="${SUMMARY}\n| \`${login}\` | Bot | ❌ Blocked |"
               fi
             else
-              echo "  👤 Human author: $author"
+              echo "  👤 Human: $login ($name <$email>)"
+              SUMMARY="${SUMMARY}\n| \`${login}\` | Human | ✅ |"
             fi
-          done <<< "$AUTHORS"
+          done < <(echo "$COMMITS" | jq -c '.')
+
+          # Write job summary
+          {
+            printf "%b\n" "$SUMMARY"
+            echo ""
+            if [ "$BOT_FOUND" = "true" ]; then
+              echo "> ❌ **Bot commits detected.** Rebase and squash them, or add the bot to \`allowed-bots\`."
+            else
+              echo "> ✅ **All commits are from human contributors.**"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
           if [ "$BOT_FOUND" = "true" ]; then
-            echo ""
-            echo "Bot commits detected in this PR:"
-            printf "%b\n" "$BOT_LIST"
-            echo ""
-            echo "To fix: rebase and squash bot commits, or add the bot to allowed-bots."
+            printf "\nBot commits detected:\n%b\n" "$BOT_LIST"
+            echo "To fix: rebase and squash bot commits, or add the bot to allowed-bots input."
             if [ "$FAIL_ON_BOT" = "true" ]; then
               exit 1
             else

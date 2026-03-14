@@ -1,0 +1,97 @@
+name: prek autoupdate
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: Branch name for the autoupdate PR
+        type: string
+        required: false
+        default: chore/prek-autoupdate
+      labels:
+        description: Comma-separated labels to add to the PR (e.g. 'dependencies,chore')
+        type: string
+        required: false
+        default: ''
+      git-name:
+        description: >
+          Git committer/author name for the autoupdate commit.
+          Falls back to the GIT_USER_NAME repository variable, then 'github-actions[bot]'.
+        type: string
+        required: false
+        default: ''
+      git-email:
+        description: >
+          Git committer/author email for the autoupdate commit.
+          Falls back to the GIT_USER_EMAIL repository variable, then the Actions noreply address.
+        type: string
+        required: false
+        default: ''
+    secrets:
+      PAT_TOKEN:
+        description: >
+          Personal Access Token — PRs and commits will be opened as this user.
+          Must have contents:write and pull-requests:write.
+        required: true
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch name for the autoupdate PR
+        type: string
+        required: false
+        default: chore/prek-autoupdate
+      labels:
+        description: Comma-separated labels to add to the PR
+        type: string
+        required: false
+        default: ''
+      git-name:
+        description: Git committer/author name (overrides GIT_USER_NAME variable)
+        type: string
+        required: false
+        default: ''
+      git-email:
+        description: Git committer/author email (overrides GIT_USER_EMAIL variable)
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  # ── Bump all prek hook revisions and open a PR ──────────────────────────────
+  autoupdate:
+    name: prek autoupdate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install prek
+        uses: j178/prek-action@0bb87d7f00b0c99306c8bcb8b8beba1eb581c037 # v1.1.1
+        with:
+          install-only: true
+
+      - name: Run prek autoupdate
+        run: prek autoupdate
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.9
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
+          committer: >-
+            ${{ inputs.git-name || vars.GIT_USER_NAME || 'github-actions[bot]' }}
+            <${{ inputs.git-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}>
+          author: >-
+            ${{ inputs.git-name || vars.GIT_USER_NAME || 'github-actions[bot]' }}
+            <${{ inputs.git-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}>
+          commit-message: "chore: prek autoupdate"
+          branch: ${{ inputs.branch || 'chore/prek-autoupdate' }}
+          title: "chore: prek autoupdate"
+          body: |
+            Automated prek hook revision update via `prek autoupdate`.
+
+            Triggered by: `${{ github.event_name }}`
+          labels: ${{ inputs.labels }}

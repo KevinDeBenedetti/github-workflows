@@ -33,8 +33,10 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
           configurationFile: ${{ inputs.configuration-file }}
         env:
-          # Ensure git identity matches the PAT owner
-          GIT_AUTHOR_NAME: Kevin De Benedetti
-          GIT_AUTHOR_EMAIL: contact@kevindb.dev
-          GIT_COMMITTER_NAME: Kevin De Benedetti
-          GIT_COMMITTER_EMAIL: contact@kevindb.dev
+          # Ensure git identity resolves to the repo owner, not a bot.
+          # Set GIT_USER_NAME and GIT_USER_EMAIL as repository variables
+          # in Settings → Secrets and variables → Actions → Variables.
+          GIT_AUTHOR_NAME: ${{ vars.GIT_USER_NAME || 'github-actions[bot]' }}
+          GIT_AUTHOR_EMAIL: ${{ vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}
+          GIT_COMMITTER_NAME: ${{ vars.GIT_USER_NAME || 'github-actions[bot]' }}
+          GIT_COMMITTER_EMAIL: ${{ vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}

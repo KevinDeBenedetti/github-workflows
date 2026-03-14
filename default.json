@@ -7,6 +7,17 @@
   "labels": ["dependencies"],
   "assignees": ["KevinDeBenedetti"],
   "reviewers": ["KevinDeBenedetti"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update hook rev pins in prek.toml — annotate with: # renovate: datasource=github-tags depName=org/repo",
+      "managerFilePatterns": ["(^|/)prek\\.toml$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\n]+?)\\nrev = \"(?<currentValue>[^\"]+)\"",
+        "# renovate: datasource=(?<datasource>[a-z-]+?) depName=(?<depName>[^\\n]+?)\\nminimum_prek_version = \"(?<currentValue>[^\"]+)\""
+      ]
+    }
+  ],
   "packageRules": [
     {
       "description": "Group minor and patch updates into a single PR",
@@ -18,6 +29,12 @@
       "description": "Label major updates for manual review (mirrors dependabot-automerge behaviour)",
       "matchUpdateTypes": ["major"],
       "labels": ["dependencies", "major-update"],
+      "automerge": false
+    },
+    {
+      "description": "Group all prek.toml hook rev updates into one PR",
+      "matchFileNames": ["prek.toml"],
+      "groupName": "prek hook revs",
       "automerge": false
     }
   ]

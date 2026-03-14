@@ -9,3 +9,7 @@ jobs:
   renovate:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/renovate.yml@main
     secrets: inherit
+    with:
+      # Use default.json as both the shared preset AND the local Renovate config
+      # for this repo itself, so the customManagers for prek.toml also apply here.
+      configuration-file: default.json
