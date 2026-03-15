@@ -1,7 +1,0 @@
-{
-  "title": "GitHub Workflows",
-  "description": "Automated workflows for CI/CD and other tasks.",
-  "icon": "⚙️",
-  "order": 3,
-  "repo": "KevinDeBenedetti/github-workflows"
-}
