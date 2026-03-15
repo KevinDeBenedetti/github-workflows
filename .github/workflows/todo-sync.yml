@@ -4,10 +4,11 @@ on:
     paths: ['TODO.yml']
   issues:
     types: [labeled, unlabeled, closed, reopened, edited, assigned]
+  workflow_dispatch:
 
 jobs:
   push-to-issues:
-    if: github.event_name == 'push'
+    if: github.event_name != 'issues'
     permissions:
       contents: write
       issues: write
