@@ -1,0 +1,36 @@
+issues:
+  - id: gwf-1
+    github_id: ~
+    type: feat
+    title: "Add reusable workflow to purge old deployments and Actions runs"
+    status: backlog
+    priority: medium
+    assignees: [KevinDeBenedetti]
+    body: |
+      ## Goal
+      Keep repos clean by automatically purging old deployments (keep last 10)
+      and old Actions workflow runs (keep last 10).
+
+      ## Acceptance criteria
+      - [ ] Reusable workflow `purge-deployments.yml` deletes all but the 10 most recent deployments
+      - [ ] Reusable workflow `purge-workflow-runs.yml` deletes all but the 10 most recent runs per workflow
+      - [ ] Both workflows expose a `keep` input to configure the retention count
+      - [ ] Example caller added to `examples/`
+      - [ ] Documentation added to `docs/workflows/`
+
+  - id: gwf-2
+    github_id: ~
+    type: feat
+    title: "Add reusable workflow to sync labels from labels.yml"
+    status: backlog
+    priority: low
+    assignees: [KevinDeBenedetti]
+    body: |
+      ## Goal
+      Allow any repo to sync its GitHub labels from a `labels.yml` file
+      via a reusable workflow, keeping label definitions consistent.
+
+      ## Acceptance criteria
+      - [ ] Reusable workflow `label-sync.yml` reads `labels.yml` and upserts labels
+      - [ ] Caller example added to `examples/`
+      - [ ] Documentation added to `docs/workflows/`

@@ -1,0 +1,44 @@
+name: TODO → Issues
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        description: >
+          PAT with issues:write and contents:write.
+          Falls back to the built-in GITHUB_TOKEN when omitted.
+        required: false
+
+jobs:
+  sync:
+    name: Sync TODO.yml → GitHub Issues
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.token || github.token }}
+
+      - name: Checkout sync script
+        uses: actions/checkout@v5
+        with:
+          repository: KevinDeBenedetti/github-workflows
+          path: _sync
+          sparse-checkout: scripts
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: _sync/scripts
+
+      - name: Run sync (push)
+        env:
+          GITHUB_TOKEN: ${{ secrets.token || github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bun run _sync/scripts/sync-todo.ts push
