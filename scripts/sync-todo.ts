@@ -605,7 +605,9 @@ async function push(): Promise<void> {
         const changes    = detectChanges(entry, issue);
         const hasChanges = Object.keys(changes).length > 0;
         console.log(`Syncing #${issue.number}: "${entry.title}"${hasChanges ? ` (${Object.keys(changes).join(', ')} changed)` : ' (no changes)'}`);
-        await updateIssue(issue.number, { title: entry.title, body, labels, assignees, state: 'open' });
+        if (isNewLink || hasChanges) {
+          await updateIssue(issue.number, { title: entry.title, body, labels, assignees, state: 'open' });
+        }
         if (isNewLink) {
           await addComment(issue.number, createdComment(entry));
           log.push({ issueNumber: issue.number, title: entry.title, action: recovered ? 'recovered' : 'linked' });

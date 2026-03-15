@@ -18,6 +18,7 @@ jobs:
     name: Sync labels.yml → GitHub labels
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       issues: write
 
     steps:
