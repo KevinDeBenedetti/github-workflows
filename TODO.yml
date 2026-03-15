@@ -1,11 +1,12 @@
 issues:
   - id: gwf-1
-    github_id: ~
+    github_id: 2
     type: feat
-    title: "Add reusable workflow to purge old deployments and Actions runs"
+    title: Add reusable workflow to purge old deployments and Actions runs
     status: backlog
     priority: medium
-    assignees: [KevinDeBenedetti]
+    assignees:
+      - KevinDeBenedetti
     body: |
       ## Goal
       Keep repos clean by automatically purging old deployments (keep last 10)
@@ -17,14 +18,14 @@ issues:
       - [ ] Both workflows expose a `keep` input to configure the retention count
       - [ ] Example caller added to `examples/`
       - [ ] Documentation added to `docs/workflows/`
-
   - id: gwf-2
-    github_id: ~
+    github_id: 3
     type: feat
-    title: "Add reusable workflow to sync labels from labels.yml"
+    title: Add reusable workflow to sync labels from labels.yml
     status: backlog
     priority: low
-    assignees: [KevinDeBenedetti]
+    assignees:
+      - KevinDeBenedetti
     body: |
       ## Goal
       Allow any repo to sync its GitHub labels from a `labels.yml` file
