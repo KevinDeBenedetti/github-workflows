@@ -276,9 +276,21 @@ function writeTodo(data: TodoFile): void {
 
 // ── Branch & PR helpers ───────────────────────────────────────────────────────
 
+// Dedicated sync branch — reused across runs so all updates land in one PR.
+const SYNC_BRANCH = 'sync/todo';
+
 async function getRefSha(branch: string): Promise<string> {
   const ref = await ghFetch<GhRef>(`/repos/${owner}/${repoName}/git/refs/heads/${branch}`);
   return ref.object.sha;
+}
+
+// Returns the branch HEAD sha if it exists, null otherwise.
+async function branchExists(name: string): Promise<string | null> {
+  try {
+    return await getRefSha(name);
+  } catch {
+    return null;
+  }
 }
 
 async function createBranch(name: string, sha: string): Promise<void> {
@@ -288,12 +300,20 @@ async function createBranch(name: string, sha: string): Promise<void> {
   });
 }
 
-// Push local TODO.yml to a branch via Contents API — commit attributed to PAT owner (your GitHub user).
+async function resetBranchToMain(name: string): Promise<void> {
+  const sha = await getRefSha(defaultBranch);
+  await ghFetch(`/repos/${owner}/${repoName}/git/refs/heads/${name}`, {
+    method: 'PATCH',
+    body: { sha, force: true },
+  });
+}
+
+// Push local TODO.yml to a branch — fetches the file SHA from that branch (not default).
 async function pushTodoToBranch(branch: string): Promise<void> {
   const content = readFileSync(TODO_PATH, 'utf8');
   const b64     = Buffer.from(content).toString('base64');
   const { sha } = await ghFetch<GhFileContent>(
-    `/repos/${owner}/${repoName}/contents/${encodeURIComponent(TODO_PATH)}`,
+    `/repos/${owner}/${repoName}/contents/${encodeURIComponent(TODO_PATH)}?ref=${branch}`,
   );
   await ghFetch(`/repos/${owner}/${repoName}/contents/${encodeURIComponent(TODO_PATH)}`, {
     method: 'PUT',
@@ -301,27 +321,56 @@ async function pushTodoToBranch(branch: string): Promise<void> {
   });
 }
 
-async function openPullRequest(head: string, title: string, body: string): Promise<GhPR> {
+async function openPullRequest(title: string, body: string): Promise<GhPR> {
   return ghFetch<GhPR>(`/repos/${owner}/${repoName}/pulls`, {
     method: 'POST',
-    body: { title, body, head, base: defaultBranch },
+    body: { title, body, head: SYNC_BRANCH, base: defaultBranch },
   });
 }
 
+// Find the open PR for SYNC_BRANCH, if any.
+async function findOpenSyncPR(): Promise<GhPR | null> {
+  const prs = await ghFetch<GhPR[]>(
+    `/repos/${owner}/${repoName}/pulls?state=open&head=${owner}:${SYNC_BRANCH}&base=${defaultBranch}&per_page=1`,
+  );
+  return prs[0] ?? null;
+}
+
 /**
- * Instead of pushing directly to main, create a short-lived branch + open a PR.
- * The PR is attributed to the PAT owner and must be reviewed before merging.
+ * Upsert the persistent sync branch and PR.
+ *
+ * Lifecycle:
+ *   1. Branch doesn't exist → create from main, push file, open PR.
+ *   2. Branch exists, PR is open → push updated file, comment on existing PR.
+ *   3. Branch exists, no open PR (was merged/closed) → reset to main, push file, open new PR.
  */
-async function createPRWithTodo(title: string, prBody: string, mode: string): Promise<void> {
-  const ts     = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-  const branch = `sync/todo-${mode}-${ts}`;
-  const sha    = await getRefSha(defaultBranch);
-  await createBranch(branch, sha);
-  console.log(`Branch created: ${branch}`);
-  await pushTodoToBranch(branch);
-  console.log(`TODO.yml pushed to ${branch}`);
-  const pr = await openPullRequest(branch, title, prBody);
-  console.log(`PR #${pr.number} opened: ${pr.html_url}`);
+async function createPRWithTodo(prTitle: string, prBody: string): Promise<void> {
+  const existingPR  = await findOpenSyncPR();
+  const branchSha   = await branchExists(SYNC_BRANCH);
+
+  if (!branchSha) {
+    const baseSha = await getRefSha(defaultBranch);
+    await createBranch(SYNC_BRANCH, baseSha);
+    console.log(`Branch created: ${SYNC_BRANCH}`);
+  } else if (!existingPR) {
+    // Branch is stale (PR was merged or closed) — reset to main before updating
+    await resetBranchToMain(SYNC_BRANCH);
+    console.log(`Branch ${SYNC_BRANCH} reset to ${defaultBranch}`);
+  } else {
+    console.log(`Branch ${SYNC_BRANCH} already open — accumulating changes`);
+  }
+
+  await pushTodoToBranch(SYNC_BRANCH);
+  console.log(`TODO.yml pushed to ${SYNC_BRANCH}`);
+
+  if (existingPR) {
+    // Add a comment describing the new batch of changes
+    await addComment(existingPR.number, prBody);
+    console.log(`PR #${existingPR.number} updated: ${existingPR.html_url}`);
+  } else {
+    const pr = await openPullRequest(prTitle, prBody);
+    console.log(`PR #${pr.number} opened: ${pr.html_url}`);
+  }
 }
 
 // ── PR body formatters ────────────────────────────────────────────────────────
@@ -576,7 +625,7 @@ async function push(): Promise<void> {
 
   if (dirty) {
     writeTodo(data);
-    await createPRWithTodo('chore: sync TODO.yml', formatPushPRBody(log), 'push');
+    await createPRWithTodo('chore: sync TODO.yml', formatPushPRBody(log));
   } else {
     console.log('No changes — no PR needed.');
   }
@@ -653,7 +702,6 @@ async function pull(): Promise<void> {
   await createPRWithTodo(
     `chore(sync): issue #${issueNumber} → TODO.yml`,
     formatPullPRBody(issueNumber, entry, changes),
-    'pull',
   );
 }
 
