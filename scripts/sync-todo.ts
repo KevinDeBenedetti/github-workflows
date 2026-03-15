@@ -26,7 +26,6 @@
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { execSync } from 'node:child_process';
 import yaml from 'js-yaml';
 
 // ── Domain types ──────────────────────────────────────────────────────────────
@@ -69,8 +68,20 @@ interface GhIssue {
   assignees: GhAssignee[];
 }
 
+interface GhFileContent { sha: string }
+
+interface IssueChanges {
+  title?:     [string, string];
+  body?:      [string, string];
+  type?:      [string, string];
+  status?:    [string, string];
+  priority?:  [string, string];
+  assignees?: [string, string];
+  state?:     ['open' | 'closed', 'open' | 'closed'];
+}
+
 interface GhFetchOptions {
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   body?:   Record<string, unknown>;
 }
 
@@ -216,20 +227,24 @@ async function getIssue(number: number): Promise<GhIssue> {
   return ghFetch<GhIssue>(`/repos/${owner}/${repoName}/issues/${number}`);
 }
 
-// Fetch all repo issues (open + closed) and index them by normalised title
-async function fetchIssuesByTitle(): Promise<Map<string, GhIssue>> {
-  const map   = new Map<string, GhIssue>();
-  let   page  = 1;
+// Fetch all repo issues (open + closed), return maps by title and by number
+async function fetchAllIssues(): Promise<{ byTitle: Map<string, GhIssue>; byNumber: Map<number, GhIssue> }> {
+  const byTitle  = new Map<string, GhIssue>();
+  const byNumber = new Map<number, GhIssue>();
+  let   page     = 1;
   while (true) {
     const batch = await ghFetch<GhIssue[]>(
       `/repos/${owner}/${repoName}/issues?state=all&per_page=100&page=${page}`,
     );
     if (!batch.length) break;
-    for (const issue of batch) map.set(issue.title.trim().toLowerCase(), issue);
+    for (const issue of batch) {
+      byTitle.set(issue.title.trim().toLowerCase(), issue);
+      byNumber.set(issue.number, issue);
+    }
     if (batch.length < 100) break;
     page++;
   }
-  return map;
+  return { byTitle, byNumber };
 }
 
 // ── TODO.yml helpers ──────────────────────────────────────────────────────────
@@ -248,17 +263,141 @@ function writeTodo(data: TodoFile): void {
   writeFileSync(TODO_PATH, yaml.dump(data, { indent: 2, lineWidth: -1, noRefs: true }), 'utf8');
 }
 
-function commitTodo(): void {
-  execSync('git config user.name  "github-actions[bot]"');
-  execSync('git config user.email "github-actions[bot]@users.noreply.github.com"');
-  execSync(`git add ${TODO_PATH}`);
+// Commit TODO.yml via the GitHub Contents API — commit is attributed to the PAT owner (your GitHub user)
+async function commitTodo(): Promise<void> {
+  const content = readFileSync(TODO_PATH, 'utf8');
+  const b64     = Buffer.from(content).toString('base64');
+  const { sha } = await ghFetch<GhFileContent>(
+    `/repos/${owner}/${repoName}/contents/${encodeURIComponent(TODO_PATH)}`,
+  );
+  await ghFetch(`/repos/${owner}/${repoName}/contents/${encodeURIComponent(TODO_PATH)}`, {
+    method: 'PUT',
+    body: { message: 'chore: sync github_id in TODO.yml [skip ci]', content: b64, sha },
+  });
+  console.log('Committed TODO.yml (attributed to PAT owner).');
+}
 
-  const staged = execSync('git diff --cached --name-only').toString().trim();
-  if (!staged) { console.log('Nothing to commit.'); return; }
+// ── Issue comments ────────────────────────────────────────────────────────────
 
-  execSync('git commit -m "chore: sync github_id in TODO.yml [skip ci]"');
-  execSync('git push');
-  console.log('Committed and pushed TODO.yml updates.');
+async function addComment(number: number, body: string): Promise<void> {
+  await ghFetch(`/repos/${owner}/${repoName}/issues/${number}/comments`, {
+    method: 'POST',
+    body: { body },
+  });
+}
+
+function detectChanges(entry: TodoEntry, issue: GhIssue): IssueChanges {
+  const changes: IssueChanges = {};
+  const names = issue.labels.map(l => l.name);
+
+  // Title
+  if (entry.title.trim() !== issue.title.trim())
+    changes.title = [issue.title, entry.title];
+
+  // Body / content — trim to normalise YAML multiline vs GitHub API trailing whitespace
+  const wantBody = (entry.body ?? '').trim();
+  const curBody  = (issue.body ?? '').trim();
+  if (wantBody !== curBody) {
+    const trunc = (s: string) => s.length > 72 ? s.slice(0, 72) + '…' : s;
+    changes.body = [trunc(curBody) || '(empty)', trunc(wantBody) || '(empty)'];
+  }
+
+  // Type label
+  const typeLabels = new Set(Object.values(TYPE_LABEL_MAP));
+  const curType    = names.find(n => typeLabels.has(n)) ?? '';
+  const wantType   = TYPE_LABEL_MAP[entry.type] ?? '';
+  if (curType !== wantType) changes.type = [curType || 'none', wantType];
+
+  // Status label
+  const curStatus  = names.find(n => n.startsWith('status: '))   ?? '';
+  const wantStatus = STATUS_LABEL_MAP[entry.status] ?? '';
+  if (curStatus !== wantStatus) changes.status = [curStatus || 'none', wantStatus];
+
+  // Priority label
+  const curPrio  = names.find(n => n.startsWith('priority: ')) ?? '';
+  const wantPrio = entry.priority ? PRIORITY_LABEL_MAP[entry.priority] : '';
+  if (curPrio !== wantPrio) changes.priority = [curPrio || 'none', wantPrio || 'none'];
+
+  // Assignees — compare sorted lists
+  const curAssignees  = issue.assignees.map(a => a.login).sort().join(', ');
+  const wantAssignees = (entry.assignees ?? []).slice().sort().join(', ');
+  if (curAssignees !== wantAssignees)
+    changes.assignees = [curAssignees || 'none', wantAssignees || 'none'];
+
+  // State
+  const wantState = entry.status === 'done' ? 'closed' : 'open' as const;
+  if (issue.state !== wantState) changes.state = [issue.state, wantState];
+
+  return changes;
+}
+
+/**
+ * Resolve which GitHub issue corresponds to a TODO entry.
+ * Verifies by BOTH github_id and title, reconciling mismatches with a warning.
+ *
+ *  github_id set  → primary lookup by id; cross-check title; warn if diverged
+ *  github_id null → lookup by title only (recovery path)
+ */
+function resolveIssue(
+  entry:    TodoEntry,
+  byTitle:  Map<string, GhIssue>,
+  byNumber: Map<number, GhIssue>,
+): { issue: GhIssue | null; recovered: boolean } {
+  const titleKey = entry.title.trim().toLowerCase();
+
+  if (entry.github_id) {
+    const byId    = byNumber.get(entry.github_id) ?? null;
+    const byTitl  = byTitle.get(titleKey)          ?? null;
+
+    if (byId) {
+      // Cross-check: title points to a different issue → log warning, trust id
+      if (byTitl && byTitl.number !== byId.number) {
+        console.warn(
+          `⚠️  Entry "${entry.id}": github_id=#${entry.github_id} title also matches #${byTitl.number} — using github_id.`,
+        );
+      }
+      return { issue: byId, recovered: false };
+    }
+
+    // github_id not found — try to recover via title
+    if (byTitl) {
+      console.warn(
+        `⚠️  Entry "${entry.id}": github_id=#${entry.github_id} not found; recovering from title match #${byTitl.number}.`,
+      );
+      return { issue: byTitl, recovered: true };
+    }
+
+    // Neither found — issue was deleted; will recreate
+    console.warn(`⚠️  Entry "${entry.id}": github_id=#${entry.github_id} not found and no title match — will recreate.`);
+    return { issue: null, recovered: false };
+  }
+
+  // No github_id → title-only lookup
+  return { issue: byTitle.get(titleKey) ?? null, recovered: false };
+}
+
+function createdComment(entry: TodoEntry): string {
+  return [
+    `🤖 **Synced from [\`TODO.yml\`](./TODO.yml)** · entry \`${entry.id}\``,
+    '',
+    '| | |',
+    '|---|---|',
+    `| **Type**     | \`${entry.type}\` |`,
+    `| **Status**   | \`${entry.status}\` |`,
+    `| **Priority** | \`${entry.priority}\` |`,
+  ].join('\n');
+}
+
+function changesComment(entry: TodoEntry, changes: IssueChanges): string {
+  const rows = (Object.entries(changes) as [string, [string, string]][])
+    .map(([field, [from, to]]) => `| **${field}** | \`${from}\` → \`${to}\` |`);
+  return [
+    `🔄 **TODO.yml sync** · entry \`${entry.id}\``,
+    '',
+    '| Field | Change |',
+    '|-------|--------|',
+    ...rows,
+  ].join('\n');
 }
 
 // ── Push mode: TODO.yml → GitHub Issues ──────────────────────────────────────
@@ -270,8 +409,7 @@ async function push(): Promise<void> {
   const issues = data.issues ?? [];
   let   dirty  = false;
 
-  // Pre-fetch all existing issues once — used to detect duplicates (idempotency)
-  const existingByTitle = await fetchIssuesByTitle();
+  const { byTitle, byNumber } = await fetchAllIssues();
 
   for (const entry of issues) {
     const labels    = labelsForEntry(entry);
@@ -279,31 +417,43 @@ async function push(): Promise<void> {
     const body      = (entry.body ?? '').trim();
     const state     = entry.status === 'done' ? 'closed' : 'open' as const;
 
-    if (!entry.github_id) {
-      // ── Idempotency: reuse existing issue with same title if found ────────
-      const existing = existingByTitle.get(entry.title.trim().toLowerCase());
-      if (existing) {
-        console.log(`Recovered existing issue #${existing.number} for "${entry.title}"`);
-        entry.github_id = existing.number;
-        dirty = true;
-        await updateIssue(existing.number, { title: entry.title, body, labels, assignees, state });
-      } else {
-        // ── Create new issue ────────────────────────────────────────────────
-        console.log(`Creating issue: "${entry.title}"`);
-        const issue = await createIssue({ title: entry.title, body, labels, assignees });
+    const { issue, recovered } = resolveIssue(entry, byTitle, byNumber);
+
+    if (!issue) {
+      // ── Create new issue ──────────────────────────────────────────────────
+      console.log(`Creating issue: "${entry.title}"`);
+      const created = await createIssue({ title: entry.title, body, labels, assignees });
+      entry.github_id = created.number;
+      dirty = true;
+      console.log(`  → #${created.number}`);
+      if (state === 'closed') await updateIssue(created.number, { state: 'closed' });
+      await addComment(created.number, createdComment(entry));
+    } else {
+      // ── Update existing issue ─────────────────────────────────────────────
+      if (!entry.github_id || recovered) {
         entry.github_id = issue.number;
         dirty = true;
-        console.log(`  → #${issue.number}`);
-        if (state === 'closed') await updateIssue(issue.number, { state: 'closed' });
+        if (recovered)
+          console.log(`Recovered issue #${issue.number} for "${entry.title}"`);
+        else
+          console.log(`Linked existing issue #${issue.number} for "${entry.title}"`);
+        await addComment(issue.number, createdComment(entry));
       }
-    } else {
-      // ── Sync existing issue ───────────────────────────────────────────────
-      console.log(`Syncing issue #${entry.github_id}: "${entry.title}"`);
-      await updateIssue(entry.github_id, { title: entry.title, body, labels, assignees, state });
+
+      // Detect ALL changes before applying them
+      const changes = detectChanges(entry, issue);
+      const hasChanges = Object.keys(changes).length > 0;
+
+      console.log(`Syncing issue #${issue.number}: "${entry.title}"${hasChanges ? ` (${Object.keys(changes).join(', ')} changed)` : ' (no changes)'}`);
+      await updateIssue(issue.number, { title: entry.title, body, labels, assignees, state });
+
+      if (hasChanges) {
+        await addComment(issue.number, changesComment(entry, changes));
+      }
     }
   }
 
-  if (dirty) { writeTodo(data); commitTodo(); }
+  if (dirty) { writeTodo(data); await commitTodo(); }
 }
 
 // ── Pull mode: GitHub Issue → TODO.yml ───────────────────────────────────────
@@ -346,7 +496,7 @@ async function pull(): Promise<void> {
 
   console.log(`Updated TODO.yml for issue #${issueNumber}: status=${entry.status}`);
   writeTodo(data);
-  commitTodo();
+  await commitTodo();
 }
 
 // ── Labels mode: labels.yml → GitHub repo labels ─────────────────────────────
