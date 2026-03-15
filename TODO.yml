@@ -17,9 +17,9 @@ issues:
       - [ ] Both workflows expose a `keep` input to configure the retention count
       - [ ] Example caller added to `examples/`
       - [ ] Documentation added to `docs/workflows/`
-  - github_id: ~
+  - github_id: 4
     type: chore
-    title: "Test sync-todo bidirectional workflow"
+    title: Test sync-todo bidirectional workflow
     status: in-progress
     priority: low
     assignees:
