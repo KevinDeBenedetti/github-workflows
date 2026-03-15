@@ -1,0 +1,46 @@
+name: Sync labels
+
+on:
+  workflow_call:
+    inputs:
+      labels-path:
+        description: Path to labels.yml inside the caller repo
+        type: string
+        required: false
+        default: labels.yml
+    secrets:
+      token:
+        description: PAT with issues:write (label management). Falls back to GITHUB_TOKEN.
+        required: false
+
+jobs:
+  sync:
+    name: Sync labels.yml → GitHub labels
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v5
+
+      - name: Checkout sync script
+        uses: actions/checkout@v5
+        with:
+          repository: KevinDeBenedetti/github-workflows
+          path: _sync
+          sparse-checkout: scripts
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: _sync/scripts
+
+      - name: Run label sync
+        env:
+          GITHUB_TOKEN: ${{ secrets.token || github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          LABELS_PATH: ${{ inputs.labels-path }}
+        run: bun run _sync/scripts/sync-todo.ts labels

@@ -8,8 +8,9 @@
     "bun": ">=1"
   },
   "scripts": {
-    "push": "bun run sync-todo.ts push",
-    "pull": "bun run sync-todo.ts pull"
+    "push":   "bun run sync-todo.ts push",
+    "pull":   "bun run sync-todo.ts pull",
+    "labels": "bun run sync-todo.ts labels"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
