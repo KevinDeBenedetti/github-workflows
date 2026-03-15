@@ -22,7 +22,7 @@ issues:
     github_id: 3
     type: feat
     title: Add reusable workflow to sync labels from labels.yml
-    status: backlog
+    status: done
     priority: low
     assignees:
       - KevinDeBenedetti
