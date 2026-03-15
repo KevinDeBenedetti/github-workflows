@@ -3,9 +3,9 @@
  * sync-todo.ts — bidirectional sync between TODO.yml and GitHub Issues
  *
  * push mode   TODO.yml → GitHub Issues
- *   - New entries (github_id: null) → create issue, write back id
+ *   - New entries (github_id: null) → create issue, write back github_id
  *   - Existing entries              → update title / body / labels / assignees
- *   - status: done                  → close issue
+ *   - status: done                  → close issue + remove entry from TODO.yml
  *
  * pull mode   GitHub Issue event → TODO.yml
  *   - Sync state, title, assignees from the issue back into TODO.yml
@@ -35,7 +35,6 @@ type IssueStatus = 'backlog' | 'in-progress' | 'to-review' | 'done';
 type Priority    = 'high' | 'medium' | 'low';
 
 interface TodoEntry {
-  id:        string;
   github_id: number | null;
   type:      IssueType;
   title:     string;
@@ -69,6 +68,15 @@ interface GhIssue {
 }
 
 interface GhFileContent { sha: string }
+interface GhRef         { object: { sha: string } }
+interface GhPR          { number: number; html_url: string }
+
+interface SyncLogEntry {
+  issueNumber: number;
+  title:       string;
+  action:      'created' | 'recovered' | 'linked' | 'updated' | 'unchanged' | 'closed';
+  changes?:    IssueChanges;
+}
 
 interface IssueChanges {
   title?:     [string, string];
@@ -153,6 +161,9 @@ if (!token || !repo) {
 }
 
 const [owner, repoName] = repo.split('/') as [string, string];
+// Base branch to branch from and target with PRs.
+// In push events GITHUB_REF_NAME is the pushed branch (main); for issue events it may be unset.
+const defaultBranch = process.env.DEFAULT_BRANCH ?? process.env.GITHUB_REF_NAME ?? 'main';
 
 async function ghFetch<T = unknown>(path: string, options: GhFetchOptions = {}): Promise<T> {
   const res = await fetch(`https://api.github.com${path}`, {
@@ -263,8 +274,22 @@ function writeTodo(data: TodoFile): void {
   writeFileSync(TODO_PATH, yaml.dump(data, { indent: 2, lineWidth: -1, noRefs: true }), 'utf8');
 }
 
-// Commit TODO.yml via the GitHub Contents API — commit is attributed to the PAT owner (your GitHub user)
-async function commitTodo(): Promise<void> {
+// ── Branch & PR helpers ───────────────────────────────────────────────────────
+
+async function getRefSha(branch: string): Promise<string> {
+  const ref = await ghFetch<GhRef>(`/repos/${owner}/${repoName}/git/refs/heads/${branch}`);
+  return ref.object.sha;
+}
+
+async function createBranch(name: string, sha: string): Promise<void> {
+  await ghFetch(`/repos/${owner}/${repoName}/git/refs`, {
+    method: 'POST',
+    body: { ref: `refs/heads/${name}`, sha },
+  });
+}
+
+// Push local TODO.yml to a branch via Contents API — commit attributed to PAT owner (your GitHub user).
+async function pushTodoToBranch(branch: string): Promise<void> {
   const content = readFileSync(TODO_PATH, 'utf8');
   const b64     = Buffer.from(content).toString('base64');
   const { sha } = await ghFetch<GhFileContent>(
@@ -272,9 +297,78 @@ async function commitTodo(): Promise<void> {
   );
   await ghFetch(`/repos/${owner}/${repoName}/contents/${encodeURIComponent(TODO_PATH)}`, {
     method: 'PUT',
-    body: { message: 'chore: sync github_id in TODO.yml [skip ci]', content: b64, sha },
+    body: { message: 'chore: sync TODO.yml [skip ci]', content: b64, sha, branch },
   });
-  console.log('Committed TODO.yml (attributed to PAT owner).');
+}
+
+async function openPullRequest(head: string, title: string, body: string): Promise<GhPR> {
+  return ghFetch<GhPR>(`/repos/${owner}/${repoName}/pulls`, {
+    method: 'POST',
+    body: { title, body, head, base: defaultBranch },
+  });
+}
+
+/**
+ * Instead of pushing directly to main, create a short-lived branch + open a PR.
+ * The PR is attributed to the PAT owner and must be reviewed before merging.
+ */
+async function createPRWithTodo(title: string, prBody: string, mode: string): Promise<void> {
+  const ts     = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const branch = `sync/todo-${mode}-${ts}`;
+  const sha    = await getRefSha(defaultBranch);
+  await createBranch(branch, sha);
+  console.log(`Branch created: ${branch}`);
+  await pushTodoToBranch(branch);
+  console.log(`TODO.yml pushed to ${branch}`);
+  const pr = await openPullRequest(branch, title, prBody);
+  console.log(`PR #${pr.number} opened: ${pr.html_url}`);
+}
+
+// ── PR body formatters ────────────────────────────────────────────────────────
+
+function formatPushPRBody(log: SyncLogEntry[]): string {
+  const icon: Record<SyncLogEntry['action'], string> = {
+    created:   '✅ created',
+    recovered: '↩️ recovered',
+    linked:    '🔗 linked',
+    updated:   '🔄 updated',
+    unchanged: '⏭️ no changes',
+    closed:    '🔒 closed & removed',
+  };
+  const rows = log.map(l => {
+    const changeList = l.changes ? Object.keys(l.changes).join(', ') : '';
+    return `| #${l.issueNumber} | ${l.title} | ${icon[l.action]}${changeList ? ` — ${changeList}` : ''} |`;
+  });
+  return [
+    '## 🤖 TODO.yml sync — push',
+    '',
+    '| Issue | Title | Action |',
+    '|-------|-------|--------|',
+    ...rows,
+    '',
+    '---',
+    '_Review and merge to finalise `github_id` updates. Contains `[skip ci]` — will **not** re-trigger sync._',
+  ].join('\n');
+}
+
+function formatPullPRBody(issueNumber: number, entry: TodoEntry, changes: Record<string, [string, string]>): string {
+  const rows = Object.entries(changes)
+    .map(([field, [from, to]]) => `| **${field}** | \`${from}\` → \`${to}\` |`);
+  const closedNote = entry.status === 'done'
+    ? '\n\n> ⚠️ Issue was closed — this entry will be **removed** from `TODO.yml` on merge.\n'
+    : '';
+  return [
+    `## 🤖 TODO.yml sync — issue #${issueNumber}`,
+    '',
+    `Issue **[#${issueNumber}](../../issues/${issueNumber})** ("${entry.title}") was updated on GitHub:`,
+    closedNote,
+    '| Field | Change |',
+    '|-------|--------|',
+    ...rows,
+    '',
+    '---',
+    '_Review and merge to keep `TODO.yml` in sync with GitHub Issues._',
+  ].join('\n');
 }
 
 // ── Issue comments ────────────────────────────────────────────────────────────
@@ -353,7 +447,7 @@ function resolveIssue(
       // Cross-check: title points to a different issue → log warning, trust id
       if (byTitl && byTitl.number !== byId.number) {
         console.warn(
-          `⚠️  Entry "${entry.id}": github_id=#${entry.github_id} title also matches #${byTitl.number} — using github_id.`,
+          `⚠️  github_id=#${entry.github_id} title also matches #${byTitl.number} — using github_id.`,
         );
       }
       return { issue: byId, recovered: false };
@@ -362,13 +456,13 @@ function resolveIssue(
     // github_id not found — try to recover via title
     if (byTitl) {
       console.warn(
-        `⚠️  Entry "${entry.id}": github_id=#${entry.github_id} not found; recovering from title match #${byTitl.number}.`,
+        `⚠️  github_id=#${entry.github_id} not found; recovering from title match #${byTitl.number}.`,
       );
       return { issue: byTitl, recovered: true };
     }
 
     // Neither found — issue was deleted; will recreate
-    console.warn(`⚠️  Entry "${entry.id}": github_id=#${entry.github_id} not found and no title match — will recreate.`);
+    console.warn(`⚠️  github_id=#${entry.github_id} not found and no title match — will recreate.`);
     return { issue: null, recovered: false };
   }
 
@@ -378,7 +472,7 @@ function resolveIssue(
 
 function createdComment(entry: TodoEntry): string {
   return [
-    `🤖 **Synced from [\`TODO.yml\`](./TODO.yml)** · entry \`${entry.id}\``,
+    `🤖 **Synced from [\`TODO.yml\`](./TODO.yml)**`,
     '',
     '| | |',
     '|---|---|',
@@ -388,11 +482,15 @@ function createdComment(entry: TodoEntry): string {
   ].join('\n');
 }
 
+function closedComment(): string {
+  return `🔒 **Closed via \`TODO.yml\`** — marked as \`done\` and removed from tracking.`;
+}
+
 function changesComment(entry: TodoEntry, changes: IssueChanges): string {
   const rows = (Object.entries(changes) as [string, [string, string]][])
     .map(([field, [from, to]]) => `| **${field}** | \`${from}\` → \`${to}\` |`);
   return [
-    `🔄 **TODO.yml sync** · entry \`${entry.id}\``,
+    `🔄 **TODO.yml sync** · issue #${entry.github_id}`,
     '',
     '| Field | Change |',
     '|-------|--------|',
@@ -405,17 +503,20 @@ function changesComment(entry: TodoEntry, changes: IssueChanges): string {
 async function push(): Promise<void> {
   await ensureLabels();
 
-  const data   = readTodo();
-  const issues = data.issues ?? [];
-  let   dirty  = false;
+  const data     = readTodo();
+  const issues   = data.issues ?? [];
+  let   dirty    = false;
+  const log: SyncLogEntry[] = [];
+  const toRemove = new Set<number>();
 
   const { byTitle, byNumber } = await fetchAllIssues();
 
-  for (const entry of issues) {
+  for (let i = 0; i < issues.length; i++) {
+    const entry     = issues[i]!;
     const labels    = labelsForEntry(entry);
     const assignees = entry.assignees ?? [];
     const body      = (entry.body ?? '').trim();
-    const state     = entry.status === 'done' ? 'closed' : 'open' as const;
+    const isDone    = entry.status === 'done';
 
     const { issue, recovered } = resolveIssue(entry, byTitle, byNumber);
 
@@ -426,34 +527,59 @@ async function push(): Promise<void> {
       entry.github_id = created.number;
       dirty = true;
       console.log(`  → #${created.number}`);
-      if (state === 'closed') await updateIssue(created.number, { state: 'closed' });
-      await addComment(created.number, createdComment(entry));
+      if (isDone) {
+        await updateIssue(created.number, { state: 'closed' });
+        await addComment(created.number, closedComment());
+        log.push({ issueNumber: created.number, title: entry.title, action: 'closed' });
+        toRemove.add(i);
+      } else {
+        await addComment(created.number, createdComment(entry));
+        log.push({ issueNumber: created.number, title: entry.title, action: 'created' });
+      }
     } else {
       // ── Update existing issue ─────────────────────────────────────────────
-      if (!entry.github_id || recovered) {
+      const isNewLink = !entry.github_id || recovered;
+      if (isNewLink) {
         entry.github_id = issue.number;
         dirty = true;
-        if (recovered)
-          console.log(`Recovered issue #${issue.number} for "${entry.title}"`);
-        else
-          console.log(`Linked existing issue #${issue.number} for "${entry.title}"`);
-        await addComment(issue.number, createdComment(entry));
+        console.log(`${recovered ? 'Recovered' : 'Linked'} issue #${issue.number} for "${entry.title}"`);
       }
-
-      // Detect ALL changes before applying them
-      const changes = detectChanges(entry, issue);
-      const hasChanges = Object.keys(changes).length > 0;
-
-      console.log(`Syncing issue #${issue.number}: "${entry.title}"${hasChanges ? ` (${Object.keys(changes).join(', ')} changed)` : ' (no changes)'}`);
-      await updateIssue(issue.number, { title: entry.title, body, labels, assignees, state });
-
-      if (hasChanges) {
-        await addComment(issue.number, changesComment(entry, changes));
+      if (isDone) {
+        if (issue.state !== 'closed') {
+          await updateIssue(issue.number, { title: entry.title, body, labels, assignees, state: 'closed' });
+        }
+        await addComment(issue.number, closedComment());
+        log.push({ issueNumber: issue.number, title: entry.title, action: 'closed' });
+        toRemove.add(i);
+        dirty = true;
+      } else {
+        const changes    = detectChanges(entry, issue);
+        const hasChanges = Object.keys(changes).length > 0;
+        console.log(`Syncing #${issue.number}: "${entry.title}"${hasChanges ? ` (${Object.keys(changes).join(', ')} changed)` : ' (no changes)'}`);
+        await updateIssue(issue.number, { title: entry.title, body, labels, assignees, state: 'open' });
+        if (isNewLink) {
+          await addComment(issue.number, createdComment(entry));
+          log.push({ issueNumber: issue.number, title: entry.title, action: recovered ? 'recovered' : 'linked' });
+        } else if (hasChanges) {
+          await addComment(issue.number, changesComment(entry, changes));
+          log.push({ issueNumber: issue.number, title: entry.title, action: 'updated', changes });
+        } else {
+          log.push({ issueNumber: issue.number, title: entry.title, action: 'unchanged' });
+        }
       }
     }
   }
 
-  if (dirty) { writeTodo(data); await commitTodo(); }
+  if (toRemove.size) {
+    data.issues = issues.filter((_, i) => !toRemove.has(i));
+  }
+
+  if (dirty) {
+    writeTodo(data);
+    await createPRWithTodo('chore: sync TODO.yml', formatPushPRBody(log), 'push');
+  } else {
+    console.log('No changes — no PR needed.');
+  }
 }
 
 // ── Pull mode: GitHub Issue → TODO.yml ───────────────────────────────────────
@@ -465,38 +591,70 @@ async function pull(): Promise<void> {
     process.exit(1);
   }
 
-  const issue  = await getIssue(issueNumber);
-  const data   = readTodo();
-  const entry  = data.issues?.find(e => e.github_id === issueNumber);
+  const issue = await getIssue(issueNumber);
+  const data  = readTodo();
+  const entry = data.issues?.find(e => e.github_id === issueNumber);
 
   if (!entry) {
     console.log(`No TODO.yml entry found for issue #${issueNumber} — skipping`);
     return;
   }
 
-  // Status: closed issue → done; otherwise read from status label
+  // Snapshot values before mutation to compute the diff for the PR body
+  const before = {
+    title:     entry.title,
+    status:    entry.status,
+    priority:  entry.priority,
+    assignees: (entry.assignees ?? []).slice().sort().join(', '),
+  };
+
   if (issue.state === 'closed') {
     entry.status = 'done';
   } else {
-    const labelNames  = issue.labels.map(l => l.name);
-    const statusLabel = labelNames.find(n => n in LABEL_STATUS_MAP);
+    const labelNames    = issue.labels.map(l => l.name);
+    const statusLabel   = labelNames.find(n => n in LABEL_STATUS_MAP);
     if (statusLabel) {
       entry.status = LABEL_STATUS_MAP[statusLabel]!;
     } else if (entry.status === 'done') {
       entry.status = 'backlog'; // issue was reopened with no status label
     }
-    // Priority: sync back if a priority label is present on the issue
     const priorityLabel = labelNames.find(n => n in LABEL_PRIORITY_MAP);
     if (priorityLabel) entry.priority = LABEL_PRIORITY_MAP[priorityLabel]!;
   }
 
-  // Title and assignees synced back for consistency
   entry.title     = issue.title;
   entry.assignees = issue.assignees.map(a => a.login);
 
-  console.log(`Updated TODO.yml for issue #${issueNumber}: status=${entry.status}`);
+  const after = {
+    title:     entry.title,
+    status:    entry.status,
+    priority:  entry.priority,
+    assignees: (entry.assignees ?? []).slice().sort().join(', '),
+  };
+
+  const changes: Record<string, [string, string]> = {};
+  for (const key of Object.keys(before) as (keyof typeof before)[]) {
+    if (before[key] !== after[key]) changes[key] = [before[key], after[key]];
+  }
+
+  if (!Object.keys(changes).length) {
+    console.log(`Issue #${issueNumber}: no changes to TODO.yml — skipping PR`);
+    return;
+  }
+
+  // status: done → remove entry from TODO.yml
+  if (entry.status === 'done') {
+    data.issues = data.issues.filter(e => e !== entry);
+    console.log(`Issue #${issueNumber} is done — removing from TODO.yml`);
+  }
+
+  console.log(`Issue #${issueNumber}: syncing ${Object.keys(changes).join(', ')} → TODO.yml`);
   writeTodo(data);
-  await commitTodo();
+  await createPRWithTodo(
+    `chore(sync): issue #${issueNumber} → TODO.yml`,
+    formatPullPRBody(issueNumber, entry, changes),
+    'pull',
+  );
 }
 
 // ── Labels mode: labels.yml → GitHub repo labels ─────────────────────────────

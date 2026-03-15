@@ -1,6 +1,5 @@
 issues:
-  - id: gwf-1
-    github_id: 2
+  - github_id: 2
     type: feat
     title: Add reusable workflow to purge old deployments and Actions runs
     status: backlog
@@ -18,20 +17,19 @@ issues:
       - [ ] Both workflows expose a `keep` input to configure the retention count
       - [ ] Example caller added to `examples/`
       - [ ] Documentation added to `docs/workflows/`
-  - id: gwf-2
-    github_id: 3
-    type: feat
-    title: Add reusable workflow to sync labels from labels.yml
-    status: done
+  - github_id: ~
+    type: chore
+    title: "Test sync-todo bidirectional workflow"
+    status: in-progress
     priority: low
     assignees:
       - KevinDeBenedetti
     body: |
       ## Goal
-      Allow any repo to sync its GitHub labels from a `labels.yml` file
-      via a reusable workflow, keeping label definitions consistent.
+      Validate that the bidirectional sync between TODO.yml and GitHub Issues works end-to-end.
 
       ## Acceptance criteria
-      - [ ] Reusable workflow `label-sync.yml` reads `labels.yml` and upserts labels
-      - [ ] Caller example added to `examples/`
-      - [ ] Documentation added to `docs/workflows/`
+      - [ ] Push mode creates this issue and writes back github_id
+      - [ ] Updating status/priority/title in TODO.yml reflects on the issue
+      - [ ] Closing the issue via GitHub triggers pull mode and removes this entry
+      - [ ] Setting status: done in TODO.yml closes the issue and removes this entry
