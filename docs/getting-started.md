@@ -38,7 +38,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/node.yml@main
     secrets: inherit
 ```
 
@@ -60,7 +60,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/python.yml@main
     secrets: inherit
 ```
 
@@ -82,7 +82,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/shell.yml@main
     secrets: inherit
 ```
 
@@ -96,7 +96,7 @@ Runs ShellCheck → actionlint → Bats.
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/docker.yml@main
     with:
       image-name: my-app
       tag-latest: true
@@ -113,7 +113,7 @@ Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/pages.yml@main
     with:
       output-directory: dist
     secrets: inherit
@@ -130,7 +130,7 @@ Requires three secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/vercel.yml@main
     with:
       environment: preview
     secrets: inherit

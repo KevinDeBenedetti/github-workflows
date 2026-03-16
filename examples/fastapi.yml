@@ -12,7 +12,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/python.yml@main
     with:
       python-version: '3.12'
     secrets: inherit
@@ -20,7 +20,7 @@ jobs:
   deploy-production:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/docker.yml@main
     with:
       context: .
       platforms: linux/amd64,linux/arm64

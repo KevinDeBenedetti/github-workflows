@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI / CD
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/node.yml@main
     with:
       node-version: '20'
     secrets: inherit
@@ -17,7 +17,7 @@ jobs:
   deploy-storybook:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/pages.yml@main
     with:
       build-command: pnpm build-storybook
       output-directory: storybook-static

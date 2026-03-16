@@ -49,6 +49,8 @@ on:
         required: false
         default: 'uv run pytest --tb=short -q'
 
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
     inputs:
       python-version:
@@ -96,6 +98,8 @@ jobs:
   ci:
     name: CI (${{ inputs.working-directory }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: ${{ inputs.working-directory }}

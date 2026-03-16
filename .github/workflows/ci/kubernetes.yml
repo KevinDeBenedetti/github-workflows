@@ -44,6 +44,8 @@ on:
         required: false
         default: .env.example
 
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
     inputs:
       run-kubeconform:
@@ -85,6 +87,8 @@ jobs:
     name: Validate Kubernetes manifests
     if: inputs.run-kubeconform
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -102,6 +106,8 @@ jobs:
     name: .env.example check
     if: inputs.run-env-example
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout

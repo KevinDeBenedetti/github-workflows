@@ -33,6 +33,10 @@ on:
           Personal Access Token — PRs and commits will be opened as this user.
           Must have contents:write and pull-requests:write.
         required: true
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
     inputs:
       branch:

@@ -13,7 +13,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/node.yml@main
     with:
       node-version: '20'
       # package-manager: bun  # décommente pour forcer bun
@@ -22,7 +22,7 @@ jobs:
   deploy-preview:
     needs: ci
     if: github.event_name == 'pull_request'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/vercel.yml@main
     with:
       environment: preview
     secrets: inherit
@@ -30,7 +30,7 @@ jobs:
   deploy-production:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/vercel.yml@main
     with:
       environment: production
     secrets: inherit

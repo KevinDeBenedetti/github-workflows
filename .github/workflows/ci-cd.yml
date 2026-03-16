@@ -1,4 +1,4 @@
-name: CI
+name: CI / CD
 
 on:
   push:
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   ci:
     name: CI
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/shell.yml@main
     with:
       run-shellcheck: false
       run-actionlint: true
@@ -23,9 +23,24 @@ jobs:
       link-check-paths: 'docs/**/*.md'
       run-docs-link-check: true
 
+  changes:
+    name: Detect docs changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs:
+              - 'docs/**'
+
   dispatch:
     name: Dispatch docs rebuild
-    needs: [ci]
-    if: github.event_name == 'push'
+    needs: [ci, changes]
+    if: github.event_name == 'push' && needs.changes.outputs.docs == 'true'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/dispatch-docs.yml@main
     secrets: inherit

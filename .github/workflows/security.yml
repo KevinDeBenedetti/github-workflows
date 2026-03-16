@@ -39,6 +39,8 @@ on:
         required: false
         default: '["javascript","typescript"]'
 
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
     inputs:
       run-node-audit:

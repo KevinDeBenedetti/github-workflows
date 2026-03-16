@@ -4,19 +4,19 @@ on:
   push:
     branches: [main]
     paths:
-      - .github/workflows/ci-shell.yml
+      - .github/workflows/ci/shell.yml
       - .github/actions/actionlint/**
       - .github/actions/shellcheck/**
       - .github/actions/bats/**
-      - .github/workflows/test-ci-shell.yml
+      - .github/workflows/test/ci-shell.yml
   pull_request:
     branches: [main]
     paths:
-      - .github/workflows/ci-shell.yml
+      - .github/workflows/ci/shell.yml
       - .github/actions/actionlint/**
       - .github/actions/shellcheck/**
       - .github/actions/bats/**
-      - .github/workflows/test-ci-shell.yml
+      - .github/workflows/test/ci-shell.yml
   workflow_dispatch:
 
 concurrency:
@@ -25,7 +25,7 @@ concurrency:
 
 jobs:
   test:
-    uses: ./.github/workflows/ci-shell.yml
+    uses: ./.github/workflows/ci/shell.yml
     with:
       run-shellcheck: false
       run-actionlint: true

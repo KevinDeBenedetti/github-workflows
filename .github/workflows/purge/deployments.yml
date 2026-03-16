@@ -1,0 +1,149 @@
+name: Purge — Deployments
+
+on:
+  workflow_call:
+    inputs:
+      keep:
+        description: Number of most-recent deployments to keep per environment
+        type: number
+        required: false
+        default: 10
+      environment:
+        description: Environment name to purge (e.g. production). Leave empty to purge all environments.
+        type: string
+        required: false
+        default: ''
+      dry-run:
+        description: List what would be deleted without actually deleting anything
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    - cron: '0 3 * * 0'  # Every Sunday at 03:00 UTC
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: Number of most-recent deployments to keep per environment
+        type: number
+        required: false
+        default: 10
+      environment:
+        description: Environment name to purge. Leave empty to purge all environments.
+        type: string
+        required: false
+        default: ''
+      dry-run:
+        description: List what would be deleted without actually deleting anything
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: purge-deployments-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    name: Purge old deployments
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+      contents: read
+
+    steps:
+      - name: Purge old deployments
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: ${{ inputs.keep || 10 }}
+          FILTER_ENV: ${{ inputs.environment || '' }}
+          DRY_RUN: ${{ inputs.dry-run || false }}
+        run: |
+          set -euo pipefail
+
+          REPO="${{ github.repository }}"
+          DELETED=0
+          SKIPPED=0
+          SUMMARY=""
+
+          # Build environment filter query param
+          if [[ -n "$FILTER_ENV" ]]; then
+            echo "🔍 Filtering by environment: ${FILTER_ENV}"
+          else
+            echo "🔍 Processing all environments"
+          fi
+
+          # Collect all unique environments to process
+          if [[ -n "$FILTER_ENV" ]]; then
+            ENVIRONMENTS=("$FILTER_ENV")
+          else
+            mapfile -t ENVIRONMENTS < <(
+              gh api "repos/${REPO}/deployments?per_page=100" --paginate \
+                --jq '.[].environment' | sort -u
+            )
+          fi
+
+          echo "📋 Environments found: ${ENVIRONMENTS[*]:-none}"
+
+          for ENV in "${ENVIRONMENTS[@]}"; do
+            echo ""
+            echo "── Environment: ${ENV} ──"
+
+            # Fetch all deployments for this environment, sorted newest-first (API default)
+            mapfile -t IDS < <(
+              gh api "repos/${REPO}/deployments?environment=${ENV}&per_page=100" --paginate \
+                --jq '.[].id'
+            )
+
+            TOTAL="${#IDS[@]}"
+            echo "   Total deployments: ${TOTAL}"
+
+            if (( TOTAL <= KEEP )); then
+              echo "   ✅ Within retention limit (keep=${KEEP}) — nothing to delete"
+              SUMMARY+="| \`${ENV}\` | ${TOTAL} | 0 |\n"
+              continue
+            fi
+
+            TO_DELETE=("${IDS[@]:$KEEP}")
+            COUNT="${#TO_DELETE[@]}"
+            echo "   🗑️  Will delete ${COUNT} deployment(s) (keeping newest ${KEEP})"
+
+            for ID in "${TO_DELETE[@]}"; do
+              if [[ "$DRY_RUN" == "true" ]]; then
+                echo "   [dry-run] Would deactivate + delete deployment ${ID}"
+                (( SKIPPED++ )) || true
+              else
+                # Deployments must be set to 'inactive' before deletion
+                gh api "repos/${REPO}/deployments/${ID}/statuses" \
+                  --method POST \
+                  --field state=inactive \
+                  --silent || true
+
+                gh api "repos/${REPO}/deployments/${ID}" \
+                  --method DELETE \
+                  --silent
+                echo "   Deleted deployment ${ID}"
+                (( DELETED++ )) || true
+              fi
+            done
+
+            SUMMARY+="| \`${ENV}\` | ${TOTAL} | ${COUNT} |\n"
+          done
+
+          # Write job summary
+          {
+            echo "### 🧹 Deployment Purge $([[ "$DRY_RUN" == "true" ]] && echo "(dry run)" || echo "")"
+            echo ""
+            echo "**Keep:** \`${KEEP}\` most recent per environment"
+            echo ""
+            echo "| Environment | Total | Deleted |"
+            echo "|-------------|-------|---------|"
+            printf "%b" "$SUMMARY"
+            echo ""
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "> ℹ️ Dry-run mode — no deployments were deleted."
+            else
+              echo "> Deleted **${DELETED}** deployment(s) across all environments."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

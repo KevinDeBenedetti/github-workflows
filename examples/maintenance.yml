@@ -1,0 +1,24 @@
+name: Maintenance
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Every Sunday at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  purge-deployments:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/deployments.yml@main
+    with:
+      keep: 10
+      # environment: production  # uncomment to restrict to a specific environment
+      dry-run: false
+    secrets: inherit
+
+  purge-workflow-runs:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/workflow-runs.yml@main
+    with:
+      keep: 10
+      # workflow: ci-node.yml  # uncomment to restrict to a specific workflow
+      # status: completed      # uncomment to only delete completed runs
+      dry-run: false
+    secrets: inherit

@@ -66,6 +66,8 @@ on:
         required: false
         default: 'docs/**/*.md'
 
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
     inputs:
       node-version:
@@ -125,6 +127,8 @@ jobs:
   ci:
     name: CI (${{ inputs.working-directory }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout

@@ -1,0 +1,21 @@
+name: VitePress — Docs
+
+# Deploys the full VitePress docs site to GitHub Pages.
+# Trigger on all pushes to main — the entire repo IS the docs.
+# If docs/ lives alongside app code, add paths: ['docs/**'] to the push trigger.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy-docs:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/pages.yml@main
+    with:
+      node-version: '20'
+      build-command: 'pnpm docs:build'
+      # VitePress outputs to docs/.vitepress/dist by default
+      output-directory: docs/.vitepress/dist
+    secrets: inherit

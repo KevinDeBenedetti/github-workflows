@@ -8,7 +8,7 @@ Auto-detects **pnpm** or **bun** from the lockfile.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/node.yml@main
     with:
       node-version: '20'
       working-directory: '.'

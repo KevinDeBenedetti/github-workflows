@@ -12,6 +12,6 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/todo-yml-push.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/todo/todo-yml-push.yml@main
     secrets:
       token: ${{ secrets.PAT_TOKEN }}

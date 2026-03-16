@@ -20,6 +20,10 @@ on:
           Must have contents:write, pull-requests:write, and workflows scope
           (required to push changes to .github/workflows/ files).
         required: true
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
     inputs:
       branch:

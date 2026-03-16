@@ -44,6 +44,10 @@ on:
         description: Tag name of the release (e.g. v1.2.3)
         value: ${{ jobs.release.outputs.tag }}
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     name: Release Please
