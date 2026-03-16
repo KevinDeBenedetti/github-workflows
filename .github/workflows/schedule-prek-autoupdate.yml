@@ -8,4 +8,7 @@ on:
 jobs:
   autoupdate:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/prek-autoupdate.yml@main
+    permissions:
+      contents: write
+      pull-requests: write
     secrets: inherit
