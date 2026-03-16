@@ -21,6 +21,9 @@ on:
 jobs:
   purge-deployments:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-deployments.yml@main
+    permissions:
+      deployments: write
+      contents: read
     with:
       keep: ${{ fromJSON(inputs.keep || '10') }}
       # environment: production  # uncomment to restrict to a specific environment
@@ -29,6 +32,9 @@ jobs:
 
   purge-workflow-runs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-workflow-runs.yml@main
+    permissions:
+      actions: write
+      contents: read
     with:
       keep: ${{ fromJSON(inputs.keep || '10') }}
       # workflow: ci-node.yml  # uncomment to restrict to a specific workflow
