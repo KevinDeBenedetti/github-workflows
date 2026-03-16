@@ -23,12 +23,12 @@ jobs:
 
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           token: ${{ secrets.token }}
 
       - name: Checkout sync script
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: KevinDeBenedetti/github-workflows
           path: _sync

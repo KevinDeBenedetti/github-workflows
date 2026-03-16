@@ -128,7 +128,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # Setup resolves pnpm or bun automatically from the lockfile
       - name: Setup Node.js
@@ -210,7 +210,7 @@ jobs:
 
       - name: Upload build artifact
         if: inputs.upload-build && inputs.run-build
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ${{ steps.output-path.outputs.path }}
