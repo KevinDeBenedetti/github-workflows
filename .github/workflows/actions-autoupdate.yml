@@ -129,6 +129,7 @@ jobs:
           git checkout -B "$BRANCH"
           git add -A
           git commit -m "chore: actions autoupdate"
+          git fetch origin "$BRANCH" 2>/dev/null || true
           git push origin "$BRANCH" --force-with-lease
 
           BODY="$(printf "Automated GitHub Actions version update via \`gh api\`.\n\n**Changes:**\n%s\n\nTriggered by: \`%s\`" \
