@@ -45,7 +45,11 @@ jobs:
             echo "   Filter pattern: $FILTER"
           fi
 
-          REPOS=$(gh repo list --limit 1000 --json nameWithOwner --jq -r '.[] | .nameWithOwner')
+          # Get authenticated user/org context for repo listing
+          OWNER=$(gh api user --jq '.login')
+          echo "   Listing repos for: $OWNER"
+
+          REPOS=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner --jq -r '.[] | .nameWithOwner')
           COUNT=$(echo "$REPOS" | wc -l)
           echo "   Found $COUNT repo(s)"
 
