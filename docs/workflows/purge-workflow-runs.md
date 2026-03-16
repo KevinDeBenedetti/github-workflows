@@ -29,9 +29,40 @@ jobs:
 | `actions`  | `write` | Delete workflow runs     |
 | `contents` | `read`  | Checkout                 |
 
+## Manual testing
+
+Use `dry-run: true` before your first real purge to preview exactly what would be deleted.
+The `examples/maintenance.yml` caller defaults `dry-run` to `true` when triggered via
+**Actions → Maintenance → Run workflow**, so a manual dispatch is always a safe preview
+unless you explicitly uncheck the option.
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: Number of most-recent runs to keep per workflow
+        type: number
+        default: 10
+        required: false
+      dry-run:
+        description: Preview without deleting
+        type: boolean
+        default: true
+        required: false
+
+jobs:
+  purge:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-workflow-runs.yml@main
+    with:
+      keep: ${{ fromJSON(inputs.keep || '10') }}
+      dry-run: ${{ inputs.dry-run == 'true' }}
+    secrets: inherit
+```
+
 ## Schedule
 
-Can be called on a schedule from a caller workflow:
+Automate after you're satisfied with a dry-run:
 
 ```yaml
 on:

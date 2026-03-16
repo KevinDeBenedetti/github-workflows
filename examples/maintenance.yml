@@ -3,22 +3,35 @@ name: Maintenance
 on:
   schedule:
     - cron: '0 3 * * 0'  # Every Sunday at 03:00 UTC
+  # Run manually from Actions → Maintenance → Run workflow.
+  # dry-run defaults to true so your first manual run is always a safe preview.
   workflow_dispatch:
+    inputs:
+      keep:
+        description: Number of most-recent items to keep (deployments and workflow runs)
+        type: number
+        default: 10
+        required: false
+      dry-run:
+        description: Preview what would be deleted without deleting (recommended for first run)
+        type: boolean
+        default: true
+        required: false
 
 jobs:
   purge-deployments:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/deployments.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-deployments.yml@main
     with:
-      keep: 10
+      keep: ${{ fromJSON(inputs.keep || '10') }}
       # environment: production  # uncomment to restrict to a specific environment
-      dry-run: false
+      dry-run: ${{ inputs.dry-run == 'true' }}
     secrets: inherit
 
   purge-workflow-runs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/workflow-runs.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-workflow-runs.yml@main
     with:
-      keep: 10
+      keep: ${{ fromJSON(inputs.keep || '10') }}
       # workflow: ci-node.yml  # uncomment to restrict to a specific workflow
       # status: completed      # uncomment to only delete completed runs
-      dry-run: false
+      dry-run: ${{ inputs.dry-run == 'true' }}
     secrets: inherit
