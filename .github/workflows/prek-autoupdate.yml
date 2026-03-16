@@ -78,7 +78,7 @@ jobs:
         run: prek autoupdate
 
       - name: Create pull request
-        uses: peter-evans/create-pull-request@v7.0.9
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.PAT_TOKEN }}
           committer: >-

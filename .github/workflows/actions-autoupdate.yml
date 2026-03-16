@@ -119,7 +119,7 @@ jobs:
           {
             echo "updates<<EOF"
             if [[ -n "$updates" ]]; then
-              printf "%b" "$updates"
+              printf "%b\n" "$updates"
             else
               echo "_All actions are already up to date._"
             fi
