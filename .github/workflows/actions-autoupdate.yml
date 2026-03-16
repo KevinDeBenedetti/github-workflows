@@ -105,20 +105,47 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Create pull request
-        uses: peter-evans/create-pull-request@v8
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-          committer: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
-          author: ${{ github.actor }} <${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com>
-          commit-message: "chore: actions autoupdate"
-          branch: ${{ inputs.branch || 'chore/actions-autoupdate' }}
-          title: "chore: actions autoupdate"
-          body: |
-            Automated GitHub Actions version update via `gh api`.
+      - name: Push branch and open pull request
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          UPDATES: ${{ steps.update.outputs.updates }}
+          BRANCH: ${{ inputs.branch || 'chore/actions-autoupdate' }}
+          LABELS: ${{ inputs.labels }}
+        run: |
+          set -euo pipefail
 
-            **Changes:**
-            ${{ steps.update.outputs.updates }}
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes – all actions are already up to date."
+            exit 0
+          fi
 
-            Triggered by: `${{ github.event_name }}`
-          labels: ${{ inputs.labels }}
+          BASE=$(git rev-parse --abbrev-ref HEAD)
+
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+
+          git checkout -B "$BRANCH"
+          git add -A
+          git commit -m "chore: actions autoupdate"
+          git push origin "$BRANCH" --force-with-lease
+
+          BODY="$(printf "Automated GitHub Actions version update via \`gh api\`.\n\n**Changes:**\n%s\n\nTriggered by: \`%s\`" \
+            "$UPDATES" "${{ github.event_name }}")"
+
+          if gh pr view "$BRANCH" --json number -q .number 2>/dev/null; then
+            echo "Pull request already exists for branch $BRANCH"
+          else
+            LABEL_ARGS=()
+            if [[ -n "$LABELS" ]]; then
+              IFS=',' read -ra label_list <<< "$LABELS"
+              for label in "${label_list[@]}"; do
+                LABEL_ARGS+=(--label "$(echo "$label" | xargs)")
+              done
+            fi
+            gh pr create \
+              --title "chore: actions autoupdate" \
+              --body "$BODY" \
+              --base "$BASE" \
+              --head "$BRANCH" \
+              "${LABEL_ARGS[@]+"${LABEL_ARGS[@]}"}"
+          fi
