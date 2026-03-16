@@ -31,6 +31,8 @@ Changes to `TODO.yml` are **never committed directly to `main`** — they open (
 Create `.github/workflows/todo-sync.yml` in your repo:
 
 ```yaml
+name: TODO sync
+
 on:
   push:
     branches: [main]
@@ -41,6 +43,10 @@ on:
 
 jobs:
   sync:
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     uses: KevinDeBenedetti/github-workflows/.github/workflows/todo-sync.yml@main
     with:
       issue-number: ${{ github.event.issue.number || 0 }}
@@ -466,12 +472,13 @@ KevinDeBenedetti/
 │   │   ├── package.json        ← js-yaml dependency
 │   │   └── tsconfig.json
 │   └── .github/workflows/
-│       ├── todo-yml-push.yml   ← reusable: push mode
-│       ├── todo-yml-pull.yml   ← reusable: pull mode
+│       ├── todo-sync.yml       ← reusable: push + pull mode (recommended)
+│       ├── todo-yml-push.yml   ← reusable: push mode only
+│       ├── todo-yml-pull.yml   ← reusable: pull mode only
 │       └── label-sync.yml      ← reusable: labels mode
 │
 └── <any-repo>/
     ├── TODO.yml                ← managed here
     └── .github/workflows/
-        └── todo-sync.yml       ← caller: thin wrapper over reusable workflows
+        └── todo-sync.yml       ← caller: thin wrapper over todo-sync.yml
 ```

@@ -29,6 +29,8 @@ jobs:
   discover:
     name: Discover repos
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.repos.outputs.matrix }}
     steps:
@@ -68,6 +70,8 @@ jobs:
     name: Purge ${{ matrix.repo }}
     needs: discover
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     strategy:
       matrix:
         repo: ${{ fromJson(needs.discover.outputs.matrix) }}
