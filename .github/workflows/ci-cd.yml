@@ -44,3 +44,24 @@ jobs:
     if: github.event_name == 'push' && needs.changes.outputs.docs == 'true'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/dispatch-docs.yml@main
     secrets: inherit
+
+  todo-sync:
+    name: TODO sync
+    if: github.event_name == 'push' || github.event_name == 'issues' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/todo-sync.yml@main
+    with:
+      issue-number: ${{ github.event.issue.number || 0 }}
+    secrets: inherit
+
+  label-sync:
+    name: Label sync
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      issues: write
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/label-sync.yml@main
+    secrets: inherit

@@ -2,7 +2,7 @@ issues:
   - github_id: 2
     type: feat
     title: Add reusable workflow to purge old deployments and Actions runs
-    status: backlog
+    status: in-progress
     priority: low
     assignees:
       - KevinDeBenedetti
