@@ -79,6 +79,8 @@ jobs:
             # Full semver pin (e.g. @v1.2.3): update to the exact latest tag.
             if [[ "$version" =~ ^v[0-9]+$ ]]; then
               latest_major=$(echo "$latest" | grep -oE '[0-9]+' | head -1)
+              current_major=$(echo "$version" | grep -oE '[0-9]+' | head -1)
+              (( latest_major < current_major )) && continue
               new_version="v${latest_major}"
             else
               new_version="$latest"
