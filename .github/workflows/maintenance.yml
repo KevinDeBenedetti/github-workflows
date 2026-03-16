@@ -41,3 +41,14 @@ jobs:
       # status: completed      # uncomment to only delete completed runs
       dry-run: ${{ inputs.dry-run == 'true' }}
     secrets: inherit
+
+  purge-caches:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-caches.yml@main
+    permissions:
+      actions: write
+      contents: read
+    with:
+      keep: ${{ fromJSON(inputs.keep || '10') }}
+      # ref: refs/heads/main  # uncomment to restrict to a specific branch
+      dry-run: ${{ inputs.dry-run == 'true' }}
+    secrets: inherit
