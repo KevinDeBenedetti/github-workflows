@@ -20,7 +20,7 @@ issues:
   - github_id: 6
     type: feat
     title: Test feature branch protection workflow
-    status: backlog
+    status: done
     priority: medium
     assignees:
       - KevinDeBenedetti
