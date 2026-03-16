@@ -135,7 +135,7 @@ jobs:
           BODY="$(printf "Automated GitHub Actions version update via \`gh api\`.\n\n**Changes:**\n%s\n\nTriggered by: \`%s\`" \
             "$UPDATES" "${{ github.event_name }}")"
 
-          if gh pr view "$BRANCH" --json number -q .number 2>/dev/null; then
+          if gh pr view "$BRANCH" --json number,state -q 'select(.state=="OPEN") | .number' 2>/dev/null | grep -q .; then
             echo "Pull request already exists for branch $BRANCH"
           else
             LABEL_ARGS=()
