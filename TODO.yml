@@ -3,7 +3,7 @@ issues:
     type: feat
     title: Add reusable workflow to purge old deployments and Actions runs
     status: backlog
-    priority: high
+    priority: low
     assignees:
       - KevinDeBenedetti
     body: |
