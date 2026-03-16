@@ -17,7 +17,8 @@ on:
       PAT_TOKEN:
         description: >
           Personal Access Token — PRs and commits will be opened as this user.
-          Must have contents:write and pull-requests:write.
+          Must have contents:write, pull-requests:write, and workflows scope
+          (required to push changes to .github/workflows/ files).
         required: true
   workflow_dispatch:
     inputs:
@@ -44,6 +45,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.PAT_TOKEN }}
 
       - name: Update action versions
         id: update
