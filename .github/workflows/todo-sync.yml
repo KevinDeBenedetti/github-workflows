@@ -49,15 +49,22 @@ jobs:
       - name: Determine sync mode
         id: mode
         run: |
-          ISSUE_NUM="${{ github.event.issue.number }}"
-          INPUT_NUM="${{ inputs.issue-number }}"
-          EFFECTIVE="${ISSUE_NUM:-${INPUT_NUM:-0}}"
-          if [ "$EFFECTIVE" -gt 0 ]; then
-            echo "mode=pull" >> "$GITHUB_OUTPUT"
-            echo "issue-number=$EFFECTIVE" >> "$GITHUB_OUTPUT"
-          else
+          # On push to TODO.yml, always use push mode (ignore any issue context)
+          if [ "${{ github.event_name }}" = "push" ]; then
             echo "mode=push" >> "$GITHUB_OUTPUT"
             echo "issue-number=0" >> "$GITHUB_OUTPUT"
+          else
+            # On issue event or workflow_call, check for issue number
+            ISSUE_NUM="${{ github.event.issue.number }}"
+            INPUT_NUM="${{ inputs.issue-number }}"
+            EFFECTIVE="${ISSUE_NUM:-${INPUT_NUM:-0}}"
+            if [ "$EFFECTIVE" -gt 0 ]; then
+              echo "mode=pull" >> "$GITHUB_OUTPUT"
+              echo "issue-number=$EFFECTIVE" >> "$GITHUB_OUTPUT"
+            else
+              echo "mode=push" >> "$GITHUB_OUTPUT"
+              echo "issue-number=0" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Run sync (${{ steps.mode.outputs.mode }})
