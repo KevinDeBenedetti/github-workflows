@@ -35,17 +35,16 @@ on:
   push:
     branches: [main]
     paths: ['TODO.yml']
+  issues:
+    types: [labeled, unlabeled, closed, reopened, edited, assigned, unassigned]
   workflow_dispatch:
 
 jobs:
-  push-to-issues:
-    permissions:
-      contents: write
-      issues: write
-      pull-requests: write
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/todo-yml-push.yml@main
-    secrets:
-      token: ${{ secrets.PAT_TOKEN }}
+  sync:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/todo-sync.yml@main
+    with:
+      issue-number: ${{ github.event.issue.number || 0 }}
+    secrets: inherit
 ```
 
 ### 2. Add a `TODO.yml` at the repo root

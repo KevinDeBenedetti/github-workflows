@@ -8,7 +8,7 @@ Uses **uv** for dependency management, **ruff** for lint/format, and **ty** for 
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/python.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
     with:
       python-version: '3.12'
       working-directory: '.'
@@ -22,7 +22,7 @@ jobs:
 | `working-directory`   | string  | `'.'`                         | Path to the app root (e.g. `apps/api`)                    |
 | `run-lint`            | boolean | `true`                        | Run `ruff check`                                          |
 | `run-format`          | boolean | `true`                        | Run `ruff format --check`                                 |
-| `run-typecheck`       | boolean | `true`                        | Run `ty check`                                            |
+| `run-typecheck`       | boolean | `false`                       | Run `ty check`                                            |
 | `run-test`            | boolean | `true`                        | Run pytest                                                |
 | `run-coverage`        | boolean | `false`                       | Enable coverage report via `pytest-cov`                   |
 | `coverage-fail-under` | number  | `80`                          | Minimum coverage percentage required to pass              |

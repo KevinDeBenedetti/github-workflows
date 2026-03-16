@@ -8,7 +8,7 @@ Auto-detects **pnpm** or **bun** from the lockfile.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
     with:
       node-version: '20'
       working-directory: '.'
@@ -28,6 +28,8 @@ jobs:
 | `run-build`           | boolean | `true`  | Run `build` script                                                               |
 | `upload-build`        | boolean | `false` | Upload build output as a workflow artifact                                       |
 | `build-artifact-name` | string  | `build` | Name of the uploaded artifact                                                    |
+| `run-link-check`      | boolean | `false` | Check markdown files for broken relative links (offline, no HTTP requests)       |
+| `link-check-paths`    | string  | `docs/**/*.md` | Space-separated glob patterns of markdown files to check                  |
 
 ## Steps
 
@@ -38,6 +40,7 @@ jobs:
 5. Test (`--passWithNoTests`)
 6. Build
 7. Upload artifact *(only when `upload-build: true`)*
+8. Link check *(only when `run-link-check: true`)*
 
 ## Notes
 

@@ -1,6 +1,6 @@
 # github-workflows
 
-[![CI](https://img.shields.io/github/actions/workflow/status/KevinDeBenedetti/github-workflows/ci.yml?style=for-the-badge&label=CI)](https://github.com/KevinDeBenedetti/github-workflows/actions/workflows/ci.yml)
+[![CI](https://img.shields.io/github/actions/workflow/status/KevinDeBenedetti/github-workflows/ci-cd.yml?style=for-the-badge&label=CI)](https://github.com/KevinDeBenedetti/github-workflows/actions/workflows/ci-cd.yml)
 
 > Reusable GitHub Actions workflows and composite actions for Node.js, Python, and shell projects.
 
@@ -11,6 +11,7 @@
 - Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, and monorepo change detection
 - Automated releases via release-please
 - Security scanning: dependency audit, CodeQL, and secret detection
+- Repository maintenance: purge old deployments and workflow run history
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
 
 ## Prerequisites

@@ -7,7 +7,7 @@ Deletes all but the **N most-recent runs** per workflow to keep the GitHub Actio
 ```yaml
 jobs:
   purge-workflow-runs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/workflow-runs.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-workflow-runs.yml@main
     with:
       keep: 10
     secrets: inherit
@@ -41,7 +41,7 @@ on:
 
 jobs:
   purge:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/workflow-runs.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-workflow-runs.yml@main
     with:
       keep: 10
     secrets: inherit

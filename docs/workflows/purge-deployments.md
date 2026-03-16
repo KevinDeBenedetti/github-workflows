@@ -8,7 +8,7 @@ Deployments are automatically marked **inactive** before deletion (required by t
 ```yaml
 jobs:
   purge-deployments:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/deployments.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-deployments.yml@main
     with:
       keep: 10
     secrets: inherit
@@ -41,7 +41,7 @@ on:
 
 jobs:
   purge:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge/deployments.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-deployments.yml@main
     with:
       keep: 10
     secrets: inherit

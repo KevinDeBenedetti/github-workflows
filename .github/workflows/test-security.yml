@@ -5,12 +5,12 @@ on:
     branches: [main]
     paths:
       - .github/workflows/security.yml
-      - .github/workflows/test/security.yml
+      - .github/workflows/test-security.yml
   pull_request:
     branches: [main]
     paths:
       - .github/workflows/security.yml
-      - .github/workflows/test/security.yml
+      - .github/workflows/test-security.yml
   workflow_dispatch:
 
 concurrency:

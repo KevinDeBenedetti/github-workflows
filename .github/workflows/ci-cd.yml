@@ -13,7 +13,7 @@ concurrency:
 jobs:
   ci:
     name: CI
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci/shell.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
     with:
       run-shellcheck: false
       run-actionlint: true

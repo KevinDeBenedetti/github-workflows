@@ -8,7 +8,7 @@ On pull requests, automatically posts or updates a comment with the preview URL.
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
     with:
       environment: preview
     secrets:

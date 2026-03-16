@@ -7,7 +7,7 @@ Builds a multi-platform Docker image and pushes it to **GitHub Container Registr
 ```yaml
 jobs:
   docker:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-docker.yml@main
     with:
       image-name: my-api
       platforms: linux/amd64,linux/arm64

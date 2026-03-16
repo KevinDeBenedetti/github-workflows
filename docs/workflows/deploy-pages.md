@@ -7,7 +7,7 @@ Builds a static site and deploys it to **GitHub Pages** via the official `action
 ```yaml
 jobs:
   pages:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
     with:
       build-command: 'pnpm build'
       output-directory: dist
@@ -55,7 +55,7 @@ VitePress outputs to `docs/.vitepress/dist` by default. Use these inputs:
 ```yaml
 jobs:
   deploy-docs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
     with:
       build-command: 'pnpm docs:build'
       output-directory: docs/.vitepress/dist

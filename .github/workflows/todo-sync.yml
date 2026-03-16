@@ -1,0 +1,68 @@
+name: TODO sync
+
+on:
+  push:
+    branches: [main]
+    paths: ['TODO.yml']
+  issues:
+    types: [labeled, unlabeled, closed, reopened, edited, assigned, unassigned]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      issue-number:
+        description: >
+          Issue number from the triggering event.
+          Pass github.event.issue.number for pull mode, omit (or 0) for push mode.
+        type: number
+        required: false
+        default: 0
+
+jobs:
+  sync:
+    name: Sync TODO.yml ↔ GitHub Issues
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.PAT_TOKEN || github.token }}
+
+      - name: Checkout sync script
+        uses: actions/checkout@v5
+        with:
+          repository: KevinDeBenedetti/github-workflows
+          path: _sync
+          sparse-checkout: scripts
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: _sync/scripts
+
+      - name: Determine sync mode
+        id: mode
+        run: |
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          INPUT_NUM="${{ inputs.issue-number }}"
+          EFFECTIVE="${ISSUE_NUM:-${INPUT_NUM:-0}}"
+          if [ "$EFFECTIVE" -gt 0 ]; then
+            echo "mode=pull" >> "$GITHUB_OUTPUT"
+            echo "issue-number=$EFFECTIVE" >> "$GITHUB_OUTPUT"
+          else
+            echo "mode=push" >> "$GITHUB_OUTPUT"
+            echo "issue-number=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run sync (${{ steps.mode.outputs.mode }})
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          ISSUE_NUMBER: ${{ steps.mode.outputs.issue-number }}
+        run: bun run _sync/scripts/sync-todo.ts ${{ steps.mode.outputs.mode }}
