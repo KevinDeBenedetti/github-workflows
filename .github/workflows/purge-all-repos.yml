@@ -1,0 +1,128 @@
+name: Purge All Repos — Maintenance Orchestrator
+
+on:
+  schedule:
+    - cron: '0 3 * * 0'  # Every Sunday at 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: Number of most-recent items to keep
+        type: number
+        default: 10
+        required: false
+      dry-run:
+        description: Preview without deleting (recommended for first run)
+        type: boolean
+        default: true
+        required: false
+      filter-repo:
+        description: Filter repos by name pattern (e.g. 'foo-*' for repos starting with 'foo')
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: purge-all-repos
+  cancel-in-progress: false
+
+jobs:
+  discover:
+    name: Discover repos
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.repos.outputs.matrix }}
+    steps:
+      - name: List all repos
+        id: repos
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FILTER: ${{ inputs.filter-repo || '' }}
+        run: |
+          set -euo pipefail
+
+          echo "🔍 Discovering all repos..."
+          if [[ -n "$FILTER" ]]; then
+            echo "   Filter pattern: $FILTER"
+          fi
+
+          REPOS=$(gh repo list --limit 1000 --json nameWithOwner --jq -r '.[] | .nameWithOwner')
+          COUNT=$(echo "$REPOS" | wc -l)
+          echo "   Found $COUNT repo(s)"
+
+          # Apply filter if provided
+          if [[ -n "$FILTER" ]]; then
+            REPOS=$(echo "$REPOS" | grep -E "$FILTER" || true)
+            FILTERED_COUNT=$(echo "$REPOS" | grep -c . || true)
+            echo "   After filter: $FILTERED_COUNT repo(s)"
+          fi
+
+          # Convert to JSON array for matrix
+          MATRIX=$(echo "$REPOS" | jq -R -s 'split("\n") | map(select(length > 0))')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+
+  purge:
+    name: Purge ${{ matrix.repo }}
+    needs: discover
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: ${{ fromJson(needs.discover.outputs.matrix) }}
+      max-parallel: 3
+    continue-on-error: true
+
+    steps:
+      - name: Trigger maintenance workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ matrix.repo }}
+          KEEP: ${{ inputs.keep || 10 }}
+          DRY_RUN: ${{ inputs.dry-run || true }}
+        run: |
+          set -euo pipefail
+
+          echo "🚀 Triggering maintenance on ${REPO}..."
+
+          # Check if maintenance.yml exists in the repo
+          if ! gh api "repos/${REPO}/contents/.github/workflows/maintenance.yml" --jq '.type' &>/dev/null; then
+            echo "⏭️  No maintenance.yml found in ${REPO} — skipping"
+            exit 0
+          fi
+
+          # Trigger workflow_dispatch
+          gh workflow run maintenance.yml \
+            --repo "${REPO}" \
+            --ref main \
+            --field keep="${KEEP}" \
+            --field dry-run="${DRY_RUN}"
+
+          echo "✅ Triggered maintenance.yml in ${REPO}"
+          echo "   Keep: ${KEEP}, Dry-run: ${DRY_RUN}"
+
+      - name: Wait for workflow to start
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ matrix.repo }}
+        run: |
+          set +e  # Don't fail if we timeout waiting
+          sleep 2  # Give the workflow time to queue
+          RUNS=$(gh run list --repo "$REPO" --workflow maintenance.yml --limit 1 --json status --jq '.[0].status')
+          echo "   Latest run status: $RUNS"
+
+  summary:
+    name: Purge Summary
+    needs: purge
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Report
+        run: |
+          {
+            echo "### 🧹 Purge All Repos — Orchestration Summary"
+            echo ""
+            echo "**Schedule:** Sundays 03:00 UTC"
+            echo "**Last run:** $(date -u)"
+            echo ""
+            echo "✅ Maintenance workflows have been triggered across all repositories."
+            echo ""
+            echo "> Monitor individual repo runs under **Actions → Maintenance** in each repository."
+          } >> "$GITHUB_STEP_SUMMARY"
