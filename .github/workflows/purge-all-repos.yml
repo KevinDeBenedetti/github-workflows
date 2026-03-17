@@ -51,7 +51,7 @@ jobs:
           OWNER="${GITHUB_ACTOR}"
           echo "   Listing repos for: $OWNER"
 
-          REPOS=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner --jq -r '.[] | .nameWithOwner')
+          REPOS=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq -r '.[] | .nameWithOwner')
           COUNT=$(echo "$REPOS" | wc -l)
           echo "   Found $COUNT repo(s)"
 
