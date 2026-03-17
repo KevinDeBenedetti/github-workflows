@@ -85,10 +85,34 @@ jobs:
 
     steps:
       - name: Trigger centralized maintenance
-        uses: KevinDeBenedetti/github-workflows/.github/workflows/maintenance.yml@main
-        with:
-          keep: ${{ inputs.keep || 10 }}
-          dry-run: ${{ inputs.dry-run || true }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ matrix.repo }}
+          KEEP: ${{ inputs.keep || 10 }}
+          DRY_RUN: ${{ inputs.dry-run || true }}
+        run: |
+          set -euo pipefail
+
+          echo "🚀 Triggering maintenance on ${REPO}..."
+
+          # Trigger centralized workflow_dispatch from github-workflows repo
+          gh workflow run maintenance.yml \
+            --repo KevinDeBenedetti/github-workflows \
+            --ref main \
+            --field keep="${KEEP}" \
+            --field dry-run="${DRY_RUN}"
+
+          echo "✅ Triggered centralized maintenance.yml"
+          echo "   Repo: ${REPO}, Keep: ${KEEP}, Dry-run: ${DRY_RUN}"
+
+      - name: Wait for workflow to start
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e  # Don't fail if we timeout waiting
+          sleep 2  # Give the workflow time to queue
+          RUNS=$(gh run list --repo KevinDeBenedetti/github-workflows --workflow maintenance.yml --limit 1 --json status --jq '.[0].status')
+          echo "   Latest run status: $RUNS"
 
   summary:
     name: Purge Summary
