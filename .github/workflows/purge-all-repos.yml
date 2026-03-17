@@ -51,19 +51,17 @@ jobs:
           OWNER="${GITHUB_ACTOR}"
           echo "   Listing repos for: $OWNER"
 
-          REPOS=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq -r '.[] | .nameWithOwner')
-          COUNT=$(echo "$REPOS" | wc -l)
-          echo "   Found $COUNT repo(s)"
-
-          # Apply filter if provided
+          # Get repos and apply filter if provided
           if [[ -n "$FILTER" ]]; then
-            REPOS=$(echo "$REPOS" | grep -E "$FILTER" || true)
-            FILTERED_COUNT=$(echo "$REPOS" | grep -c . || true)
+            MATRIX=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq "[.[] | select(.nameWithOwner | test(\"$FILTER\")) | .nameWithOwner]")
+            FILTERED_COUNT=$(echo "$MATRIX" | jq 'length')
             echo "   After filter: $FILTERED_COUNT repo(s)"
+          else
+            MATRIX=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq '[.[] | .nameWithOwner]')
+            COUNT=$(echo "$MATRIX" | jq 'length')
+            echo "   Found $COUNT repo(s)"
           fi
 
-          # Convert to JSON array for matrix
-          MATRIX=$(echo "$REPOS" | jq -R -s 'split("\n") | map(select(length > 0))')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   purge:
