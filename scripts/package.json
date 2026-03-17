@@ -8,16 +8,20 @@
     "bun": ">=1"
   },
   "scripts": {
-    "push":   "bun run sync-todo.ts push",
-    "pull":   "bun run sync-todo.ts pull",
-    "labels": "bun run sync-todo.ts labels"
+    "push":      "bun run sync-todo.ts push",
+    "pull":      "bun run sync-todo.ts pull",
+    "labels":    "bun run sync-todo.ts labels",
+    "lint":      "oxlint --fix",
+    "format":    "oxfmt --write *.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
-    "@types/node": "^22.0.0",
+    "@types/node": "^25.5.0",
+    "oxlint": "^0.9",
     "typescript": "^5.8.2"
   }
 }

@@ -7,7 +7,7 @@ import yaml from 'js-yaml';
 import { createLabel, updateLabel, repo } from './github.js';
 import { TodoEntry, LabelDef, LabelsFile, typeLabels, statusLabels, priorityLabels } from './types.js';
 
-const [owner, repoName] = repo.split('/');
+repo.split('/'); // unused split, kept for consistency
 
 // ── Label sync ─────────────────────────────────────────────────────────────────
 

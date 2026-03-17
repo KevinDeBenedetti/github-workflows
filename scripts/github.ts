@@ -4,11 +4,9 @@
 
 import {
   GhIssue,
-  GhLabel,
   GhLabelFull,
   GhPR,
   GhFetchOptions,
-  GhFileContent,
   GhRef,
 } from './types.js';
 

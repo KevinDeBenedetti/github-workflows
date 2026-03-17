@@ -11,8 +11,6 @@ import {
   ghFetch,
   repo,
 } from './github.js';
-import { writeTodo } from './files.js';
-import { TodoFile } from './types.js';
 
 const [owner, repoName] = repo.split('/');
 
@@ -73,7 +71,10 @@ export async function findOpenSyncPR(): Promise<{ number: number; html_url: stri
     );
 
     if (result.items && result.items.length > 0) {
-      return result.items[0];
+      const pr = result.items[0];
+      if (pr && pr.number && pr.html_url) {
+        return { number: pr.number, html_url: pr.html_url };
+      }
     }
   } catch {
     // Silently fail if search doesn't work

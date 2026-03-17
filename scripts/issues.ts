@@ -7,7 +7,6 @@ import {
   updateIssue,
   getIssue,
   fetchAllIssues,
-  ghFetch,
   repo,
 } from './github.js';
 import { readTodo, writeTodo } from './files.js';
@@ -20,10 +19,9 @@ import {
   GhIssue,
   IssueChanges,
   SyncLogEntry,
-  TodoFile,
 } from './types.js';
 
-const [owner, repoName] = repo.split('/');
+repo.split('/'); // unused split, kept for consistency
 
 // ── Change detection ──────────────────────────────────────────────────────────
 
@@ -70,7 +68,6 @@ export function resolveIssue(
   entry: TodoEntry,
   byTitle: Map<string, GhIssue>,
   byNumber: Map<number, GhIssue>,
-  log: SyncLogEntry[],
 ): { issue: GhIssue | null; action: string } {
   if (!entry.github_id) {
     const byTitleMatch = byTitle.get(entry.title);
@@ -109,7 +106,7 @@ export async function push(): Promise<void> {
   await ensureLabels();
 
   for (const entry of todo.issues) {
-    const { issue, action } = resolveIssue(entry, byTitle, byNumber, log);
+    const { issue } = resolveIssue(entry, byTitle, byNumber);
 
     if (!issue) {
       // Create new issue

@@ -468,7 +468,15 @@ KevinDeBenedetti/
 ├── github-workflows/
 │   ├── TODO.yml
 │   ├── scripts/
-│   │   ├── sync-todo.ts        ← core sync logic (push / pull / labels modes)
+│   │   ├── sync-todo.ts        ← entry point (59 lines)
+│   │   ├── types.ts            ← domain types (122 lines)
+│   │   ├── github.ts           ← API client (173 lines)
+│   │   ├── files.ts            ← file I/O (24 lines)
+│   │   ├── git.ts              ← git operations (116 lines)
+│   │   ├── labels.ts           ← label sync (80 lines)
+│   │   ├── issues.ts           ← push/pull logic (239 lines)
+│   │   ├── comments.ts         ← comment helpers (53 lines)
+│   │   ├── formatters.ts       ← formatting (58 lines)
 │   │   ├── package.json        ← js-yaml dependency
 │   │   └── tsconfig.json
 │   └── .github/workflows/
@@ -482,3 +490,44 @@ KevinDeBenedetti/
     └── .github/workflows/
         └── todo-sync.yml       ← caller: thin wrapper over todo-sync.yml
 ```
+
+### Module structure (refactored v2)
+
+The `scripts/` directory has been refactored from a monolithic 757-line file into 9 focused modules, each with a single responsibility:
+
+| Module | Lines | Responsibility |
+|--------|-------|---|
+| `sync-todo.ts` | 59 | Entry point & mode dispatch |
+| `types.ts` | 122 | Domain types, interfaces & mappings |
+| `github.ts` | 167 | GitHub REST API client abstraction |
+| `files.ts` | 24 | YAML file I/O operations |
+| `git.ts` | 120 | Git branches, commits & PR operations |
+| `labels.ts` | 80 | Label sync logic & mapping |
+| `issues.ts` | 239 | Push/pull mode logic & state reconciliation |
+| `comments.ts` | 53 | Issue comment composition |
+| `formatters.ts` | 58 | PR body formatting |
+
+**Benefits of modular design:**
+- Improved readability (largest module ~240 lines)
+- Easier testing (unit test each module independently)
+- Better maintainability (clear separation of concerns)
+- Simpler debugging (error traces point to specific modules)
+- Extensible (add new modes without modifying existing code)
+
+## Code Quality Tooling
+
+The scripts now include automated linting, formatting, and type checking:
+
+- **Oxlint**: Rust-based linter (100x faster than ESLint), runs in ~6ms
+- **TypeScript**: Strict mode type checking, enforces strong type safety
+- **Auto-fix**: Most issues are automatically fixed with `bun run lint`
+
+Development workflow:
+```bash
+cd scripts/
+bun install           # One-time setup
+bun run lint          # Linting with auto-fixes
+bun run typecheck     # Type checking
+```
+
+See [scripts/README.md](../scripts/README.md) for detailed tooling documentation.

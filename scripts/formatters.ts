@@ -2,7 +2,7 @@
  * Pull request body formatting
  */
 
-import { TodoEntry, IssueChanges, SyncLogEntry } from './types.js';
+import { TodoEntry, SyncLogEntry } from './types.js';
 
 export function formatPushPRBody(log: SyncLogEntry[]): string {
   const lines = ['## Synced TODO items', '', 'Changes from `TODO.yml`:'];
