@@ -48,7 +48,7 @@ jobs:
           fi
 
           # Get authenticated user/org context for repo listing
-          OWNER=$(gh api user --jq '.login')
+          OWNER="${GITHUB_ACTOR}"
           echo "   Listing repos for: $OWNER"
 
           REPOS=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner --jq -r '.[] | .nameWithOwner')
