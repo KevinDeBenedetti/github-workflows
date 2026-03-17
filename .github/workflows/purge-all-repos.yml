@@ -76,6 +76,7 @@ jobs:
     permissions:
       contents: read
       actions: write
+      deployments: write
     strategy:
       matrix:
         repo: ${{ fromJson(needs.discover.outputs.matrix) }}
@@ -83,42 +84,11 @@ jobs:
     continue-on-error: true
 
     steps:
-      - name: Trigger maintenance workflow
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ matrix.repo }}
-          KEEP: ${{ inputs.keep || 10 }}
-          DRY_RUN: ${{ inputs.dry-run || true }}
-        run: |
-          set -euo pipefail
-
-          echo "🚀 Triggering maintenance on ${REPO}..."
-
-          # Check if maintenance.yml exists in the repo
-          if ! gh api "repos/${REPO}/contents/.github/workflows/maintenance.yml" --jq '.type' &>/dev/null; then
-            echo "⏭️  No maintenance.yml found in ${REPO} — skipping"
-            exit 0
-          fi
-
-          # Trigger workflow_dispatch
-          gh workflow run maintenance.yml \
-            --repo "${REPO}" \
-            --ref main \
-            --field keep="${KEEP}" \
-            --field dry-run="${DRY_RUN}"
-
-          echo "✅ Triggered maintenance.yml in ${REPO}"
-          echo "   Keep: ${KEEP}, Dry-run: ${DRY_RUN}"
-
-      - name: Wait for workflow to start
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ matrix.repo }}
-        run: |
-          set +e  # Don't fail if we timeout waiting
-          sleep 2  # Give the workflow time to queue
-          RUNS=$(gh run list --repo "$REPO" --workflow maintenance.yml --limit 1 --json status --jq '.[0].status')
-          echo "   Latest run status: $RUNS"
+      - name: Trigger centralized maintenance
+        uses: KevinDeBenedetti/github-workflows/.github/workflows/maintenance.yml@main
+        with:
+          keep: ${{ inputs.keep || 10 }}
+          dry-run: ${{ inputs.dry-run || true }}
 
   summary:
     name: Purge Summary

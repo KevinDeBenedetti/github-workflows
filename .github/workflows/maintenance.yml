@@ -17,6 +17,16 @@ on:
         type: boolean
         default: true
         required: false
+  workflow_call:
+    inputs:
+      keep:
+        description: Number of most-recent items to keep (deployments and workflow runs)
+        type: number
+        default: 10
+      dry-run:
+        description: Preview what would be deleted without deleting
+        type: boolean
+        default: true
 
 jobs:
   purge-deployments:
