@@ -529,5 +529,3 @@ bun install           # One-time setup
 bun run lint          # Linting with auto-fixes
 bun run typecheck     # Type checking
 ```
-
-See [scripts/README.md](../scripts/README.md) for detailed tooling documentation.
