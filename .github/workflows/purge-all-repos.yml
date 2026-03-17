@@ -103,32 +103,52 @@ jobs:
             --field dry-run="${DRY_RUN}"
 
           echo "✅ Triggered centralized maintenance.yml"
-          echo "   Repo: ${REPO}, Keep: ${KEEP}, Dry-run: ${DRY_RUN}"
-
-      - name: Wait for workflow to start
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set +e  # Don't fail if we timeout waiting
-          sleep 2  # Give the workflow time to queue
-          RUNS=$(gh run list --repo KevinDeBenedetti/github-workflows --workflow maintenance.yml --limit 1 --json status --jq '.[0].status')
-          echo "   Latest run status: $RUNS"
+          echo "   Parameters: Repo=${REPO}, Keep=${KEEP}, Dry-run=${DRY_RUN}"
 
   summary:
     name: Purge Summary
     needs: purge
     runs-on: ubuntu-latest
     if: always()
+    permissions:
+      actions: read
     steps:
       - name: Report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEEP: ${{ inputs.keep || 10 }}
+          DRY_RUN: ${{ inputs.dry-run || true }}
         run: |
           {
             echo "### 🧹 Purge All Repos — Orchestration Summary"
             echo ""
-            echo "**Schedule:** Sundays 03:00 UTC"
-            echo "**Last run:** $(date -u)"
+            echo "**Status:** ✅ Complete"
+            echo "**Mode:** $([ "$DRY_RUN" == "true" ] && echo "🔍 Dry-run (preview)" || echo "⚡ Live execution")"
+            echo "**Retention:** Keep \`${KEEP}\` most recent items per workflow"
             echo ""
-            echo "✅ Maintenance workflows have been triggered across all repositories."
+            echo "## 📋 What Was Processed"
             echo ""
-            echo "> Monitor individual repo runs under **Actions → Maintenance** in each repository."
+            echo "Centralized maintenance workflows triggered in: **github-workflows**"
+            echo ""
+            echo "Three purge tasks executed per repository:"
+            echo "- 🗑️ **Deployments**: Removes old deployment records from environments"
+            echo "- 🗑️ **Workflow Runs**: Removes old GitHub Actions runs (keeps newest N)"
+            echo "- 🗑️ **Caches**: Removes old workflow caches (keeps newest N)"
+            echo ""
+            echo "## 🔍 How to View Detailed Results"
+            echo ""
+            echo "Check the centralized maintenance workflow runs in this repository:"
+            echo ""
+            echo "**Link:** [View Maintenance Runs](../../actions/workflows/maintenance.yml)"
+            echo ""
+            echo "Each maintenance run shows:"
+            echo "- ✅ Deployments deleted"
+            echo "- ✅ Workflow runs deleted (per workflow)"
+            echo "- ✅ Caches deleted"
+            echo ""
+            echo "## 📚 Learn More"
+            echo ""
+            echo "- [Purge Deployments Workflow](../../docs/workflows/purge-deployments.md)"
+            echo "- [Purge Workflow Runs Workflow](../../docs/workflows/purge-workflow-runs.md)"
+            echo "- [Purge Caches Workflow](../../docs/workflows/purge-caches.md)"
           } >> "$GITHUB_STEP_SUMMARY"
