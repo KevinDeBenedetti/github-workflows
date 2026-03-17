@@ -53,16 +53,21 @@ jobs:
 
           # Get repos and apply filter if provided
           if [[ -n "$FILTER" ]]; then
-            MATRIX=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq "[.[] | select(.nameWithOwner | test(\"$FILTER\")) | .nameWithOwner]")
+            MATRIX=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq -c "[.[] | select(.nameWithOwner | test(\"$FILTER\")) | .nameWithOwner]")
             FILTERED_COUNT=$(echo "$MATRIX" | jq 'length')
             echo "   After filter: $FILTERED_COUNT repo(s)"
           else
-            MATRIX=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq '[.[] | .nameWithOwner]')
+            MATRIX=$(gh repo list "$OWNER" --limit 1000 --json nameWithOwner | jq -c '[.[] | .nameWithOwner]')
             COUNT=$(echo "$MATRIX" | jq 'length')
             echo "   Found $COUNT repo(s)"
           fi
 
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          # Use multiline output format for GitHub Actions
+          {
+            echo "matrix<<EOF"
+            echo "$MATRIX"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
   purge:
     name: Purge ${{ matrix.repo }}
