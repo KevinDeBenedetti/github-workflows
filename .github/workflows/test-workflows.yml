@@ -1,0 +1,38 @@
+name: Test — Reusable workflows
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  ci-shell:
+    name: CI — Shell
+    uses: ./.github/workflows/ci-shell.yml
+    with:
+      run-shellcheck: true
+      run-actionlint: true
+      run-bats: true
+    permissions:
+      contents: read
+
+  security:
+    name: Security — Secret scan
+    uses: ./.github/workflows/security.yml
+    with:
+      run-node-audit: false
+      run-python-audit: false
+      run-secret-scan: true
+      run-codeql: false
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+      pull-requests: read
