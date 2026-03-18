@@ -17,27 +17,27 @@ jobs:
   release:
     name: Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/release.yml
-    secrets: inherit
     permissions:
       contents: write
       pull-requests: write
+    uses: ./.github/workflows/release.yml
+    secrets: inherit
 
   dependabot-automerge:
     name: Dependabot — Auto-merge
     if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
-    uses: ./.github/workflows/dependabot.yml
-    secrets: inherit
     permissions:
       contents: write
       pull-requests: write
+    uses: ./.github/workflows/dependabot.yml
+    secrets: inherit
 
   check-bot-commits:
     name: Check bot commits
     if: github.event_name == 'pull_request_target'
-    uses: ./.github/workflows/check-bot-commits.yml
-    with:
-      allowed-bots: '["dependabot[bot]"]'
     permissions:
       contents: read
       pull-requests: read
+    uses: ./.github/workflows/check-bot-commits.yml
+    with:
+      allowed-bots: '["dependabot[bot]"]'
