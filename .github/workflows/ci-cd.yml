@@ -17,18 +17,18 @@ jobs:
   release:
     name: Release
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    uses: ./.github/workflows/release.yml
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
     secrets: inherit
 
   dependabot-automerge:
     name: Dependabot — Auto-merge
     if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
-    uses: ./.github/workflows/dependabot.yml
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/dependabot.yml@main
     secrets: inherit
 
   check-bot-commits:
     name: Check bot commits
     if: github.event_name == 'pull_request_target'
-    uses: ./.github/workflows/check-bot-commits.yml
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@main
     with:
       allowed-bots: '["dependabot[bot]"]'
