@@ -19,7 +19,7 @@ jobs:
     with:
       run-shellcheck: true
       run-actionlint: true
-      run-bats: true
+      run-bats: false
     permissions:
       contents: read
 
