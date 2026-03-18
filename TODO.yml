@@ -1,35 +1,9 @@
-issues:
-  - github_id: 2
-    type: feat
-    title: Add reusable workflow to purge old deployments and Actions runs
-    status: in-progress
-    priority: low
-    assignees:
-      - KevinDeBenedetti
-    body: |
-      ## Goal
-      Keep repos clean by automatically purging old deployments (keep last 10)
-      and old Actions workflow runs (keep last 10).
-
-      ## Acceptance criteria
-      - [ ] Reusable workflow `purge-deployments.yml` deletes all but the 10 most recent deployments
-      - [ ] Reusable workflow `purge-workflow-runs.yml` deletes all but the 10 most recent runs per workflow
-      - [ ] Both workflows expose a `keep` input to configure the retention count
-      - [ ] Example caller added to `examples/`
-      - [ ] Documentation added to `docs/workflows/`
-  - github_id: 6
-    type: feat
-    title: Test feature branch protection workflow
-    status: in-progress
-    priority: low
-    assignees:
-      - KevinDeBenedetti
-    body: |
-      ## Goal
-      Validate that the bidirectional sync between TODO.yml and GitHub Issues works end-to-end.
-
-      ## Acceptance criteria
-      - [x] Push mode creates this issue and writes back github_id
-      - [x] Updating status/priority/title in TODO.yml reflects on the issue
-      - [x] Closing the issue via GitHub triggers pull mode and removes this entry
-      - [ ] Setting status: done in TODO.yml closes the issue and removes this entry
+todos:
+  - id: "FEAT-01"
+    title: "Add dark mode support"
+    github_id: null
+    status: open
+  - id: "BUG-07"
+    title: "Fix login crash"
+    github_id: 57
+    status: closed

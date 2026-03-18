@@ -1,0 +1,68 @@
+name: "Sync GitHub Issues → TODO.yml"
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - closed
+      - reopened
+      - labeled
+      - unlabeled
+      - assigned
+      - unassigned
+
+jobs:
+  sync:
+    name: Sync Issue to TODO.yml
+    runs-on: ubuntu-latest
+    if: "github.actor != 'github-actions[bot]'"
+    outputs:
+      changed: ${{ steps.check_changes.outputs.changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install
+
+      - name: Sync Issue to TODO.yml
+        working-directory: scripts
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_STATE: ${{ github.event.issue.state }}
+          ISSUE_LABELS: ${{ toJson(github.event.issue.labels.*.name) }}
+          ISSUE_ASSIGNEE: ${{ github.event.issue.assignee.login }}
+          ISSUE_MILESTONE: ${{ github.event.issue.milestone.title }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: npx tsx sync-issue-to-todo.ts
+
+      - name: Check if TODO.yml changed
+        id: check_changes
+        run: |
+          if ! git diff --quiet TODO.yml; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Pull Request
+        if: steps.check_changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: sync TODO.yml from issue #${{ github.event.issue.number }} [skip-todo-sync]"
+          title: "sync: TODO.yml ← issue #${{ github.event.issue.number }} — ${{ github.event.issue.title }}"
+          branch: "todo-sync/issue-${{ github.event.issue.number }}"
+          labels: "todo-sync"
+          body: "Automated update of TODO.yml triggered by changes to issue #${{ github.event.issue.number }}."

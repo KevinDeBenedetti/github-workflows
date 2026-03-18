@@ -27,6 +27,16 @@ on:
         description: Preview what would be deleted without deleting
         type: boolean
         default: true
+    outputs:
+      deployments-stats:
+        description: JSON stats from deployments purge
+        value: ${{ jobs.purge-deployments.outputs.stats }}
+      workflow-runs-stats:
+        description: JSON stats from workflow runs purge
+        value: ${{ jobs.purge-workflow-runs.outputs.stats }}
+      caches-stats:
+        description: JSON stats from caches purge
+        value: ${{ jobs.purge-caches.outputs.stats }}
 
 jobs:
   purge-deployments:

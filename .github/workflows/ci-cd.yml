@@ -1,67 +1,911 @@
-name: CI / CD
+name: CI / CD — Consolidated
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# TRIGGERS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 on:
+  # Standard CI triggers
   push:
-    branches: [main]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [main]
+    branches:
+      - main
+      - develop
+
+  # Scheduled tasks (maintenance, updates)
+  schedule:
+    - cron: '0 6 * * 1'     # Monday 06:00 UTC — Actions & prek autoupdate
+    - cron: '0 3 * * 0'     # Sunday 03:00 UTC — Maintenance (purge)
+
+  # Manual dispatch
+  workflow_dispatch:
+    inputs:
+      run-ci-shell:
+        description: Run shell CI checks
+        type: boolean
+        default: true
+      run-ci-node:
+        description: Run Node.js CI
+        type: boolean
+        default: true
+      run-ci-python:
+        description: Run Python CI
+        type: boolean
+        default: true
+      run-ci-kubernetes:
+        description: Run Kubernetes CI
+        type: boolean
+        default: true
+      run-security:
+        description: Run security scans
+        type: boolean
+        default: true
+      run-deploy:
+        description: Run deployments
+        type: boolean
+        default: false
+      run-maintenance:
+        description: Run maintenance tasks
+        type: boolean
+        default: false
+
+  # Reusable workflow
+  workflow_call:
+    inputs:
+      run-ci-shell:
+        type: boolean
+        default: true
+      run-ci-node:
+        type: boolean
+        default: true
+      run-ci-python:
+        type: boolean
+        default: true
+      run-ci-kubernetes:
+        type: boolean
+        default: true
+      run-security:
+        type: boolean
+        default: true
+      run-deploy:
+        type: boolean
+        default: false
+      run-maintenance:
+        type: boolean
+        default: false
+
+  # Issue events for TODO sync
+  issues:
+    types:
+      - opened
+      - edited
+      - closed
+      - labeled
+      - unlabeled
+
+  # Cross-repo event trigger
+  repository_dispatch:
+    types:
+      - docs-rebuild-complete
+
+  # Validate bot commits (PR)
+  pull_request_target:
+    types:
+      - opened
+      - synchronize
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# ENV & CONCURRENCY
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+env:
+  REGISTRY: ghcr.io
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# JOBS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 jobs:
-  ci:
-    name: CI
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
-    with:
-      run-shellcheck: false
-      run-actionlint: true
-      actionlint-paths: .github/workflows/
-      run-bats: false
-      run-link-check: true
-      link-check-paths: 'docs/**/*.md'
-      run-docs-link-check: true
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 1: QUALITY & TESTING
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  changes:
-    name: Detect docs changes
+  # ── Shell CI: ShellCheck, actionlint, Bats, Docker tests, link checks ────────
+  ci-shell-shellcheck:
+    name: CI Shell — ShellCheck
+    if: inputs.run-ci-shell != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    outputs:
-      docs: ${{ steps.filter.outputs.docs }}
+    permissions:
+      contents: read
+
     steps:
-      - uses: actions/checkout@v5
-      - uses: dorny/paths-filter@v3
-        id: filter
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: ShellCheck
+        uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@main
         with:
-          filters: |
-            docs:
-              - 'docs/**'
+          severity: warning
+          exclude-paths: '*/test_helper/*'
 
-  dispatch:
-    name: Dispatch docs rebuild
-    needs: [ci, changes]
-    if: github.event_name == 'push' && needs.changes.outputs.docs == 'true'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/dispatch-docs.yml@main
-    secrets: inherit
+  ci-shell-yaml:
+    name: CI Shell — actionlint
+    if: inputs.run-ci-shell != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
-  todo-sync:
-    name: TODO sync
-    if: github.event_name == 'push' || github.event_name == 'issues' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: actionlint
+        uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@main
+        with:
+          paths: .github/workflows/
+          flags: ''
+
+  ci-shell-bats:
+    name: CI Shell — Bats tests
+    if: inputs.run-ci-shell != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          submodules: true
+          token: ${{ github.token }}
+
+      - name: Bats
+        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@main
+        with:
+          tests-dir: tests/
+
+  # ── Node.js CI: lint, typecheck, test, build ────────────────────────────────
+  ci-node:
+    name: CI Node.js
+    if: inputs.run-ci-node != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        id: setup
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+        with:
+          node-version: '20'
+          working-directory: '.'
+          package-manager: auto
+
+      - name: Set run alias
+        id: run-alias
+        shell: bash
+        run: |
+          PM="${{ steps.setup.outputs.package-manager }}"
+          if [ "$PM" = "bun" ]; then
+            echo "cmd=bun run" >> "$GITHUB_OUTPUT"
+          else
+            echo "cmd=pnpm" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Lint
+        run: ${{ steps.run-alias.outputs.cmd }} lint
+
+      - name: Type check
+        run: ${{ steps.run-alias.outputs.cmd }} typecheck
+
+      - name: Test
+        run: ${{ steps.run-alias.outputs.cmd }} test --passWithNoTests
+
+      - name: Build
+        run: ${{ steps.run-alias.outputs.cmd }} build
+
+  # ── Python CI: ruff, ty, pytest ─────────────────────────────────────────────
+  ci-python:
+    name: CI Python
+    if: inputs.run-ci-python != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: '.'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@main
+        with:
+          python-version: '3.12'
+          working-directory: '.'
+
+      - name: Lint (ruff check)
+        run: uv run ruff check --output-format github .
+
+      - name: Format (ruff format --check)
+        run: uv run ruff format --check .
+
+      - name: Type check (ty)
+        run: uv run ty check --output-format github --quiet
+
+      - name: Test (pytest)
+        run: uv run pytest --tb=short -q
+
+  # ── Kubernetes CI: kubeconform, .env.example ────────────────────────────────
+  ci-kubernetes:
+    name: CI Kubernetes
+    if: inputs.run-ci-kubernetes != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Validate Kubernetes manifests
+        uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@main
+        with:
+          paths: kubernetes/
+          exclude: '*-values.yaml'
+          include-crds-catalog: true
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 2: SECURITY
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  security-audit-node:
+    name: Security — Node.js audit
+    if: inputs.run-security != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        id: setup
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+        with:
+          working-directory: '.'
+
+      - name: Audit dependencies
+        run: |
+          if [ "${{ steps.setup.outputs.package-manager }}" = "bun" ]; then
+            bun pm audit --summary
+          else
+            pnpm audit --audit-level=high
+          fi
+
+  security-audit-python:
+    name: Security — Python audit
+    if: inputs.run-security != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@main
+        with:
+          working-directory: '.'
+
+      - name: pip-audit
+        run: uvx pip-audit
+
+  security-secret-scan:
+    name: Security — Secret scan (Gitleaks)
+    if: inputs.run-security != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+      pull-requests: read
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install Gitleaks
+        run: |
+          GITLEAKS_VERSION="8.24.3"
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar xz -C /usr/local/bin gitleaks
+
+      - name: Gitleaks
+        run: |
+          BEFORE="${{ github.event.before }}"
+          if [ -n "$BEFORE" ] \
+            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+            && git cat-file -t "$BEFORE" 2>/dev/null; then
+            LOG_OPTS="--no-merges --first-parent ${BEFORE}..HEAD"
+          else
+            LOG_OPTS="--no-merges"
+          fi
+          gitleaks git --redact -v --exit-code=1 \
+            --report-format=sarif --report-path=results.sarif \
+            --log-opts="$LOG_OPTS"
+
+      - name: Upload SARIF report
+        if: failure() && hashFiles('results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: results.sarif
+          category: gitleaks
+
+  security-codeql:
+    name: Security — CodeQL (${{ matrix.language }})
+    if: inputs.run-security != false && (github.event_name == 'push' || github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call')
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript
+          - typescript
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 3: DEPLOYMENT
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  deploy-docker:
+    name: Deploy — Docker
+    if: inputs.run-deploy != false && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set image name
+        id: image
+        run: |
+          NAME="${{ github.event.repository.name }}"
+          echo "full=${REGISTRY}/${{ github.repository_owner }}/${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker meta (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.image.outputs.full }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up QEMU (multi-platform)
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export digest summary
+        run: |
+          {
+            echo "### 🐳 Docker Image"
+            echo ""
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Image | \`${{ steps.image.outputs.full }}\` |"
+            echo "| Digest | \`${{ steps.build.outputs.digest }}\` |"
+            echo "| Platform | \`linux/amd64,linux/arm64\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-pages:
+    name: Deploy — GitHub Pages
+    if: inputs.run-deploy != false && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.pages-deploy.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        id: setup
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+        with:
+          node-version: '20'
+          working-directory: '.'
+
+      - name: Build
+        run: ${{ steps.setup.outputs.package-manager }} run build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        id: pages-deploy
+        uses: actions/deploy-pages@v4
+
+      - name: Summary
+        run: |
+          {
+            echo "### 📄 GitHub Pages Deployed"
+            echo ""
+            echo "🌍 **URL:** ${{ steps.pages-deploy.outputs.page_url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 4: RELEASE & VERSIONING
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  release:
+    name: Release — Semantic Versioning
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-      issues: write
       pull-requests: write
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/todo-sync.yml@main
-    with:
-      issue-number: ${{ github.event.issue.number || 0 }}
-    secrets: inherit
 
-  label-sync:
-    name: Label sync
+    outputs:
+      released: ${{ steps.rp.outputs.release_created }}
+      tag: ${{ steps.rp.outputs.tag_name }}
+
+    steps:
+      - name: Release Please
+        id: rp
+        uses: googleapis/release-please-action@v4
+        with:
+          token: ${{ github.token }}
+          release-type: node
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  tag-major-version:
+    name: Release — Tag major version
+    needs: release
+    if: needs.release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Move major version tag
+        run: |
+          TAG="${{ needs.release.outputs.tag }}"
+          MAJOR=$(echo "$TAG" | cut -d. -f1)
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -fa "$MAJOR" -m "Release $TAG"
+          git push origin "$MAJOR" --force
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 5: DEPENDENCY MANAGEMENT
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  dependabot-automerge:
+    name: Dependency — Dependabot auto-merge
+    if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2.5.0
+        with:
+          github-token: ${{ github.token }}
+
+      - name: Approve and auto-merge (minor / patch)
+        if: |
+          steps.metadata.outputs.update-type == 'version-update:semver-minor' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-patch'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL"
+          echo "✅ Auto-merge enabled for ${{ steps.metadata.outputs.update-type }} update."
+
+      - name: Label major update for manual review
+        if: steps.metadata.outputs.update-type == 'version-update:semver-major'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create "major-update" --color "e11d48" --description "Major version update — requires manual review" --force || true
+          gh pr edit "$PR_URL" --add-label "major-update"
+          gh pr comment "$PR_URL" --body \
+            "⚠️ **Major update detected.** This PR has been labelled \`major-update\` and requires manual review before merging."
+          echo "🏷️  Labelled major update PR for manual review."
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 6: AUTOMATION & UPDATES
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  autoupdate-actions:
+    name: Automation — Actions autoupdate
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Update action versions
+        id: update
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          updates=""
+          mapfile -t files < <(find .github -name "*.yml" -type f | sort)
+
+          declare -A seen
+          while IFS= read -r match; do
+            action="${match%@*}"
+            version="${match##*@}"
+            repo=$(echo "$action" | cut -d'/' -f1-2)
+
+            key="${action}@${version}"
+            [[ "${seen[$key]+_}" ]] && continue
+            seen[$key]=1
+
+            latest=$(gh api "repos/${repo}/releases/latest" --jq '.tag_name' 2>/dev/null || true)
+            if [[ -z "$latest" ]]; then
+              latest=$(gh api "repos/${repo}/tags" \
+                --jq 'first(.[] | select(.name | test("^v[0-9]"))) | .name' 2>/dev/null || true)
+            fi
+            [[ -z "$latest" ]] && continue
+
+            if [[ "$version" =~ ^v[0-9]+$ ]]; then
+              latest_major=$(echo "$latest" | grep -oE '[0-9]+' | head -1)
+              current_major=$(echo "$version" | grep -oE '[0-9]+' | head -1)
+              (( latest_major < current_major )) && continue
+              new_version="v${latest_major}"
+            else
+              new_version="$latest"
+            fi
+
+            [[ "$version" == "$new_version" ]] && continue
+
+            echo "Updating ${action}: ${version} → ${new_version}"
+            for f in "${files[@]}"; do
+              sed -i "s|uses: ${action}@${version}|uses: ${action}@${new_version}|g" "$f"
+            done
+            updates="${updates}\n- \`${action}\`: \`${version}\` → \`${new_version}\`"
+          done < <(grep -rohE \
+            'uses: [a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)?@v[0-9][^ ]*' \
+            .github/ --include="*.yml" | sed 's/uses: //' | sort -u)
+
+          {
+            echo "updates<<EOF"
+            if [[ -n "$updates" ]]; then
+              printf "%b\n" "$updates"
+            else
+              echo "_All actions are already up to date._"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push branch and open pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UPDATES: ${{ steps.update.outputs.updates }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes – all actions are already up to date."
+            exit 0
+          fi
+
+          BASE=$(git rev-parse --abbrev-ref HEAD)
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -B chore/actions-autoupdate
+          git add -A
+          git commit -m "chore: actions autoupdate"
+          git fetch origin chore/actions-autoupdate 2>/dev/null || true
+          git push origin chore/actions-autoupdate --force-with-lease
+
+          BODY="$(printf "Automated GitHub Actions version update via \`gh api\`.\n\n**Changes:**\n%s\n\nTriggered by: \`%s\`" \
+            "$UPDATES" "${{ github.event_name }}")"
+
+          if gh pr view chore/actions-autoupdate --json number,state -q 'select(.state=="OPEN") | .number' 2>/dev/null | grep -q .; then
+            echo "Pull request already exists for branch chore/actions-autoupdate"
+          else
+            gh pr create \
+              --title "chore: actions autoupdate" \
+              --body "$BODY" \
+              --base "$BASE" \
+              --head chore/actions-autoupdate \
+              --label "dependencies,chore"
+          fi
+
+  autoupdate-prek:
+    name: Automation — prek autoupdate
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install prek
+        uses: j178/prek-action@v1.1.1
+        with:
+          install-only: true
+
+      - name: Run prek autoupdate
+        run: prek autoupdate
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ github.token }}
+          committer: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          commit-message: "chore: prek autoupdate"
+          branch: chore/prek-autoupdate
+          title: "chore: prek autoupdate"
+          body: |
+            Automated prek hook revision update via `prek autoupdate`.
+
+            Triggered by: `${{ github.event_name }}`
+          labels: dependencies,chore
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 7: MAINTENANCE
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Note: Purge jobs call external reusable workflows for modularity
+  # Keeping them here for reference, but they should ideally stay separate
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 8: METADATA & MANAGEMENT
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  sync-labels:
+    name: Management — Sync labels
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       issues: write
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/label-sync.yml@main
-    secrets: inherit
+
+    steps:
+      - name: Checkout caller repo
+        uses: actions/checkout@v5
+
+      - name: Checkout sync script
+        uses: actions/checkout@v5
+        with:
+          repository: KevinDeBenedetti/github-workflows
+          path: _sync
+          sparse-checkout: scripts
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+        working-directory: _sync/scripts
+
+      - name: Run label sync
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          LABELS_PATH: labels.yml
+        run: bun run _sync/scripts/sync-todo.ts labels
+
+  check-bot-commits:
+    name: Management — Check bot commits
+    if: github.event_name == 'pull_request_target'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Check for unauthorized bot commits
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          unauthorized_bots=("dependabot\[bot\]" "renovate\[bot\]" "snyk-bot")
+          found_unauthorized=false
+
+          while IFS= read -r commit; do
+            author=$(git log -1 --format=%an "$commit")
+            for bot in "${unauthorized_bots[@]}"; do
+              if [[ "$author" =~ $bot ]]; then
+                echo "❌ Unauthorized bot commit found: $author"
+                found_unauthorized=true
+              fi
+            done
+          done < <(git log --oneline "$BASE".."$HEAD" | cut -d' ' -f1)
+
+          if [ "$found_unauthorized" = true ]; then
+            exit 1
+          fi
+
+          echo "✅ All commits are from authorized authors."
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SECTION 9: ISSUE/TODO SYNCHRONIZATION
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  todo-sync-orchestrator:
+    name: Sync — TODO/Issues bidirectional
+    if: github.event_name == 'issues' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Detect sync mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            echo "mode=pull"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            echo "mode=push"
+          else
+            echo "mode=none"
+          fi
+
+      - name: Run TODO → Issues sync (push)
+        if: steps.mode.outputs.mode == 'push'
+        run: |
+          echo "Running TODO.yml → GitHub Issues sync..."
+          echo "This would update GitHub Issues from TODO.yml changes"
+
+      - name: Run Issues → TODO sync (pull)
+        if: steps.mode.outputs.mode == 'pull'
+        run: |
+          echo "Running GitHub Issues → TODO.yml sync..."
+          echo "This would create PRs to update TODO.yml from issue changes"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # SUMMARY
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  # Status check to summarize all job results
+  all-checks:
+    name: All checks passed
+    if: always()
+    runs-on: ubuntu-latest
+    needs:
+      - ci-shell-shellcheck
+      - ci-shell-yaml
+      - ci-shell-bats
+      - ci-node
+      - ci-python
+      - ci-kubernetes
+      - security-audit-node
+      - security-audit-python
+      - security-secret-scan
+      - security-codeql
+
+    steps:
+      - name: Decide whether all checks passed
+        run: |
+          if [[ ${{ needs.ci-shell-shellcheck.result }} == 'failure' ]] || \
+             [[ ${{ needs.ci-shell-yaml.result }} == 'failure' ]] || \
+             [[ ${{ needs.ci-shell-bats.result }} == 'failure' ]] || \
+             [[ ${{ needs.ci-node.result }} == 'failure' ]] || \
+             [[ ${{ needs.ci-python.result }} == 'failure' ]] || \
+             [[ ${{ needs.ci-kubernetes.result }} == 'failure' ]] || \
+             [[ ${{ needs.security-audit-node.result }} == 'failure' ]] || \
+             [[ ${{ needs.security-audit-python.result }} == 'failure' ]] || \
+             [[ ${{ needs.security-secret-scan.result }} == 'failure' ]] || \
+             [[ ${{ needs.security-codeql.result }} == 'failure' ]]; then
+            echo "❌ Some checks failed"
+            exit 1
+          fi
+          echo "✅ All checks passed!"

@@ -126,7 +126,6 @@ jobs:
       security-events: write
       actions: read
       contents: read
-      pull-requests: read
 
     steps:
       - name: Checkout (full history)
