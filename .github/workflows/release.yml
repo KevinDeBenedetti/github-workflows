@@ -8,16 +8,27 @@ on:
         type: string
         required: false
         default: ''
+      initial-version:
+        description: >
+          Initial version for new releases (e.g., '0.1.0', '1.0.0').
+          Only used if manifest file doesn't exist. Customize per repository needs.
+        type: string
+        required: false
+        default: '1.0.0'
       config-file:
-        description: Path to release-please-config.json
+        description: >
+          Path to release-please-config.json. Supports: root path or '.github/release/' folder.
+          If not provided, checks in this order: .github/release/release-please-config.json, release-please-config.json
         type: string
         required: false
-        default: release-please-config.json
+        default: ''
       manifest-file:
-        description: Path to .release-please-manifest.json
+        description: >
+          Path to .release-please-manifest.json. Supports: root path or '.github/release/' folder.
+          If not provided, checks in this order: .github/release/.release-please-manifest.json, .release-please-manifest.json
         type: string
         required: false
-        default: .release-please-manifest.json
+        default: ''
       git-user-name:
         description: >
           Name used for the git tagger identity when moving the major version tag.
@@ -64,14 +75,62 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Detect release config paths
+        id: detect-paths
+        shell: bash
+        run: |
+          # Determine config file path
+          if [ -n "${{ inputs.config-file }}" ]; then
+            CONFIG_FILE="${{ inputs.config-file }}"
+          elif [ -f ".github/release/release-please-config.json" ]; then
+            CONFIG_FILE=".github/release/release-please-config.json"
+          else
+            CONFIG_FILE="release-please-config.json"
+          fi
+
+          # Determine manifest file path
+          if [ -n "${{ inputs.manifest-file }}" ]; then
+            MANIFEST_FILE="${{ inputs.manifest-file }}"
+          elif [ -f ".github/release/.release-please-manifest.json" ]; then
+            MANIFEST_FILE=".github/release/.release-please-manifest.json"
+          else
+            MANIFEST_FILE=".release-please-manifest.json"
+          fi
+
+          {
+            echo "config-file=$CONFIG_FILE"
+            echo "manifest-file=$MANIFEST_FILE"
+            echo "initial-version=${{ inputs.initial-version }}"
+          } >> "$GITHUB_OUTPUT"
+          echo "ℹ️ Using config: $CONFIG_FILE"
+          echo "ℹ️ Using manifest: $MANIFEST_FILE"
+          echo "ℹ️ Initial version: ${{ inputs.initial-version }}"
+
+      - name: Initialize manifest with custom version
+        shell: bash
+        run: |
+          MANIFEST_FILE="${{ steps.detect-paths.outputs.manifest-file }}"
+          if [ ! -f "$MANIFEST_FILE" ]; then
+            mkdir -p "$(dirname "$MANIFEST_FILE")"
+            cat > "$MANIFEST_FILE" << 'EOF'
+          {
+            ".": "${{ steps.detect-paths.outputs.initial-version }}"
+          }
+          EOF
+            echo "✅ Created manifest with initial version: ${{ steps.detect-paths.outputs.initial-version }}"
+          fi
+
       - name: Release Please
         id: rp
         uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN || github.token }}
           release-type: ${{ inputs.release-type || '' }}
-          config-file: ${{ inputs.config-file }}
-          manifest-file: ${{ inputs.manifest-file }}
+          config-file: ${{ steps.detect-paths.outputs.config-file }}
+          manifest-file: ${{ steps.detect-paths.outputs.manifest-file }}
 
   tag-workflows:
     name: Tag @v<major> alias
