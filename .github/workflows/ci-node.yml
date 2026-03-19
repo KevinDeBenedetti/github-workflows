@@ -61,10 +61,10 @@ on:
         required: false
         default: false
       link-check-paths:
-        description: Space-separated glob patterns of markdown files to check
+        description: Space-separated paths or directories of markdown files to check
         type: string
         required: false
-        default: 'docs/**/*.md'
+        default: 'docs/'
 
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
@@ -115,9 +115,9 @@ on:
         type: boolean
         default: false
       link-check-paths:
-        description: Space-separated glob patterns of markdown files to check
+        description: Space-separated paths or directories of markdown files to check
         type: string
-        default: 'docs/**/*.md'
+        default: 'docs/'
 
 concurrency:
   group: ci-node-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}

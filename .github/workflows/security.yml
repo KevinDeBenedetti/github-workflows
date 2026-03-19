@@ -93,7 +93,7 @@ jobs:
         working-directory: ${{ inputs.node-working-directory }}
         run: |
           if [ "${{ steps.setup.outputs.package-manager }}" = "bun" ]; then
-            bun pm audit --summary
+            bun audit --audit-level=high
           else
             pnpm audit --audit-level=high
           fi
