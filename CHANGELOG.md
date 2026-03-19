@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.2.0...v0.2.1) (2026-03-19)
+
+
+### Bug Fixes
+
+* update upload-pages-artifact action to version 4 in CI workflow ([0d7ab07](https://github.com/KevinDeBenedetti/github-workflows/commit/0d7ab077785b9b11a63b051a8e4de16afb07b7a8))
+
 ## [0.2.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.1.0...v0.2.0) (2026-03-19)
 
 
