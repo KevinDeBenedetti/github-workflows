@@ -54,7 +54,7 @@ jobs:
           eval "$CMD"
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ${{ inputs.working-directory }}/${{ inputs.output-directory }}
 
