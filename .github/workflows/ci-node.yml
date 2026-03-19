@@ -168,7 +168,13 @@ jobs:
       - name: Test
         if: inputs.run-test
         working-directory: ${{ inputs.working-directory }}
-        run: ${{ steps.run-alias.outputs.cmd }} test --passWithNoTests
+        shell: bash
+        run: |
+          if [ "${{ steps.setup.outputs.package-manager }}" = "bun" ]; then
+            bun run test
+          else
+            pnpm test --passWithNoTests
+          fi
 
       - name: Check markdown links
         if: inputs.run-link-check
