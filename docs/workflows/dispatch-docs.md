@@ -1,31 +1,43 @@
-# Dispatch — Docs Rebuild
+# Deploy — Docs to GitHub Pages
 
-Sends a `repository_dispatch` event to a target repository (default: `KevinDeBenedetti/kevindebenedetti.github.io`) to trigger a remote documentation rebuild.
+Deploys the `docs/` folder from the calling repository directly to GitHub Pages using `actions/upload-pages-artifact` and `actions/deploy-pages`.
 
 ## Usage
 
 ```yaml
 jobs:
-  dispatch-docs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/dispatch-docs.yml@main
-    secrets: inherit
+  deploy-docs:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
 ```
+
+> **GitHub Pages must be configured** to use "GitHub Actions" as the source in the repository settings.
 
 ## Inputs
 
-| Input         | Type   | Default                                    | Description                                          |
-| ------------- | ------ | ------------------------------------------ | ---------------------------------------------------- |
-| `target-repo` | string | `KevinDeBenedetti/kevindebenedetti.github.io` | Repository to dispatch to (`owner/repo`)           |
-| `event-type`  | string | `docs-updated`                             | `repository_dispatch` event type to send             |
+| Input            | Type   | Default  | Description                                   |
+| ---------------- | ------ | -------- | --------------------------------------------- |
+| `docs-directory` | string | `docs`   | Path to the docs folder to deploy             |
 
-## Secrets
+## Outputs
 
-| Secret      | Required | Description                                                                  |
-| ----------- | -------- | ---------------------------------------------------------------------------- |
-| `PAT_TOKEN` | ✅        | Fine-grained PAT with `actions:write` on the **target** repository           |
+| Output     | Description                            |
+| ---------- | -------------------------------------- |
+| `page-url` | URL of the deployed GitHub Pages site  |
+
+## Permissions required
+
+The calling workflow must grant the following permissions (or use `permissions: write-all`):
+
+```yaml
+permissions:
+  pages: write
+  id-token: write
+```
+
+These are set internally per job via `workflow_call`, so callers using `secrets: inherit` do not need to repeat them.
 
 ## Notes
 
-- The dispatch payload includes `source` (the calling repository) and `ref` (the triggering branch/tag).
-- The target repository must have a workflow that listens for the `repository_dispatch` event type.
-- Designed to be called after a documentation-affecting push to automatically rebuild the docs site.
+- No build step — the docs folder is uploaded as-is (static files, Markdown, HTML, etc.).
+- The `page-url` output is available in subsequent jobs via `needs.<job>.outputs.page-url`.
+- Designed to be called after any push that updates documentation.

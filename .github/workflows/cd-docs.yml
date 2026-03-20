@@ -1,42 +1,56 @@
-name: Dispatch — Docs Rebuild
+name: Deploy — Docs to GitHub Pages
 
 on:
   workflow_call:
     inputs:
-      target-repo:
-        description: 'Repository to dispatch to (owner/repo)'
+      docs-directory:
+        description: 'Path to the docs folder to deploy'
         type: string
         required: false
-        default: 'KevinDeBenedetti/kevindebenedetti.github.io'
-      event-type:
-        description: 'repository_dispatch event type'
-        type: string
-        required: false
-        default: 'docs-updated'
-    secrets:
-      PAT_TOKEN:
-        description: >
-          Fine-grained PAT with actions:write on the target repository.
-          Can be shared with the repo-level PAT_TOKEN if that token already
-          has actions:write on the target.
-        required: true
+        default: 'docs'
+    outputs:
+      page-url:
+        description: URL of the deployed GitHub Pages site
+        value: ${{ jobs.deploy.outputs.page-url }}
 
 jobs:
-  dispatch:
-    name: Dispatch docs rebuild
+  build:
+    name: Upload docs artifact
     runs-on: ubuntu-latest
 
     steps:
-      - name: Trigger docs rebuild
-        env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
-          TARGET: ${{ inputs.target-repo }}
-          EVENT: ${{ inputs.event-type }}
-          SOURCE: ${{ github.repository }}
-          REF: ${{ github.ref }}
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ${{ inputs.docs-directory }}
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    outputs:
+      page-url: ${{ steps.pages.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: pages
+        uses: actions/deploy-pages@v4
+
+      - name: Summary
         run: |
-          gh api "repos/${TARGET}/dispatches" \
-            --method POST \
-            --input - << EOF
-          {"event_type":"${EVENT}","client_payload":{"source":"${SOURCE}","ref":"${REF}"}}
-          EOF
+          {
+            echo "### 📄 Docs Deployed to GitHub Pages"
+            echo ""
+            echo "🌍 **URL:** ${{ steps.pages.outputs.page_url }}"
+            echo "📁 **Source:** \`${{ inputs.docs-directory }}/\`"
+            echo "📦 **Repository:** \`${{ github.repository }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
