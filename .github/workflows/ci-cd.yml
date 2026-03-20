@@ -3,8 +3,6 @@ name: CI / CD
 on:
   push:
     branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
   pull_request_target:
     types: [opened, synchronize]
 
@@ -24,12 +22,6 @@ jobs:
     name: Sync docs → central repo
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
-    secrets: inherit
-
-  dependabot-automerge:
-    name: Dependabot — Auto-merge
-    if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/dependabot.yml@main
     secrets: inherit
 
   check-bot-commits:
