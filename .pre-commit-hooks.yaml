@@ -7,3 +7,14 @@
   entry: .github/actions/check-docs-links/check-docs-links.sh
   files: ^docs/.*\.md$
   pass_filenames: true
+
+- id: check-vitepress-md
+  name: No unescaped Vue interpolations in docs/
+  description: >
+    Ensures {{ }} expressions in docs/ markdown are escaped with v-pre.
+    Unescaped expressions are evaluated by VitePress at SSR build time and
+    cause TypeError crashes when the referenced variable is undefined.
+  language: script
+  entry: .github/actions/check-vitepress-md/check-vitepress-md.sh
+  files: ^docs/.*\.md$
+  pass_filenames: true
