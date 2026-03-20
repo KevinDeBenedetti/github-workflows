@@ -28,6 +28,11 @@ on:
         type: boolean
         required: false
         default: true
+      target:
+        description: Build target stage (e.g. dev, prod)
+        type: string
+        required: false
+        default: ''
       tag-latest:
         description: Also tag as :latest
         type: boolean
@@ -45,14 +50,14 @@ env:
   REGISTRY: ghcr.io
 
 concurrency:
-  group: deploy-docker-${{ github.ref }}-${{ inputs.context }}
+  group: deploy-docker-${{ github.ref }}-${{ inputs.context }}-${{ inputs.target }}
   cancel-in-progress: false
 
 jobs:
   docker:
     name: Docker build & push (${{ inputs.context }})
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'production' || 'preview' }}
+    environment: ${{ inputs.push && (github.ref == 'refs/heads/main' && 'production' || 'preview') || '' }}
     permissions:
       contents: read
       packages: write
@@ -111,6 +116,7 @@ jobs:
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          target: ${{ inputs.target }}
           cache-from: type=gha,scope=${{ inputs.context }}
           cache-to: type=gha,scope=${{ inputs.context }},mode=max
 

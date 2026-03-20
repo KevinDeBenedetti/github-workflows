@@ -36,3 +36,11 @@ language = "script"
 entry = ".github/actions/check-docs-links/check-docs-links.sh"
 files = "^docs/.*\\.md$"
 pass_filenames = true
+
+[[repos.hooks]]
+id = "check-vitepress-md"
+name = "No unescaped Vue interpolations in docs/"
+language = "script"
+entry = ".github/actions/check-vitepress-md/check-vitepress-md.sh"
+files = "^docs/.*\\.md$"
+pass_filenames = true

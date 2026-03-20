@@ -1,0 +1,13 @@
+name: Check VitePress markdown
+description: >
+  Detect unescaped Vue template interpolations {{ }} in docs/ markdown files.
+  VitePress compiles every Markdown file as a Vue SFC — any {{ expr }} outside
+  a fenced code block or a v-pre wrapper is evaluated at SSR build time and
+  causes TypeError crashes when the referenced variable is undefined.
+
+runs:
+  using: composite
+  steps:
+    - name: Check VitePress markdown
+      shell: bash
+      run: bash "${{ github.action_path }}/check-vitepress-md.sh"

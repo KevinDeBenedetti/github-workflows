@@ -20,6 +20,12 @@ jobs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
     secrets: inherit
 
+  deploy-docs:
+    name: Sync docs → central repo
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
+    secrets: inherit
+
   dependabot-automerge:
     name: Dependabot — Auto-merge
     if: github.event_name == 'pull_request' && github.actor == 'dependabot[bot]'
