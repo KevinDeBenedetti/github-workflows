@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.2.1...v0.3.0) (2026-03-20)
+
+
+### Features
+
+* add pre-commit hook to check for unescaped Vue interpolations in markdown files ([aef16fd](https://github.com/KevinDeBenedetti/github-workflows/commit/aef16fdf6562afd3d8606bbd637297415ca133d4))
+
+
+### Bug Fixes
+
+* allow SARIF report upload to continue on error in CodeQL job ([38e2a8d](https://github.com/KevinDeBenedetti/github-workflows/commit/38e2a8d045282afe354fe402104089b844398db3))
+
 ## [0.2.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.2.0...v0.2.1) (2026-03-19)
 
 
