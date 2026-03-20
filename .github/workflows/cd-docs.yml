@@ -15,45 +15,34 @@ on:
         default: 'KevinDeBenedetti/kevindebenedetti.github.io'
       target-directory:
         description: >
-          Subdirectory in the target repo to sync docs into.
+          Logical name for this repo's docs in the central site
+          (used as metadata in the dispatch payload).
           Defaults to the calling repository name (e.g. github-workflows).
         type: string
         required: false
         default: ''
     outputs:
       docs-synced:
-        description: '"true" if docs were actually changed and pushed, "false" if nothing changed.'
-        value: ${{ jobs.sync.outputs.docs-synced }}
+        description: '"true" when the docs-updated dispatch was sent successfully.'
+        value: ${{ jobs.dispatch.outputs.dispatched }}
     secrets:
       PAT_TOKEN:
         description: >
           Fine-grained PAT with contents:write on the target repository
           (KevinDeBenedetti/kevindebenedetti.github.io or the value of target-repo).
-          Used both to push synced docs and to dispatch the docs-updated event.
+          Required to send the repository_dispatch event.
         required: true
 
 jobs:
-  sync:
-    name: Sync docs → ${{ inputs.target-repo }}
+  dispatch:
+    name: Dispatch docs-updated → ${{ inputs.target-repo }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
     outputs:
-      docs-synced: ${{ steps.commit.outputs.pushed }}
+      dispatched: ${{ steps.dispatch.outputs.dispatched }}
 
     steps:
-      - name: Checkout source (calling repo)
-        uses: actions/checkout@v5
-        with:
-          path: source
-
-      - name: Checkout target (central docs repo)
-        uses: actions/checkout@v5
-        with:
-          repository: ${{ inputs.target-repo }}
-          token: ${{ secrets.PAT_TOKEN }}
-          path: target
-
       - name: Resolve target directory
         id: dirs
         env:
@@ -63,31 +52,8 @@ jobs:
           TARGET_DIR="${INPUT_TARGET:-$REPO_NAME}"
           echo "target=${TARGET_DIR}" >> "$GITHUB_OUTPUT"
 
-      - name: Sync docs
-        run: |
-          mkdir -p "target/${{ steps.dirs.outputs.target }}"
-          rsync -av --delete \
-            "source/${{ inputs.docs-directory }}/" \
-            "target/${{ steps.dirs.outputs.target }}/"
-
-      - name: Commit and push
-        id: commit
-        working-directory: target
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          if git diff --cached --quiet; then
-            echo "No changes — skipping commit."
-            echo "pushed=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          git commit -m "docs: sync ${{ github.repository }}@${{ github.ref_name }}"
-          git push
-          echo "pushed=true" >> "$GITHUB_OUTPUT"
-
       - name: Dispatch docs-updated event
-        if: steps.commit.outputs.pushed == 'true'
+        id: dispatch
         env:
           GH_TOKEN: ${{ secrets.PAT_TOKEN }}
           TARGET_REPO: ${{ inputs.target-repo }}
@@ -95,6 +61,7 @@ jobs:
           SOURCE_REF: ${{ github.ref_name }}
           SOURCE_SHA: ${{ github.sha }}
           DOCS_DIR: ${{ inputs.docs-directory }}
+          TARGET_DIR: ${{ steps.dirs.outputs.target }}
         run: |
           gh api "repos/${TARGET_REPO}/dispatches" \
             --method POST \
@@ -102,23 +69,20 @@ jobs:
             -f "client_payload[repo]=${SOURCE_REPO}" \
             -f "client_payload[ref]=${SOURCE_REF}" \
             -f "client_payload[sha]=${SOURCE_SHA}" \
-            -f "client_payload[docs_directory]=${DOCS_DIR}"
+            -f "client_payload[docs_directory]=${DOCS_DIR}" \
+            -f "client_payload[target_directory]=${TARGET_DIR}"
+          echo "dispatched=true" >> "$GITHUB_OUTPUT"
 
       - name: Summary
         run: |
-          PUSHED="${{ steps.commit.outputs.pushed }}"
           {
-            echo "### 📄 Docs Synced to Central Repo"
+            echo "### 📄 Docs Update Dispatched"
             echo ""
             echo "| | |"
             echo "|---|---|"
             echo "| 📦 **Source repo** | \`${{ github.repository }}\` |"
             echo "| 📂 **Docs folder** | \`${{ inputs.docs-directory }}/\` |"
             echo "| 🔀 **Ref** | \`${{ github.ref_name }}\` \`${{ github.sha }}\` |"
-            echo "| 📁 **Target** | \`${{ inputs.target-repo }}/${{ steps.dirs.outputs.target }}/\` |"
-            if [ "$PUSHED" = "true" ]; then
-              echo "| ✅ **Status** | Docs pushed — rebuild dispatched |"
-            else
-              echo "| ⏭️ **Status** | No changes — skipped |"
-            fi
+            echo "| 🎯 **Target** | \`${{ inputs.target-repo }}\` |"
+            echo "| ✅ **Status** | \`docs-updated\` event dispatched — rebuild triggered |"
           } >> "$GITHUB_STEP_SUMMARY"
