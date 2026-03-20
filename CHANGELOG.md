@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.3.0...v0.4.0) (2026-03-20)
+
+
+### Features
+
+* add VitePress markdown check action and update workflows for centralized docs deployment ([62ff767](https://github.com/KevinDeBenedetti/github-workflows/commit/62ff767e90a64590a7b3c33da56119fd22049381))
+* update deployment workflow to directly deploy docs to GitHub Pages ([688549d](https://github.com/KevinDeBenedetti/github-workflows/commit/688549dfd35b9913410923e6b388462788a9049d))
+
 ## [0.3.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.2.1...v0.3.0) (2026-03-20)
 
 
