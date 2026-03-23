@@ -7,9 +7,11 @@ inputs:
     required: false
     default: kubernetes/
   exclude:
-    description: Filename pattern to exclude from find (e.g. '*-values.yaml')
+    description: >
+      Regex pattern passed to -ignore-filename-pattern to exclude files
+      (e.g. '.*-values\.yaml').
     required: false
-    default: '*-values.yaml'
+    default: '.*-values\.yaml'
   include-crds-catalog:
     description: >
       Also validate CRDs against the Datree CRDs-catalog
@@ -38,5 +40,13 @@ runs:
             "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
           )
         fi
-        find ${{ inputs.paths }} -name '*.yaml' ! -name '${{ inputs.exclude }}' \
-          | xargs kubeconform -strict -summary "${SCHEMA_ARGS[@]}"
+
+        IGNORE_ARGS=()
+        if [ -n "${{ inputs.exclude }}" ]; then
+          IGNORE_ARGS+=("-ignore-filename-pattern" "${{ inputs.exclude }}")
+        fi
+
+        kubeconform -strict -summary \
+          "${SCHEMA_ARGS[@]}" \
+          "${IGNORE_ARGS[@]}" \
+          "${{ inputs.paths }}"
