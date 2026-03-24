@@ -15,10 +15,10 @@ on:
         required: false
         default: kubernetes/
       kubeconform-exclude:
-        description: Filename pattern to exclude from validation (e.g. '*-values.yaml')
+        description: Filename pattern to exclude from validation (e.g. '.*-values\.yaml')
         type: string
         required: false
-        default: '*-values.yaml'
+        default: '.*-values\.yaml'
       kubeconform-include-crds-catalog:
         description: >
           Also validate against the Datree CRDs-catalog
@@ -57,9 +57,9 @@ on:
         type: string
         default: kubernetes/
       kubeconform-exclude:
-        description: Filename pattern to exclude from validation (e.g. '*-values.yaml')
+        description: Filename pattern to exclude from validation (e.g. '.*-values\.yaml')
         type: string
-        default: '*-values.yaml'
+        default: '.*-values\.yaml'
       kubeconform-include-crds-catalog:
         description: Also validate against the Datree CRDs-catalog
         type: boolean
