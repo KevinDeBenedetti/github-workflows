@@ -38,6 +38,16 @@ on:
         type: boolean
         required: false
         default: false
+      version:
+        description: Explicit version tag to apply (e.g. v1.2.3 from a release job output). When set, adds a type=raw tag with this value.
+        type: string
+        required: false
+        default: ''
+      build-args:
+        description: List of Docker build-args (one per line, KEY=VALUE). Passed to docker/build-push-action build-args.
+        type: string
+        required: false
+        default: ''
     outputs:
       image:
         description: Full image reference with digest
@@ -90,6 +100,7 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=sha-
+            ${{ inputs.version != '' && format('type=raw,value={0}', inputs.version) || '' }}
             ${{ inputs.tag-latest && 'type=raw,value=latest,enable={{is_default_branch}}' || '' }}
 
       - name: Set up QEMU (multi-platform)
@@ -117,6 +128,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           target: ${{ inputs.target }}
+          build-args: ${{ inputs.build-args }}
           cache-from: type=gha,scope=${{ inputs.context }}
           cache-to: type=gha,scope=${{ inputs.context }},mode=max
 
