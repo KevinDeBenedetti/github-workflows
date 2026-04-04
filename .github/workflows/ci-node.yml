@@ -65,6 +65,10 @@ on:
         type: string
         required: false
         default: 'docs/'
+    secrets:
+      github-token:
+        description: GitHub token passed as GITHUB_TOKEN env var to the build step (e.g. for scripts that call the GitHub API)
+        required: false
 
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
@@ -186,6 +190,8 @@ jobs:
       - name: Build
         if: inputs.run-build
         working-directory: ${{ inputs.working-directory }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.github-token }}
         run: ${{ steps.run-alias.outputs.cmd }} build
 
       # Resolve build output path per framework

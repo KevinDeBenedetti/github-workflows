@@ -27,6 +27,10 @@ on:
       page-url:
         description: URL of the deployed GitHub Pages site
         value: ${{ jobs.deploy.outputs.page-url }}
+    secrets:
+      github-token:
+        description: GitHub token passed as GITHUB_TOKEN env var to the build step (e.g. for scripts that call the GitHub API)
+        required: false
 
 jobs:
   build:
@@ -46,6 +50,8 @@ jobs:
 
       - name: Build
         working-directory: ${{ inputs.working-directory }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.github-token }}
         run: |
           CMD="${{ inputs.build-command }}"
           if [ -z "$CMD" ]; then
