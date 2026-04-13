@@ -26,6 +26,14 @@ on:
         type: boolean
         required: false
         default: true
+      kubeconform-ignore-missing-schemas:
+        description: >
+          Skip resources whose schema is not found in any configured schema
+          location. Useful for custom CRDs not in the catalog (e.g. Tetragon
+          TracingPolicy, Kyverno ClusterPolicy).
+        type: boolean
+        required: false
+        default: false
 
       # ── .env.example ───────────────────────────────────────────────────────
       run-env-example:
@@ -64,6 +72,10 @@ on:
         description: Also validate against the Datree CRDs-catalog
         type: boolean
         default: true
+      kubeconform-ignore-missing-schemas:
+        description: Skip resources whose schema is not found in any configured schema location
+        type: boolean
+        default: false
       run-env-example:
         description: Check that .env.example contains all required keys
         type: boolean
@@ -100,6 +112,7 @@ jobs:
           paths: ${{ inputs.kubeconform-paths }}
           exclude: ${{ inputs.kubeconform-exclude }}
           include-crds-catalog: ${{ inputs.kubeconform-include-crds-catalog }}
+          ignore-missing-schemas: ${{ inputs.kubeconform-ignore-missing-schemas }}
 
   # ── .env.example completeness check ──────────────────────────────────────
   env-example:
