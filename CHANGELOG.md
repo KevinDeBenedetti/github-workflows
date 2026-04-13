@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.5.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.4.0...v0.5.0) (2026-04-13)
+
+
+### Features
+
+* add optional GitHub token input to workflows for API access ([4aaedc6](https://github.com/KevinDeBenedetti/github-workflows/commit/4aaedc683f8cfe552c189fbbd82b487ea551ec8f))
+* add version and build-args inputs to Docker workflow for enhanced flexibility ([f5b1e31](https://github.com/KevinDeBenedetti/github-workflows/commit/f5b1e312c3987145d949b4f8005f21c65d7e3514))
+* enhance kubeconform action to support regex exclusion patterns and remove deprecated maintenance workflow ([4a0ea55](https://github.com/KevinDeBenedetti/github-workflows/commit/4a0ea5591a6428b0af745efc213579a7ded275c1))
+* **kubeconform:** add ignore-missing-schemas input for custom CRDs ([9b7af88](https://github.com/KevinDeBenedetti/github-workflows/commit/9b7af88ccef5d5d086f8afea262b18ec729b774c))
+* **kubeconform:** add kubeconform-ignore-missing-schemas input for custom CRDs ([204c7cb](https://github.com/KevinDeBenedetti/github-workflows/commit/204c7cb0c1c83a75af6b9349a532a908ee1eccdf))
+
+
+### Bug Fixes
+
+* update kubeconform exclude pattern to use regex format ([517fd88](https://github.com/KevinDeBenedetti/github-workflows/commit/517fd88881b9ca14de2bcd2b3a4d7472cecc149f))
+
 ## [0.4.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.3.0...v0.4.0) (2026-03-20)
 
 
