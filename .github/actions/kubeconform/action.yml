@@ -18,6 +18,12 @@ inputs:
       (adds cert-manager, Traefik, etc. schemas)
     required: false
     default: 'true'
+  ignore-missing-schemas:
+    description: >
+      Skip validation for resources whose schema is not found (e.g. custom CRDs
+      not present in the CRDs-catalog such as Tetragon TracingPolicy).
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -44,6 +50,9 @@ runs:
         IGNORE_ARGS=()
         if [ -n "${{ inputs.exclude }}" ]; then
           IGNORE_ARGS+=("-ignore-filename-pattern" "${{ inputs.exclude }}")
+        fi
+        if [ "${{ inputs.ignore-missing-schemas }}" = "true" ]; then
+          IGNORE_ARGS+=("-ignore-missing-schemas")
         fi
 
         kubeconform -strict -summary \
