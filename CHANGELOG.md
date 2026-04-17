@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.6.0...v0.7.0) (2026-04-17)
+
+
+### Features
+
+* add CI workflows for Ansible, Helm, and Terraform with corresponding inputs and jobs ([e4255dc](https://github.com/KevinDeBenedetti/github-workflows/commit/e4255dc5b84981fb3716687696bd9fa7cff0b151))
+
 ## [0.6.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.5.0...v0.6.0) (2026-04-17)
 
 
