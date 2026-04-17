@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.5.0...v0.6.0) (2026-04-17)
+
+
+### Features
+
+* add deployments permission for Docker job ([96e567f](https://github.com/KevinDeBenedetti/github-workflows/commit/96e567f7b8934fccc56e0dc886e954c450a1776b))
+
 ## [0.5.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.4.0...v0.5.0) (2026-04-13)
 
 
