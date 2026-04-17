@@ -1,0 +1,147 @@
+name: CI — Helm
+
+on:
+  workflow_call:
+    inputs:
+      # ── Helm lint ──────────────────────────────────────────────────────────
+      run-lint:
+        description: Run `helm lint` on all charts
+        type: boolean
+        required: false
+        default: true
+      chart-paths:
+        description: Space-separated paths to chart directories (supports globs, e.g. 'charts/*')
+        type: string
+        required: false
+        default: 'charts/*'
+      helm-version:
+        description: Helm version to install (e.g. v3.17.0)
+        type: string
+        required: false
+        default: v3.17.0
+      lint-strict:
+        description: Fail on lint warnings as well as errors (passes --strict to helm lint)
+        type: boolean
+        required: false
+        default: false
+      # ── Helm template dry-run ─────────────────────────────────────────────
+      run-template:
+        description: Run `helm template` dry-run on all charts to catch render errors
+        type: boolean
+        required: false
+        default: false
+      template-values:
+        description: Path to a values file to use during helm template (optional)
+        type: string
+        required: false
+        default: ''
+
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      run-lint:
+        description: Run `helm lint` on all charts
+        type: boolean
+        default: true
+      chart-paths:
+        description: Space-separated paths to chart directories (supports globs, e.g. 'charts/*')
+        type: string
+        default: 'charts/*'
+      helm-version:
+        description: Helm version to install (e.g. v3.17.0)
+        type: string
+        default: v3.17.0
+      lint-strict:
+        description: Fail on lint warnings as well as errors (passes --strict to helm lint)
+        type: boolean
+        default: false
+      run-template:
+        description: Run `helm template` dry-run on all charts to catch render errors
+        type: boolean
+        default: false
+      template-values:
+        description: Path to a values file to use during helm template (optional)
+        type: string
+        default: ''
+
+concurrency:
+  group: ci-helm-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Helm lint ─────────────────────────────────────────────────────────────
+  helm-lint:
+    name: Helm lint
+    if: inputs.run-lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ inputs.helm-version }}
+
+      - name: Lint charts
+        run: |
+          STRICT_FLAG=""
+          if [[ "${{ inputs.lint-strict }}" == "true" ]]; then
+            STRICT_FLAG="--strict"
+          fi
+          found=0
+          for chart in ${{ inputs.chart-paths }}; do
+            if [[ -f "$chart/Chart.yaml" ]]; then
+              found=1
+              echo "::group::Linting $chart"
+              helm lint "$chart" $STRICT_FLAG
+              echo "::endgroup::"
+            fi
+          done
+          if [[ "$found" -eq 0 ]]; then
+            echo "⚠️  No charts found matching: ${{ inputs.chart-paths }}"
+            exit 1
+          fi
+
+  # ── Helm template dry-run ────────────────────────────────────────────────
+  helm-template:
+    name: Helm template dry-run
+    if: inputs.run-template
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: ${{ inputs.helm-version }}
+
+      - name: Template charts
+        run: |
+          VALUES_ARGS=()
+          if [[ -n "${{ inputs.template-values }}" ]]; then
+            VALUES_ARGS=(-f "${{ inputs.template-values }}")
+          fi
+          found=0
+          for chart in ${{ inputs.chart-paths }}; do
+            if [[ -f "$chart/Chart.yaml" ]]; then
+              found=1
+              echo "::group::Templating $chart"
+              helm dependency update "$chart" 2>/dev/null || true
+              helm template "dry-run" "$chart" "${VALUES_ARGS[@]}" --generate-name > /dev/null
+              echo "  ✅ $chart renders cleanly"
+              echo "::endgroup::"
+            fi
+          done
+          if [[ "$found" -eq 0 ]]; then
+            echo "⚠️  No charts found matching: ${{ inputs.chart-paths }}"
+            exit 1
+          fi

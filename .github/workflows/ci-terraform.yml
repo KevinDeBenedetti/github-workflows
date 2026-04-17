@@ -1,0 +1,84 @@
+name: CI — Terraform
+
+on:
+  workflow_call:
+    inputs:
+      # ── Terraform validate ────────────────────────────────────────────────
+      run-validate:
+        description: Run `terraform validate` (requires init)
+        type: boolean
+        required: false
+        default: true
+      # ── Terraform fmt check ───────────────────────────────────────────────
+      run-fmt-check:
+        description: Run `terraform fmt -check -diff` to enforce formatting
+        type: boolean
+        required: false
+        default: true
+      # ── Config ────────────────────────────────────────────────────────────
+      tf-dir:
+        description: Path to the Terraform root module directory
+        type: string
+        required: false
+        default: terraform
+      terraform-version:
+        description: Terraform version to install (e.g. 1.10.0). Defaults to latest.
+        type: string
+        required: false
+        default: latest
+
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      run-validate:
+        description: Run `terraform validate`
+        type: boolean
+        default: true
+      run-fmt-check:
+        description: Run `terraform fmt -check -diff`
+        type: boolean
+        default: true
+      tf-dir:
+        description: Path to the Terraform root module directory
+        type: string
+        default: terraform
+      terraform-version:
+        description: Terraform version to install (e.g. 1.10.0). Defaults to latest.
+        type: string
+        default: latest
+
+concurrency:
+  group: ci-terraform-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Terraform validate + fmt ─────────────────────────────────────────────
+  terraform:
+    name: Terraform validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.tf-dir }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Terraform init (no backend)
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        if: inputs.run-validate
+        run: terraform validate
+
+      - name: Terraform fmt check
+        if: inputs.run-fmt-check
+        run: terraform fmt -check -diff

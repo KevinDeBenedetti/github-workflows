@@ -1,0 +1,139 @@
+name: CI — Ansible
+
+on:
+  workflow_call:
+    inputs:
+      # ── Ansible lint ──────────────────────────────────────────────────────
+      ansible-dir:
+        description: Path to the directory containing Ansible playbooks/roles
+        type: string
+        required: false
+        default: ansible/
+      ansible-lint-version:
+        description: ansible-lint version to install (pip specifier, e.g. '>=25.0,<26')
+        type: string
+        required: false
+        default: ''
+      python-version:
+        description: Python version to use
+        type: string
+        required: false
+        default: '3.12'
+      fail-on-error:
+        description: >
+          Fail the job when ansible-lint reports violations.
+          Set to false to run in advisory mode (warnings only).
+        type: boolean
+        required: false
+        default: true
+      # ── Ansible syntax check ──────────────────────────────────────────────
+      run-syntax-check:
+        description: Run `ansible-playbook --syntax-check` on all playbooks found
+        type: boolean
+        required: false
+        default: false
+      playbook-glob:
+        description: Glob pattern (relative to ansible-dir) for playbooks to syntax-check
+        type: string
+        required: false
+        default: '*.yml'
+
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      ansible-dir:
+        description: Path to the directory containing Ansible playbooks/roles
+        type: string
+        default: ansible/
+      ansible-lint-version:
+        description: ansible-lint version to install (pip specifier, e.g. '>=25.0,<26')
+        type: string
+        default: ''
+      python-version:
+        description: Python version to use
+        type: string
+        default: '3.12'
+      fail-on-error:
+        description: Fail the job when ansible-lint reports violations
+        type: boolean
+        default: true
+      run-syntax-check:
+        description: Run `ansible-playbook --syntax-check` on all playbooks found
+        type: boolean
+        default: false
+      playbook-glob:
+        description: Glob pattern (relative to ansible-dir) for playbooks to syntax-check
+        type: string
+        default: '*.yml'
+
+concurrency:
+  group: ci-ansible-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Ansible lint ─────────────────────────────────────────────────────────
+  ansible-lint:
+    name: Ansible lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install ansible-lint
+        run: |
+          PKG="ansible-lint"
+          if [[ -n "${{ inputs.ansible-lint-version }}" ]]; then
+            PKG="ansible-lint${{ inputs.ansible-lint-version }}"
+          fi
+          pip install --quiet "$PKG"
+
+      - name: Run ansible-lint
+        run: |
+          if [[ "${{ inputs.fail-on-error }}" == "true" ]]; then
+            ansible-lint ${{ inputs.ansible-dir }}
+          else
+            ansible-lint ${{ inputs.ansible-dir }} || true
+          fi
+
+  # ── Ansible syntax check ─────────────────────────────────────────────────
+  ansible-syntax-check:
+    name: Ansible syntax check
+    if: inputs.run-syntax-check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python ${{ inputs.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install ansible
+        run: pip install --quiet ansible
+
+      - name: Syntax check all playbooks
+        run: |
+          found=0
+          while IFS= read -r -d '' playbook; do
+            found=1
+            echo "::group::Syntax check: $playbook"
+            ansible-playbook --syntax-check "$playbook"
+            echo "::endgroup::"
+          done < <(find "${{ inputs.ansible-dir }}" -maxdepth 1 \
+                        -name "${{ inputs.playbook-glob }}" -print0)
+          if [[ "$found" -eq 0 ]]; then
+            echo "⚠️  No playbooks found in ${{ inputs.ansible-dir }} matching ${{ inputs.playbook-glob }}"
+          fi
