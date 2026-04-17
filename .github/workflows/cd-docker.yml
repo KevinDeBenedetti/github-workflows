@@ -71,6 +71,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      deployments: write
 
     outputs:
       image: ${{ steps.meta.outputs.tags }}
