@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.7.0...v0.8.0) (2026-04-18)
+
+
+### Features
+
+* enhance actionlint and kubeconform installation with retry logic and output redirection ([cef23e8](https://github.com/KevinDeBenedetti/github-workflows/commit/cef23e8f22d2b23caac0774109c82857945689c9))
+
 ## [0.7.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.6.0...v0.7.0) (2026-04-17)
 
 
