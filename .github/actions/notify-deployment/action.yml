@@ -1,0 +1,56 @@
+name: 'Notify Deployment'
+description: 'Génère un Job Summary Markdown détaillé après un déploiement K8S.'
+inputs:
+  app-name:
+    description: 'Nom de l''application (ex: portfolio-dev)'
+    required: true
+  environment:
+    description: 'Environnement (ex: development, production)'
+    required: true
+    default: 'development'
+  status:
+    description: 'Statut du déploiement'
+    required: true
+    default: 'success'
+  version:
+    description: 'Version de l''image'
+    required: true
+  url:
+    description: 'URL de l''application'
+    required: false
+  argocd-url:
+    description: 'URL de l''application sur ArgoCD'
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate Job Summary
+      shell: bash
+      run: |
+        ICON="✅"
+        if [ "${{ inputs.status }}" != "success" ]; then
+          ICON="❌"
+        fi
+
+        echo "### ${ICON} Déploiement ${{ inputs.app-name }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Propriété | Valeur |" >> $GITHUB_STEP_SUMMARY
+        echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Statut** | ${ICON} ${{ inputs.status }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Environnement** | \`${{ inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
+        echo "| **Version** | \`${{ inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+
+        if [ -n "${{ inputs.url }}" ]; then
+          echo "| **URL** | [${{ inputs.url }}](https://${{ inputs.url }}) |" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Actions de monitoring :**" >> $GITHUB_STEP_SUMMARY
+
+        if [ -n "${{ inputs.argocd-url }}" ]; then
+          echo "- 🛰️ [Voir sur ArgoCD](${{ inputs.argocd-url }})" >> $GITHUB_STEP_SUMMARY
+        fi
+
+        echo "- 📝 [Commit Infra](https://github.com/KevinDeBenedetti/infra/commit/main)" >> $GITHUB_STEP_SUMMARY
+        echo "- 📊 [Logs de l'action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
