@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.8.0...v0.9.0) (2026-06-06)
+
+
+### Features
+
+* add notify-deployment composite action ([2f37afe](https://github.com/KevinDeBenedetti/github-workflows/commit/2f37afe2cd5b199d86f79737b97f5d23e4874e21))
+
+
+### Bug Fixes
+
+* update release-please action to version 5 ([b5c10b2](https://github.com/KevinDeBenedetti/github-workflows/commit/b5c10b27de5086a4fb477431c0f8fc8629116e32))
+* update setup actions for Python and Terraform to latest versions ([dba2df8](https://github.com/KevinDeBenedetti/github-workflows/commit/dba2df8107ddd30fee6f4dd1b95f848e494c3b46))
+
 ## [0.8.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.7.0...v0.8.0) (2026-04-18)
 
 
