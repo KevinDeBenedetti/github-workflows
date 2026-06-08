@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.9.0...v0.9.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* ci terraform ([e730bd1](https://github.com/KevinDeBenedetti/github-workflows/commit/e730bd15e4bb9021fb30e3a6cd2c80aa6fb7067b))
+
 ## [0.9.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.8.0...v0.9.0) (2026-06-06)
 
 
