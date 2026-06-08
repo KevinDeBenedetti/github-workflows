@@ -72,6 +72,14 @@ jobs:
         with:
           terraform_version: ${{ inputs.terraform-version }}
 
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ${{ inputs.tf-dir }}/.terraform
+          key: terraform-${{ inputs.tf-dir }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.tf-dir)) }}
+          restore-keys: |
+            terraform-${{ inputs.tf-dir }}-
+
       - name: Terraform init (no backend)
         run: terraform init -backend=false
 
