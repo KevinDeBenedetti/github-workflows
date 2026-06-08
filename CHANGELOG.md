@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.9.1...v0.9.2) (2026-06-08)
+
+
+### Bug Fixes
+
+* gitleaks version ([c1bef5b](https://github.com/KevinDeBenedetti/github-workflows/commit/c1bef5b5245b95bcf418216ad4ffb95060a27e18))
+
 ## [0.9.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.9.0...v0.9.1) (2026-06-08)
 
 
