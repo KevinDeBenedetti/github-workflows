@@ -1,0 +1,218 @@
+name: Deploy — Kaniko (self-hosted)
+
+# Drop-in replacement for cd-docker.yml for builds running on the k3s cluster.
+#
+# Differences vs. cd-docker.yml:
+#   - runs-on: [self-hosted, linux, k3s, kaniko]  (cluster runner)
+#   - Single architecture only (native cluster arch — linux/amd64)
+#   - No QEMU / no multi-platform builds
+#   - No GHA layer cache (Kaniko uses --cache-repo on GHCR instead)
+#   - digest output not available (Kaniko does not expose it the same way)
+#
+# Migration: change `uses: .../cd-docker.yml` → `uses: .../cd-kaniko.yml`
+# and remove the `platforms` input if present.
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Image name (e.g. my-api). Defaults to repo name.
+        type: string
+        required: false
+        default: ''
+      context:
+        description: Docker build context path (relative to repo root)
+        type: string
+        required: false
+        default: '.'
+      dockerfile:
+        description: Dockerfile path relative to context
+        type: string
+        required: false
+        default: Dockerfile
+      push:
+        description: Push image to registry
+        type: boolean
+        required: false
+        default: true
+      target:
+        description: Build target stage (e.g. dev, prod)
+        type: string
+        required: false
+        default: ''
+      tag-latest:
+        description: Also tag as :latest on default branch
+        type: boolean
+        required: false
+        default: false
+      version:
+        description: Explicit version tag (e.g. v1.2.3 from release job output)
+        type: string
+        required: false
+        default: ''
+      build-args:
+        description: Build args (one per line, KEY=VALUE)
+        type: string
+        required: false
+        default: ''
+    outputs:
+      image:
+        description: Primary image tag
+        value: ${{ jobs.kaniko.outputs.image }}
+
+  workflow_dispatch:
+    inputs:
+      image-name:
+        description: Image name
+        type: string
+        default: ''
+      context:
+        description: Docker build context path
+        type: string
+        default: '.'
+      dockerfile:
+        description: Dockerfile path relative to context
+        type: string
+        default: Dockerfile
+      push:
+        description: Push image to registry
+        type: boolean
+        default: true
+      target:
+        description: Build target stage
+        type: string
+        default: ''
+      tag-latest:
+        description: Also tag as :latest
+        type: boolean
+        default: false
+      version:
+        description: Explicit version tag
+        type: string
+        default: ''
+      build-args:
+        description: Build args (one per line, KEY=VALUE)
+        type: string
+        default: ''
+
+env:
+  REGISTRY: ghcr.io
+
+concurrency:
+  group: deploy-kaniko-${{ github.ref }}-${{ inputs.context }}-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  kaniko:
+    name: Kaniko build & push (${{ inputs.context }})
+    runs-on: [self-hosted, linux, k3s, kaniko]
+    permissions:
+      contents: read
+      packages: write
+
+    outputs:
+      image: ${{ steps.image.outputs.full }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set image name
+        id: image
+        run: |
+          NAME="${{ inputs.image-name }}"
+          [ -z "$NAME" ] && NAME="${{ github.event.repository.name }}"
+          echo "full=${REGISTRY}/${{ github.repository_owner }}/${NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Docker meta (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ steps.image.outputs.full }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            ${{ inputs.version != '' && format('type=raw,value={0}', inputs.version) || '' }}
+            ${{ inputs.tag-latest && 'type=raw,value=latest,enable={{is_default_branch}}' || '' }}
+
+      - name: Build Kaniko flags
+        id: flags
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          BUILD_ARGS: ${{ inputs.build-args }}
+          TARGET: ${{ inputs.target }}
+          PUSH: ${{ inputs.push }}
+        run: |
+          # Convert newline-separated tags to --destination flags
+          DEST=""
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && DEST="$DEST --destination $tag"
+          done <<< "$TAGS"
+
+          # Convert newline-separated build-args to --build-arg flags
+          ARGS=""
+          while IFS= read -r arg; do
+            [ -n "$arg" ] && ARGS="$ARGS --build-arg $arg"
+          done <<< "$BUILD_ARGS"
+
+          TARGET_FLAG=""
+          [ -n "$TARGET" ] && TARGET_FLAG="--target $TARGET"
+
+          NO_PUSH_FLAG=""
+          [ "$PUSH" = "false" ] && NO_PUSH_FLAG="--no-push"
+
+          {
+            echo "dest=$DEST"
+            echo "args=$ARGS"
+            echo "target=$TARGET_FLAG"
+            echo "nopush=$NO_PUSH_FLAG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push with Kaniko
+        env:
+          DEST_FLAGS: ${{ steps.flags.outputs.dest }}
+          ARGS_FLAGS: ${{ steps.flags.outputs.args }}
+          TARGET_FLAG: ${{ steps.flags.outputs.target }}
+          NO_PUSH_FLAG: ${{ steps.flags.outputs.nopush }}
+          IMAGE_BASE: ${{ steps.image.outputs.full }}
+          CONTEXT: ${{ inputs.context }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+        run: |
+          # shellcheck disable=SC2086
+          /kaniko-bin/executor \
+            --context="dir://${GITHUB_WORKSPACE}/${CONTEXT}" \
+            --dockerfile="${GITHUB_WORKSPACE}/${CONTEXT}/${DOCKERFILE}" \
+            --cache=true \
+            --cache-repo="${IMAGE_BASE}-cache" \
+            --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            $DEST_FLAGS \
+            $TARGET_FLAG \
+            $ARGS_FLAGS \
+            $NO_PUSH_FLAG
+
+      - name: Job summary
+        if: always()
+        env:
+          IMAGE: ${{ steps.image.outputs.full }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+          CONTEXT: ${{ inputs.context }}
+        run: |
+          {
+            echo "### Kaniko Build"
+            echo ""
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Image | \`${IMAGE}\` |"
+            echo "| Context | \`${CONTEXT}\` |"
+            echo "| SHA | \`${{ github.sha }}\` |"
+            echo ""
+            echo "**Tags:**"
+            while IFS= read -r tag; do
+              [ -n "$tag" ] && echo "- \`$tag\`"
+            done <<< "$TAGS"
+          } >> "$GITHUB_STEP_SUMMARY"
