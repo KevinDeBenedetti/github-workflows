@@ -21,16 +21,22 @@ on:
         type: string
         required: false
         default: ''
+      app-id:
+        description: >
+          ID of the GitHub App installed on the target repository.
+          Used with APP_PRIVATE_KEY to mint a short-lived token scoped to
+          contents:write on target-repo only.
+        type: string
+        required: true
     outputs:
       docs-synced:
         description: '"true" when the docs-updated dispatch was sent successfully.'
         value: ${{ jobs.dispatch.outputs.dispatched }}
     secrets:
-      PAT_TOKEN:
+      APP_PRIVATE_KEY:
         description: >
-          Fine-grained PAT with contents:write on the target repository
-          (KevinDeBenedetti/kevindebenedetti.github.io or the value of target-repo).
-          Required to send the repository_dispatch event.
+          Private key of the GitHub App (app-id) installed on the target
+          repository. Required to send the repository_dispatch event.
         required: true
 
 jobs:
@@ -52,10 +58,27 @@ jobs:
           TARGET_DIR="${INPUT_TARGET:-$REPO_NAME}"
           echo "target=${TARGET_DIR}" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve target repo
+        id: target
+        env:
+          TARGET_REPO: ${{ inputs.target-repo }}
+        run: |
+          echo "owner=${TARGET_REPO%%/*}" >> "$GITHUB_OUTPUT"
+          echo "repo=${TARGET_REPO##*/}" >> "$GITHUB_OUTPUT"
+
+      - name: Generate App token
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ inputs.app-id }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ steps.target.outputs.owner }}
+          repositories: ${{ steps.target.outputs.repo }}
+
       - name: Dispatch docs-updated event
         id: dispatch
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
           TARGET_REPO: ${{ inputs.target-repo }}
           SOURCE_REPO: ${{ github.repository }}
           SOURCE_REF: ${{ github.ref_name }}

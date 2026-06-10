@@ -22,7 +22,10 @@ jobs:
     name: Sync docs → central repo
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
-    secrets: inherit
+    with:
+      app-id: ${{ vars.DOCS_APP_ID }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
 
   check-bot-commits:
     name: Check bot commits
