@@ -23,8 +23,11 @@ runs:
         curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
           -o "$RUNNER_TEMP/shellcheck.tar.xz" \
           "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
-        tar xJ -C "$INSTALL_DIR" --strip-components=1 \
-          "shellcheck-v${SHELLCHECK_VERSION}/shellcheck" < "$RUNNER_TEMP/shellcheck.tar.xz"
+        # Decompress with python3 (lzma) — the actions-runner image has no xz.
+        python3 -c "import lzma, shutil, sys; shutil.copyfileobj(lzma.open(sys.argv[1]), open(sys.argv[2], 'wb'))" \
+          "$RUNNER_TEMP/shellcheck.tar.xz" "$RUNNER_TEMP/shellcheck.tar"
+        tar xf "$RUNNER_TEMP/shellcheck.tar" -C "$INSTALL_DIR" --strip-components=1 \
+          "shellcheck-v${SHELLCHECK_VERSION}/shellcheck"
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 
     - name: Run ShellCheck

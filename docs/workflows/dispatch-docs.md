@@ -11,7 +11,7 @@ jobs:
   deploy-docs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
     with:
-      app-id: ${{ vars.DOCS_APP_ID }}
+      client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
 ```
@@ -23,7 +23,7 @@ jobs:
 | `docs-directory`   | string | `docs`                                          | Docs folder in the calling repo (sent as metadata in the dispatch payload)         |
 | `target-repo`      | string | `KevinDeBenedetti/kevindebenedetti.github.io`   | Centralized docs repository (`owner/repo`) that receives the dispatch event        |
 | `target-directory` | string | _(calling repo name)_                           | Logical name for this repo's docs section (sent as metadata in the dispatch payload) |
-| `app-id`           | string | _(required)_                                    | ID of the GitHub App installed on `target-repo` (e.g. <code v-pre>${{ vars.DOCS_APP_ID }}</code>) |
+| `client-id`        | string | _(required)_                                    | Client ID of the GitHub App installed on `target-repo` (e.g. <code v-pre>${{ vars.DOCS_APP_CLIENT_ID }}</code>) |
 
 ## Outputs
 
@@ -35,7 +35,7 @@ jobs:
 
 | Secret            | Required | Description                                                                                |
 | ----------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `APP_PRIVATE_KEY` | ✅        | Private key of the GitHub App (`app-id`) installed on the **target** repository with `contents: read and write` permission |
+| `APP_PRIVATE_KEY` | ✅        | Private key of the GitHub App (`client-id`) installed on the **target** repository with `contents: read and write` permission |
 
 ## How it works
 
@@ -57,6 +57,6 @@ jobs:
 
 - No files are committed directly to `target-repo` — the central site's build handles all syncing.
 - The GitHub App must be installed on `target-repo` with `Contents: Read and write` permission.
-  Store its ID as the `DOCS_APP_ID` repository variable and its private key as the
+  Store its Client ID as the `DOCS_APP_CLIENT_ID` repository variable and its private key as the
   `DOCS_APP_PRIVATE_KEY` secret in every calling repo.
 - The central repo must have `repository_dispatch: types: [docs-updated]` in its CI trigger.

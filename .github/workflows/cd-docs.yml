@@ -21,9 +21,9 @@ on:
         type: string
         required: false
         default: ''
-      app-id:
+      client-id:
         description: >
-          ID of the GitHub App installed on the target repository.
+          Client ID of the GitHub App installed on the target repository.
           Used with APP_PRIVATE_KEY to mint a short-lived token scoped to
           contents:write on target-repo only.
         type: string
@@ -35,7 +35,7 @@ on:
     secrets:
       APP_PRIVATE_KEY:
         description: >
-          Private key of the GitHub App (app-id) installed on the target
+          Private key of the GitHub App (client-id) installed on the target
           repository. Required to send the repository_dispatch event.
         required: true
 
@@ -70,7 +70,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ inputs.app-id }}
+          client-id: ${{ inputs.client-id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ steps.target.outputs.owner }}
           repositories: ${{ steps.target.outputs.repo }}
