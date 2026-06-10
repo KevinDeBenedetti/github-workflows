@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.11.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.0...v0.11.1) (2026-06-10)
+
+
+### Bug Fixes
+
+* gh app ([5dde701](https://github.com/KevinDeBenedetti/github-workflows/commit/5dde7012bc0f23b22fa030254524933449979373))
+* runners ci ([19b41fd](https://github.com/KevinDeBenedetti/github-workflows/commit/19b41fdfc2b044f561afa839f18a0d0652c5de2d))
+
 ## [0.11.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.10.0...v0.11.0) (2026-06-10)
 
 
