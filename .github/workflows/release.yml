@@ -43,6 +43,11 @@ on:
         type: string
         required: false
         default: ''
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
     secrets:
       RELEASE_TOKEN:
         description: PAT with write access (defaults to GITHUB_TOKEN if not set)
@@ -62,7 +67,7 @@ concurrency:
 jobs:
   release:
     name: Release Please
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: write
       issues: write
@@ -136,7 +141,7 @@ jobs:
     name: Tag @v<major> alias
     needs: release
     if: needs.release.outputs.released == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: write
 

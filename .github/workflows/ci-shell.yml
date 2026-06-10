@@ -80,13 +80,17 @@ on:
         type: boolean
         required: false
         default: false
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
     secrets:
       token:
         description: >
           GitHub token or PAT used to checkout private submodules.
           Falls back to the default GITHUB_TOKEN if not provided.
         required: false
-
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -152,6 +156,12 @@ on:
         type: boolean
         default: false
 
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
 concurrency:
   group: ci-shell-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -161,7 +171,7 @@ jobs:
   shellcheck:
     name: ShellCheck
     if: inputs.run-shellcheck
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
 
     steps:
       - name: Checkout
@@ -177,7 +187,7 @@ jobs:
   validate-yaml:
     name: Validate YAML
     if: inputs.run-actionlint
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
 
     steps:
       - name: Checkout
@@ -193,7 +203,7 @@ jobs:
   bats:
     name: Bats tests
     if: inputs.run-bats
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
 
     steps:
       - name: Checkout
@@ -212,7 +222,7 @@ jobs:
   docker-test:
     name: Docker — ${{ matrix.target }}
     if: inputs.run-docker
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     strategy:
       fail-fast: false
       matrix:
@@ -235,7 +245,7 @@ jobs:
   link-check:
     name: Link check
     if: inputs.run-link-check
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
 
     steps:
       - name: Checkout
@@ -252,7 +262,7 @@ jobs:
   docs-link-check:
     name: Docs link check
     if: inputs.run-docs-link-check
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
 
     steps:
       - name: Checkout

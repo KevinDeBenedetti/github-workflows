@@ -27,6 +27,11 @@ on:
         required: false
         default: latest
 
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -48,6 +53,12 @@ on:
         type: string
         default: latest
 
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
 concurrency:
   group: ci-terraform-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -56,7 +67,7 @@ jobs:
   # ── Terraform validate + fmt ─────────────────────────────────────────────
   terraform:
     name: Terraform validate
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: read
     defaults:

@@ -39,6 +39,11 @@ on:
         required: false
         default: '["javascript","typescript"]'
 
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -72,12 +77,18 @@ on:
         type: string
         default: '["javascript","typescript"]'
 
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
 jobs:
   # ── Dependency audit (Node) ─────────────────────────────────────────────────
   audit-node:
     name: Audit Node.js dependencies
     if: inputs.run-node-audit
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
 
     steps:
       - name: Checkout
@@ -102,7 +113,7 @@ jobs:
   audit-python:
     name: Audit Python dependencies
     if: inputs.run-python-audit
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
 
     steps:
       - name: Checkout
@@ -121,7 +132,7 @@ jobs:
   secret-scan:
     name: Scan for leaked secrets
     if: inputs.run-secret-scan
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       security-events: write
       actions: read
@@ -167,7 +178,7 @@ jobs:
   codeql:
     name: CodeQL (${{ matrix.language }})
     if: inputs.run-codeql
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       security-events: write
       actions: read

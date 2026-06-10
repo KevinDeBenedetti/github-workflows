@@ -38,6 +38,11 @@ on:
         required: false
         default: '*.yml'
 
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -67,6 +72,12 @@ on:
         type: string
         default: '*.yml'
 
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
 concurrency:
   group: ci-ansible-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -75,7 +86,7 @@ jobs:
   # ── Ansible lint ─────────────────────────────────────────────────────────
   ansible-lint:
     name: Ansible lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: read
 
@@ -108,7 +119,7 @@ jobs:
   ansible-syntax-check:
     name: Ansible syntax check
     if: inputs.run-syntax-check
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: read
 
