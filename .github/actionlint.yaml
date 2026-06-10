@@ -2,3 +2,5 @@ self-hosted-runner:
   labels:
     - k3s
     - kaniko
+    - k3s-infra
+    - k3s-portfolio

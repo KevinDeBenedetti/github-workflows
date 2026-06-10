@@ -65,6 +65,11 @@ on:
         type: string
         required: false
         default: 'docs/'
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
     secrets:
       github-token:
         description: GitHub token passed as GITHUB_TOKEN env var to the build step (e.g. for scripts that call the GitHub API)
@@ -122,6 +127,10 @@ on:
         description: Space-separated paths or directories of markdown files to check
         type: string
         default: 'docs/'
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        default: '"ubuntu-latest"'
 
 concurrency:
   group: ci-node-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
@@ -130,7 +139,7 @@ concurrency:
 jobs:
   ci:
     name: CI (${{ inputs.working-directory }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: read
 

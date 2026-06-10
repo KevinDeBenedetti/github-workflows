@@ -3,7 +3,8 @@ name: Deploy — Kaniko (self-hosted)
 # Drop-in replacement for cd-docker.yml for builds running on the k3s cluster.
 #
 # Differences vs. cd-docker.yml:
-#   - runs-on: [self-hosted, linux, k3s, kaniko]  (cluster runner)
+#   - runs-on: cluster runner — legacy labels ["self-hosted","linux","k3s","kaniko"]
+#     by default, or an ARC scale set name via the `runner` input (e.g. '"k3s-portfolio"')
 #   - Single architecture only (native cluster arch — linux/amd64)
 #   - No QEMU / no multi-platform builds
 #   - No GHA layer cache (Kaniko uses --cache-repo on GHCR instead)
@@ -55,6 +56,11 @@ on:
         type: string
         required: false
         default: ''
+      runner:
+        description: Runner labels as JSON — use '"k3s-portfolio"' (ARC scale set) or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '["self-hosted","linux","k3s","kaniko"]'
     outputs:
       image:
         description: Primary image tag
@@ -94,6 +100,10 @@ on:
         description: Build args (one per line, KEY=VALUE)
         type: string
         default: ''
+      runner:
+        description: Runner labels as JSON — use '"k3s-portfolio"' (ARC scale set) or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        default: '["self-hosted","linux","k3s","kaniko"]'
 
 env:
   REGISTRY: ghcr.io
@@ -105,7 +115,7 @@ concurrency:
 jobs:
   kaniko:
     name: Kaniko build & push (${{ inputs.context }})
-    runs-on: [self-hosted, linux, k3s, kaniko]
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: read
       packages: write
