@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.10.0...v0.11.0) (2026-06-10)
+
+
+### Features
+
+* self runners ([2ef4a7b](https://github.com/KevinDeBenedetti/github-workflows/commit/2ef4a7bd78418506a06aa68420fe19bb8e2a67b3))
+
+
+### Bug Fixes
+
+* add shellcheck ([16b1622](https://github.com/KevinDeBenedetti/github-workflows/commit/16b16225eee970631e5d9b400d57c00f35c93a4a))
+
 ## [0.10.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.9.2...v0.10.0) (2026-06-10)
 
 
