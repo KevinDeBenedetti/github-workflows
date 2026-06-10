@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.9.2...v0.10.0) (2026-06-10)
+
+
+### Features
+
+* add kaniko ([7df3480](https://github.com/KevinDeBenedetti/github-workflows/commit/7df34801e3fa57b83b4db0c3ede67d630d5a6bca))
+
 ## [0.9.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.9.1...v0.9.2) (2026-06-08)
 
 
