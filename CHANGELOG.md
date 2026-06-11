@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.1...v0.11.2) (2026-06-11)
+
+
+### Bug Fixes
+
+* gh app ([6a79b24](https://github.com/KevinDeBenedetti/github-workflows/commit/6a79b24d7a299d09fab3a18307b1842e934226a0))
+
 ## [0.11.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.0...v0.11.1) (2026-06-10)
 
 
