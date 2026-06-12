@@ -2,6 +2,15 @@ name: Deploy — Kaniko (self-hosted)
 
 # Drop-in replacement for cd-docker.yml for builds running on the k3s cluster.
 #
+# The job runs INSIDE the official Kaniko executor image (job container), so the
+# ARC runner scale set MUST be deployed with `containerMode: kubernetes` — Kaniko
+# needs root in a disposable container because it unpacks base-image layers onto
+# the container's own root filesystem. Running the executor binary inside the
+# runner container (non-root) fails with "permission denied".
+#
+# GHCR auth uses the job's GITHUB_TOKEN (permissions: packages: write) — no
+# registry secret needs to be mounted in the runner pod.
+#
 # Differences vs. cd-docker.yml:
 #   - runs-on: cluster runner — legacy labels ["self-hosted","linux","k3s","kaniko"]
 #     by default, or an ARC scale set name via the `runner` input (e.g. '"k3s-portfolio"')
@@ -116,6 +125,14 @@ jobs:
   kaniko:
     name: Kaniko build & push (${{ inputs.context }})
     runs-on: ${{ fromJson(inputs.runner) }}
+    # Kaniko must run as root in its own disposable container (it extracts
+    # image layers onto /). Requires ARC containerMode: kubernetes.
+    container:
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+    defaults:
+      run:
+        # The debug image only ships busybox sh — no bash.
+        shell: sh
     permissions:
       contents: read
       packages: write
@@ -134,6 +151,15 @@ jobs:
           [ -z "$NAME" ] && NAME="${{ github.event.repository.name }}"
           echo "full=${REGISTRY}/${{ github.repository_owner }}/${NAME}" >> "$GITHUB_OUTPUT"
 
+      - name: GHCR auth for Kaniko
+        env:
+          GH_ACTOR: ${{ github.actor }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p /kaniko/.docker
+          AUTH=$(printf '%s' "${GH_ACTOR}:${GH_TOKEN}" | base64 | tr -d '\n')
+          printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /kaniko/.docker/config.json
+
       - name: Docker meta (tags + labels)
         id: meta
         uses: docker/metadata-action@v6
@@ -148,25 +174,27 @@ jobs:
             ${{ inputs.version != '' && format('type=raw,value={0}', inputs.version) || '' }}
             ${{ inputs.tag-latest && 'type=raw,value=latest,enable={{is_default_branch}}' || '' }}
 
-      - name: Build Kaniko flags
-        id: flags
+      - name: Build and push with Kaniko
         env:
           TAGS: ${{ steps.meta.outputs.tags }}
           BUILD_ARGS: ${{ inputs.build-args }}
           TARGET: ${{ inputs.target }}
           PUSH: ${{ inputs.push }}
+          IMAGE_BASE: ${{ steps.image.outputs.full }}
+          CONTEXT: ${{ inputs.context }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
         run: |
-          # Convert newline-separated tags to --destination flags
+          # POSIX sh (busybox) — tags and build-args are newline-separated,
+          # neither may contain spaces.
           DEST=""
-          while IFS= read -r tag; do
-            [ -n "$tag" ] && DEST="$DEST --destination $tag"
-          done <<< "$TAGS"
+          for tag in $TAGS; do
+            DEST="$DEST --destination $tag"
+          done
 
-          # Convert newline-separated build-args to --build-arg flags
           ARGS=""
-          while IFS= read -r arg; do
-            [ -n "$arg" ] && ARGS="$ARGS --build-arg $arg"
-          done <<< "$BUILD_ARGS"
+          for arg in $BUILD_ARGS; do
+            ARGS="$ARGS --build-arg $arg"
+          done
 
           TARGET_FLAG=""
           [ -n "$TARGET" ] && TARGET_FLAG="--target $TARGET"
@@ -174,25 +202,8 @@ jobs:
           NO_PUSH_FLAG=""
           [ "$PUSH" = "false" ] && NO_PUSH_FLAG="--no-push"
 
-          {
-            echo "dest=$DEST"
-            echo "args=$ARGS"
-            echo "target=$TARGET_FLAG"
-            echo "nopush=$NO_PUSH_FLAG"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build and push with Kaniko
-        env:
-          DEST_FLAGS: ${{ steps.flags.outputs.dest }}
-          ARGS_FLAGS: ${{ steps.flags.outputs.args }}
-          TARGET_FLAG: ${{ steps.flags.outputs.target }}
-          NO_PUSH_FLAG: ${{ steps.flags.outputs.nopush }}
-          IMAGE_BASE: ${{ steps.image.outputs.full }}
-          CONTEXT: ${{ inputs.context }}
-          DOCKERFILE: ${{ inputs.dockerfile }}
-        run: |
           # shellcheck disable=SC2086
-          /kaniko-bin/executor \
+          /kaniko/executor \
             --context="dir://${GITHUB_WORKSPACE}/${CONTEXT}" \
             --dockerfile="${GITHUB_WORKSPACE}/${CONTEXT}/${DOCKERFILE}" \
             --cache=true \
@@ -200,9 +211,9 @@ jobs:
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --label "org.opencontainers.image.revision=${{ github.sha }}" \
             --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
-            $DEST_FLAGS \
+            $DEST \
             $TARGET_FLAG \
-            $ARGS_FLAGS \
+            $ARGS \
             $NO_PUSH_FLAG
 
       - name: Job summary
@@ -222,7 +233,7 @@ jobs:
             echo "| SHA | \`${{ github.sha }}\` |"
             echo ""
             echo "**Tags:**"
-            while IFS= read -r tag; do
-              [ -n "$tag" ] && echo "- \`$tag\`"
-            done <<< "$TAGS"
+            for tag in $TAGS; do
+              echo "- \`$tag\`"
+            done
           } >> "$GITHUB_STEP_SUMMARY"
