@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.3](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.2...v0.11.3) (2026-06-12)
+
+
+### Bug Fixes
+
+* kaniko ([fe36f9d](https://github.com/KevinDeBenedetti/github-workflows/commit/fe36f9d933d9cc60376782cd8619c7d84ce9ec2e))
+
 ## [0.11.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.1...v0.11.2) (2026-06-11)
 
 
