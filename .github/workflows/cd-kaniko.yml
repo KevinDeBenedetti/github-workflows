@@ -8,8 +8,16 @@ name: Deploy — Kaniko (self-hosted)
 # the container's own root filesystem. Running the executor binary inside the
 # runner container (non-root) fails with "permission denied".
 #
+# The Kaniko debug image is busybox-only (no glibc), so it CANNOT run the
+# runner's bundled Node.js — JavaScript actions like actions/checkout and
+# docker/metadata-action fail inside it with "env: can't execute .../node:
+# No such file or directory" (exit 127). This workflow is therefore fully
+# busybox-native: NO JS actions. Kaniko fetches the source itself via its git
+# build context, and image tags are computed in POSIX sh.
+#
 # GHCR auth uses the job's GITHUB_TOKEN (permissions: packages: write) — no
-# registry secret needs to be mounted in the runner pod.
+# registry secret needs to be mounted in the runner pod. The same token clones
+# the source (GIT_USERNAME/GIT_PASSWORD).
 #
 # Differences vs. cd-docker.yml:
 #   - runs-on: cluster runner — legacy labels ["self-hosted","linux","k3s","kaniko"]
@@ -18,6 +26,10 @@ name: Deploy — Kaniko (self-hosted)
 #   - No QEMU / no multi-platform builds
 #   - No GHA layer cache (Kaniko uses --cache-repo on GHCR instead)
 #   - digest output not available (Kaniko does not expose it the same way)
+#   - Source is cloned by Kaniko (git context), not checked out — the job runs
+#     on push events; PR refs (refs/pull/N/merge) are not fetchable this way.
+#   - Tags are computed in sh (subset of docker/metadata-action): branch, sha-,
+#     the explicit `version` input (+ major.minor if semver), and latest.
 #
 # Migration: change `uses: .../cd-docker.yml` → `uses: .../cd-kaniko.yml`
 # and remove the `platforms` input if present.
@@ -141,8 +153,9 @@ jobs:
       image: ${{ steps.image.outputs.full }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
+      # No actions/checkout — it is a JS action and the busybox Kaniko image
+      # cannot run the runner's glibc Node.js. Kaniko clones the source itself
+      # (git context) in the build step below.
 
       - name: Set image name
         id: image
@@ -160,35 +173,79 @@ jobs:
           AUTH=$(printf '%s' "${GH_ACTOR}:${GH_TOKEN}" | base64 | tr -d '\n')
           printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > /kaniko/.docker/config.json
 
-      - name: Docker meta (tags + labels)
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ steps.image.outputs.full }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-
-            ${{ inputs.version != '' && format('type=raw,value={0}', inputs.version) || '' }}
-            ${{ inputs.tag-latest && 'type=raw,value=latest,enable={{is_default_branch}}' || '' }}
+      - name: Compute tags
+        id: tags
+        env:
+          SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          VERSION: ${{ inputs.version }}
+          TAG_LATEST: ${{ inputs.tag-latest }}
+        run: |
+          # Space-separated bare image tags (no registry prefix). POSIX sh
+          # reimplementation of the docker/metadata-action subset we use, since
+          # that action needs Node.js (unavailable in the busybox Kaniko image).
+          # Tags never contain spaces, so a space-separated list is safe for the
+          # `for tag in $TAGS` loop in the build step.
+          TAGS=""
+          add_tag() { TAGS="${TAGS:+$TAGS }$1"; }
+
+          SHORT_SHA=$(printf '%s' "$SHA" | cut -c1-7)
+          add_tag "sha-${SHORT_SHA}"
+
+          # Branch name on push (slashes are illegal in tags → '-').
+          if [ "$EVENT" = "push" ] && [ "$REF_TYPE" = "branch" ]; then
+            add_tag "$(printf '%s' "$REF_NAME" | tr '/' '-')"
+          fi
+
+          # Pull-request builds.
+          if [ "$EVENT" = "pull_request" ] && [ -n "$PR_NUMBER" ]; then
+            add_tag "pr-${PR_NUMBER}"
+          fi
+
+          # Explicit version input, plus major.minor when it is semver.
+          if [ -n "$VERSION" ]; then
+            add_tag "$VERSION"
+            SEMVER="${VERSION#v}"
+            case "$SEMVER" in
+              [0-9]*.[0-9]*.[0-9]*) add_tag "$(printf '%s' "$SEMVER" | cut -d. -f1-2)" ;;
+            esac
+          fi
+
+          # latest on the default branch.
+          if [ "$TAG_LATEST" = "true" ] && [ "$REF_NAME" = "$DEFAULT_BRANCH" ]; then
+            add_tag "latest"
+          fi
+
+          echo "Computed tags: $TAGS"
+          echo "list=$TAGS" >> "$GITHUB_OUTPUT"
 
       - name: Build and push with Kaniko
         env:
-          TAGS: ${{ steps.meta.outputs.tags }}
+          TAGS: ${{ steps.tags.outputs.list }}
           BUILD_ARGS: ${{ inputs.build-args }}
           TARGET: ${{ inputs.target }}
           PUSH: ${{ inputs.push }}
           IMAGE_BASE: ${{ steps.image.outputs.full }}
           CONTEXT: ${{ inputs.context }}
           DOCKERFILE: ${{ inputs.dockerfile }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+          SERVER_URL: ${{ github.server_url }}
+          # Kaniko clones the build context over HTTPS with these creds — the
+          # job token's `contents: read` is enough.
+          GIT_USERNAME: x-access-token
+          GIT_PASSWORD: ${{ github.token }}
         run: |
           # POSIX sh (busybox) — tags and build-args are newline-separated,
           # neither may contain spaces.
           DEST=""
           for tag in $TAGS; do
-            DEST="$DEST --destination $tag"
+            DEST="$DEST --destination ${IMAGE_BASE}:${tag}"
           done
 
           ARGS=""
@@ -202,15 +259,21 @@ jobs:
           NO_PUSH_FLAG=""
           [ "$PUSH" = "false" ] && NO_PUSH_FLAG="--no-push"
 
+          # Context = this repo at this commit (cloned by Kaniko). --context-sub-path
+          # narrows it to the app dir, and --dockerfile resolves relative to that
+          # sub-path (Kaniko joins SrcContext + sub-path before the dockerfile lookup).
+          GIT_HOST="${SERVER_URL#https://}"
+
           # shellcheck disable=SC2086
           /kaniko/executor \
-            --context="dir://${GITHUB_WORKSPACE}/${CONTEXT}" \
-            --dockerfile="${GITHUB_WORKSPACE}/${CONTEXT}/${DOCKERFILE}" \
+            --context="git://${GIT_HOST}/${REPO}.git#${REF}#${SHA}" \
+            --context-sub-path="${CONTEXT}" \
+            --dockerfile="${DOCKERFILE}" \
             --cache=true \
             --cache-repo="${IMAGE_BASE}-cache" \
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            --label "org.opencontainers.image.revision=${{ github.sha }}" \
-            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            --label "org.opencontainers.image.revision=${SHA}" \
+            --label "org.opencontainers.image.source=${SERVER_URL}/${REPO}" \
             $DEST \
             $TARGET_FLAG \
             $ARGS \
@@ -220,7 +283,7 @@ jobs:
         if: always()
         env:
           IMAGE: ${{ steps.image.outputs.full }}
-          TAGS: ${{ steps.meta.outputs.tags }}
+          TAGS: ${{ steps.tags.outputs.list }}
           CONTEXT: ${{ inputs.context }}
         run: |
           {
@@ -234,6 +297,6 @@ jobs:
             echo ""
             echo "**Tags:**"
             for tag in $TAGS; do
-              echo "- \`$tag\`"
+              echo "- \`${IMAGE}:${tag}\`"
             done
           } >> "$GITHUB_STEP_SUMMARY"
