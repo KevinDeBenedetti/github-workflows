@@ -162,7 +162,12 @@ jobs:
         run: |
           NAME="${{ inputs.image-name }}"
           [ -z "$NAME" ] && NAME="${{ github.event.repository.name }}"
-          echo "full=${REGISTRY}/${{ github.repository_owner }}/${NAME}" >> "$GITHUB_OUTPUT"
+          # OCI registry repositories must be lowercase. github.repository_owner
+          # (and possibly the repo name) can contain uppercase, so normalise here
+          # — docker/metadata-action used to do this for us before this workflow
+          # was rewritten to drive Kaniko directly.
+          FULL=$(printf '%s/%s/%s' "$REGISTRY" "${{ github.repository_owner }}" "$NAME" | tr '[:upper:]' '[:lower:]')
+          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
 
       - name: GHCR auth for Kaniko
         env:
