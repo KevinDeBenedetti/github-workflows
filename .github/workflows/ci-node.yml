@@ -201,6 +201,12 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         env:
           GITHUB_TOKEN: ${{ secrets.github-token }}
+          # Opt out of framework/tool telemetry so CI builds transmit nothing
+          # (Next.js, Turbo, and the generic DO_NOT_TRACK convention). Harmless
+          # for frameworks that don't read them.
+          NEXT_TELEMETRY_DISABLED: '1'
+          TURBO_TELEMETRY_DISABLED: '1'
+          DO_NOT_TRACK: '1'
         run: ${{ steps.run-alias.outputs.cmd }} build
 
       # Resolve build output path per framework
