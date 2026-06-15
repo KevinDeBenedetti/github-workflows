@@ -96,7 +96,17 @@ jobs:
             terraform-${{ inputs.tf-dir }}-
 
       - name: Terraform init (no backend)
-        run: terraform init -backend=false
+        # Retry: provider downloads from registry.terraform.io intermittently
+        # time out ("Client.Timeout exceeded while awaiting headers"), which is
+        # transient infra flakiness rather than a config error.
+        run: |
+          for attempt in 1 2 3; do
+            terraform init -backend=false && exit 0
+            echo "::warning::terraform init failed (attempt ${attempt}/3) — retrying in 20s"
+            sleep 20
+          done
+          echo "::error::terraform init failed after 3 attempts (registry.terraform.io unreachable?)"
+          exit 1
 
       - name: Terraform validate
         if: inputs.run-validate
