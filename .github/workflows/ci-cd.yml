@@ -10,9 +10,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Orchestrator grants nothing itself; each reusable workflow declares its own job permissions.
-permissions: {}
-
 jobs:
 
   release:
