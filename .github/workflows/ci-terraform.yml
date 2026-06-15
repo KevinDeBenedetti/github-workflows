@@ -99,6 +99,13 @@ jobs:
         # Retry: provider downloads from registry.terraform.io intermittently
         # time out ("Client.Timeout exceeded while awaiting headers"), which is
         # transient infra flakiness rather than a config error.
+        #
+        # TF_REGISTRY_CLIENT_TIMEOUT raises Terraform's per-request registry
+        # client timeout from its 10s default to 30s — the failing call is the
+        # registry download-metadata request, and 10s is too tight for slow
+        # responses from GitHub-hosted runners. (30 is the documented maximum.)
+        env:
+          TF_REGISTRY_CLIENT_TIMEOUT: "30"
         run: |
           for attempt in 1 2 3; do
             terraform init -backend=false && exit 0
