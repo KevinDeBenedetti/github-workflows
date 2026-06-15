@@ -48,9 +48,22 @@ on:
         type: string
         required: false
         default: '"ubuntu-latest"'
+      app-client-id:
+        description: >
+          Client ID (or App ID) of a GitHub App installed on this repo with
+          contents/pull-requests/issues write. When set, a short-lived App token
+          is minted and used instead of GITHUB_TOKEN, so the release PR is
+          attributed to the App rather than github-actions[bot] — this avoids the
+          manual workflow-approval gate and lets CI run on the release PR.
+        type: string
+        required: false
+        default: ''
     secrets:
       RELEASE_TOKEN:
         description: PAT with write access (defaults to GITHUB_TOKEN if not set)
+        required: false
+      APP_PRIVATE_KEY:
+        description: Private key of the GitHub App referenced by app-client-id.
         required: false
     outputs:
       released:
@@ -128,11 +141,19 @@ jobs:
             echo "✅ Created manifest with initial version: ${{ steps.detect-paths.outputs.initial-version }}"
           fi
 
+      - name: Generate App token
+        id: app-token
+        if: inputs.app-client-id != ''
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Release Please
         id: rp
         uses: googleapis/release-please-action@v5
         with:
-          token: ${{ secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN || github.token }}
+          token: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
           release-type: ${{ inputs.release-type || '' }}
           config-file: ${{ steps.detect-paths.outputs.config-file }}
           manifest-file: ${{ steps.detect-paths.outputs.manifest-file }}
