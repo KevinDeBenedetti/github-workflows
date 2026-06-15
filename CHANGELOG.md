@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.12.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.5...v0.12.0) (2026-06-15)
+
+
+### Features
+
+* update tags & review all workflows ([2d72b0c](https://github.com/KevinDeBenedetti/github-workflows/commit/2d72b0c321a53aeaed9b208ae56bd70bd0b44bce))
+
+
+### Bug Fixes
+
+* add allowed bots ([ec5ee0d](https://github.com/KevinDeBenedetti/github-workflows/commit/ec5ee0dfb3c35ed9edf4642d1f7bebb5d46a9caf))
+* bots allowed ([d0c0ac4](https://github.com/KevinDeBenedetti/github-workflows/commit/d0c0ac4c69543a568f69330db3089b4361591495))
+* clean todo & cd vercel ([1b025e1](https://github.com/KevinDeBenedetti/github-workflows/commit/1b025e1687f010913e21511258b2d3c5da2dd9ab))
+* node runner ci ([ae48bd7](https://github.com/KevinDeBenedetti/github-workflows/commit/ae48bd706e88fa24ba30f2fafc68607124f45b5b))
+* permissions ([3798436](https://github.com/KevinDeBenedetti/github-workflows/commit/3798436db2d11ffe1cbc413289a397b5e327fafb))
+
 ## [0.11.5](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.4...v0.11.5) (2026-06-13)
 
 
