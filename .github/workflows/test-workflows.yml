@@ -15,10 +15,6 @@ jobs:
 
   ci-shell:
     name: CI — Shell
-    # Skip the auto-generated release-please PR: it's a bot-authored PR, so its
-    # pull_request runs require manual approval. The code is already tested on
-    # the source branch before merge, and CI re-runs on push to main after merge.
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     uses: ./.github/workflows/ci-shell.yml
     with:
       run-shellcheck: true
@@ -29,7 +25,6 @@ jobs:
 
   security:
     name: Security — Secret scan
-    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     uses: ./.github/workflows/security.yml
     with:
       run-node-audit: false
