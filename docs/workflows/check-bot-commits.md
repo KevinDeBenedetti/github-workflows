@@ -55,5 +55,5 @@ The workflow:
 ## Notes
 
 - The check is skipped on non-PR events (push, workflow_dispatch, etc.).
-- To allow Dependabot's own commits in PRs, add `dependabot[bot]` to `allowed-bots`.
+- To allow a bot's commits, add it to `allowed-bots` — e.g. `dependabot[bot]` or `github-actions[bot]` for release-please PRs.
 - Bot commits that have already landed on the default branch are not checked — this only covers incoming PR commits.

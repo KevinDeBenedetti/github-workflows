@@ -3,8 +3,6 @@ name: CI / CD
 on:
   push:
     branches: [main, develop]
-  pull_request:
-    types: [opened, synchronize]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -26,10 +24,3 @@ jobs:
       client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
-
-  check-bot-commits:
-    name: Check bot commits
-    if: github.event_name == 'pull_request'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@main
-    with:
-      allowed-bots: '["dependabot[bot]", "github-actions[bot]"]'
