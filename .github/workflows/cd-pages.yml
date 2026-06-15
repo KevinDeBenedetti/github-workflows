@@ -52,12 +52,16 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         env:
           GITHUB_TOKEN: ${{ secrets.github-token }}
+          # Routed through env (never interpolated into the script body) so a
+          # caller-supplied build-command cannot inject shell at expansion time.
+          BUILD_COMMAND: ${{ inputs.build-command }}
+          PACKAGE_MANAGER: ${{ steps.setup.outputs.package-manager }}
         run: |
-          CMD="${{ inputs.build-command }}"
-          if [ -z "$CMD" ]; then
-            CMD="${{ steps.setup.outputs.package-manager }} run build"
+          if [ -n "$BUILD_COMMAND" ]; then
+            sh -c "$BUILD_COMMAND"
+          else
+            "$PACKAGE_MANAGER" run build
           fi
-          eval "$CMD"
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
