@@ -70,9 +70,7 @@ jobs:
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          # The action's input is `app-id` (it accepts both App IDs and Client IDs);
-          # `client-id` is not a valid input and fails the step.
-          app-id: ${{ inputs.client-id }}
+          client-id: ${{ inputs.client-id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ steps.target.outputs.owner }}
           repositories: ${{ steps.target.outputs.repo }}

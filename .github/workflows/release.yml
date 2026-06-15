@@ -146,7 +146,7 @@ jobs:
         if: inputs.app-client-id != ''
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ inputs.app-client-id }}
+          client-id: ${{ inputs.app-client-id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Release Please
