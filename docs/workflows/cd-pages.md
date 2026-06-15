@@ -7,7 +7,7 @@ Builds a static site and deploys it to **GitHub Pages** via the official `action
 ```yaml
 jobs:
   pages:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
     with:
       build-command: 'pnpm build'
       output-directory: dist
@@ -19,8 +19,14 @@ jobs:
 | ------------------- | ------ | ------------ | ------------------------------------------------------- |
 | `working-directory` | string | `'.'`        | Path to the app root (e.g. `apps/client`)               |
 | `node-version`      | string | `'20'`       | Node.js version                                         |
-| `build-command`     | string | `pnpm build` | Command to build the static site                        |
+| `build-command`     | string | `''`         | Build command to run (leave empty to auto-detect from the package manager) |
 | `output-directory`  | string | `dist`       | Build output directory, relative to `working-directory` |
+
+## Secrets
+
+| Secret         | Required | Description                                                                                       |
+| -------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `github-token` | no       | GitHub token passed as `GITHUB_TOKEN` env var to the build step (e.g. for scripts calling the GitHub API) |
 
 ## Outputs
 
@@ -55,7 +61,7 @@ VitePress outputs to `docs/.vitepress/dist` by default. Use these inputs:
 ```yaml
 jobs:
   deploy-docs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
     with:
       build-command: 'pnpm docs:build'
       output-directory: docs/.vitepress/dist

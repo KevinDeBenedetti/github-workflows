@@ -20,13 +20,15 @@ jobs:
 
 ## Inputs
 
-| Input            | Type   | Default                                        | Description                                                                                       |
-| ---------------- | ------ | ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `release-type`   | string | `''`                                           | release-please release type (e.g. `node`, `python`, `simple`). Ignored when `config-file` is set. |
-| `config-file`    | string | `release-please-config.json`                   | Path to `release-please-config.json`                                                              |
-| `manifest-file`  | string | `.release-please-manifest.json`                | Path to `.release-please-manifest.json`                                                           |
-| `git-user-name`  | string | `github-actions[bot]`                          | Name used for the git tagger identity when moving the major version tag                           |
-| `git-user-email` | string | `github-actions[bot]@users.noreply.github.com` | Email used for the git tagger identity when moving the major version tag                          |
+| Input             | Type   | Default            | Description                                                                                                                           |
+| ----------------- | ------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `release-type`    | string | `''`               | release-please release type (e.g. `node`, `python`, `simple`). Ignored when `config-file` is provided.                              |
+| `initial-version` | string | `'1.0.0'`          | Initial version for new releases (e.g. `0.1.0`, `1.0.0`). Only used if the manifest file doesn't exist.                             |
+| `config-file`     | string | `''`               | Path to `release-please-config.json`. If empty, checks `.github/release/release-please-config.json` then `release-please-config.json`. |
+| `manifest-file`   | string | `''`               | Path to `.release-please-manifest.json`. If empty, checks `.github/release/.release-please-manifest.json` then `.release-please-manifest.json`. |
+| `git-user-name`   | string | `''`               | Name for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_NAME` repo variable, then `github-actions[bot]`. |
+| `git-user-email`  | string | `''`               | Email for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_EMAIL` repo variable, then the Actions noreply address. |
+| `runner`          | string | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'`.                                     |
 
 ## Secrets
 

@@ -145,7 +145,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       # Setup resolves pnpm or bun automatically from the lockfile
       - name: Setup Node.js

@@ -63,7 +63,7 @@ runs:
 
     - name: Setup Node.js (pnpm)
       if: steps.resolve.outputs.pm == 'pnpm'
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
 
@@ -95,7 +95,7 @@ runs:
 
     - name: Setup Node.js (bun)
       if: steps.resolve.outputs.pm == 'bun'
-      uses: actions/setup-node@v5
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
 

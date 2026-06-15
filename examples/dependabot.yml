@@ -1,11 +1,10 @@
-# Dependabot auto-merge + bot commit guard
+# Bot commit guard for pull requests
 #
 # Drop this file into .github/workflows/ in any repository.
-# Required secrets (repo or org level):
-#   PAT_TOKEN  — Personal Access Token (human account, not a bot)
+# Blocks PRs that contain commits authored by unauthorised bots, while
+# allowing the bots you explicitly trust (e.g. dependabot).
 #
 # Recommended repository settings:
-#   Settings → General → Allow auto-merge  ✅
 #   Settings → Branches → Branch protection with at least one required check
 
 name: Dependabot
@@ -15,20 +14,9 @@ on:
     types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
-  # Auto-merge minor/patch; label major for manual review
-  automerge:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/dependabot-automerge.yml@main
-    secrets: inherit
-    # Optional overrides:
-    # with:
-    #   merge-method: squash   # squash | merge | rebase
-    #   major-label: major-update
-
   # Block PRs that contain commits from unauthorised bots.
-  # Dependabot's own commits are excluded because dependabot PRs never reach
-  # this check (the automerge job handles them; human review handles majors).
   bot-guard:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@main
-    # Allow dependabot itself if you want to run this check on dependabot PRs too:
-    # with:
-    #   allowed-bots: '["dependabot[bot]"]'
+    with:
+      # Bots allowed to author commits in a PR (JSON array of logins).
+      allowed-bots: '["dependabot[bot]"]'

@@ -94,12 +94,74 @@ Runs ShellCheck → actionlint → Bats.
 
 ---
 
+### Helm
+
+```yaml
+jobs:
+  ci:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-helm.yml@main
+    with:
+      chart-paths: 'charts/*'
+      run-template: true
+    secrets: inherit
+```
+
+Runs `helm lint` and an optional `helm template` dry-run on all charts.
+
+---
+
+### Kubernetes
+
+```yaml
+jobs:
+  ci:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@main
+    with:
+      kubeconform-paths: kubernetes/
+    secrets: inherit
+```
+
+Validates Kubernetes manifests with kubeconform (CRDs-catalog enabled by default).
+
+---
+
+### Terraform
+
+```yaml
+jobs:
+  ci:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-terraform.yml@main
+    with:
+      tf-dir: terraform
+    secrets: inherit
+```
+
+Runs `terraform validate` and `terraform fmt -check -diff`.
+
+---
+
+### Ansible
+
+```yaml
+jobs:
+  ci:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-ansible.yml@main
+    with:
+      ansible-dir: ansible/
+      run-syntax-check: true
+    secrets: inherit
+```
+
+Runs `ansible-lint` and an optional `ansible-playbook --syntax-check`.
+
+---
+
 ### Docker
 
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
     with:
       image-name: my-app
       tag-latest: true
@@ -107,7 +169,23 @@ jobs:
 ```
 
 Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
-→ [Full reference](workflows/deploy-docker.md)
+→ [Full reference](workflows/cd-docker.md)
+
+---
+
+### Kaniko (self-hosted)
+
+```yaml
+jobs:
+  deploy:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-kaniko.yml@main
+    with:
+      image-name: my-app
+      runner: '["self-hosted","linux","k3s","kaniko"]'
+    secrets: inherit
+```
+
+Builds and pushes an image to GHCR using Kaniko on self-hosted runners (no Docker daemon required).
 
 ---
 
@@ -116,13 +194,13 @@ Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
     with:
       output-directory: dist
     secrets: inherit
 ```
 
-→ [Full reference](workflows/deploy-pages.md)
+→ [Full reference](workflows/cd-pages.md)
 
 ---
 
@@ -133,13 +211,33 @@ Requires three secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@main
     with:
       environment: preview
     secrets: inherit
 ```
 
-→ [Full reference](workflows/deploy-vercel.md)
+→ [Full reference](workflows/cd-vercel.md)
+
+---
+
+### Docs sync
+
+Sync this repo's docs to a centralized docs site via `repository_dispatch`. Requires a
+GitHub App: pass its `client-id` and the `APP_PRIVATE_KEY` secret.
+
+```yaml
+jobs:
+  docs:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
+    with:
+      docs-directory: docs
+      client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
+```
+
+→ [Full reference](workflows/cd-docs.md)
 
 ---
 
@@ -171,57 +269,24 @@ Combines Gitleaks secret scanning, CodeQL SAST, and optional dependency audits.
 
 ---
 
-### Repository maintenance (purge)
-
-Keep deployments and workflow run history clean automatically:
-
-```yaml
-# .github/workflows/maintenance.yml
-name: Maintenance
-on:
-  schedule:
-    - cron: '0 3 * * 0'  # Every Sunday at 03:00 UTC
-  workflow_dispatch:
-
-jobs:
-  purge-deployments:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-deployments.yml@main
-    with:
-      keep: 10       # keep the 10 most-recent deployments per environment
-      dry-run: false
-    secrets: inherit
-
-  purge-workflow-runs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/purge-workflow-runs.yml@main
-    with:
-      keep: 10       # keep the 10 most-recent runs per workflow
-      dry-run: false
-    secrets: inherit
-```
-
-→ [Deployments reference](workflows/purge-deployments.md) · [Workflow runs reference](workflows/purge-workflow-runs.md)
-
----
-
 ## All available workflows
 
 | Workflow | Description | Doc |
 |---|---|---|
 | `ci-node.yml` | Node.js CI (lint → typecheck → test → build) | [→](workflows/ci-node.md) |
-| `ci-python.yml` | Python CI (lint → format → typecheck → test) | [→](workflows/ci-python.md) |
+| `ci-python.yml` | Python CI (lint → format → test) | [→](workflows/ci-python.md) |
 | `ci-shell.yml` | Shell CI (ShellCheck → actionlint → Bats) | [→](workflows/ci-shell.md) |
-| `deploy-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](workflows/deploy-docker.md) |
-| `deploy-pages.yml` | Build & deploy static site to GitHub Pages | [→](workflows/deploy-pages.md) |
-| `deploy-vercel.yml` | Deploy preview or production to Vercel | [→](workflows/deploy-vercel.md) |
+| `ci-ansible.yml` | Ansible CI (ansible-lint + syntax check) | [→](workflows/ci-ansible.md) |
+| `ci-helm.yml` | Helm CI (lint + template dry-run) | [→](workflows/ci-helm.md) |
+| `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](workflows/ci-kubernetes.md) |
+| `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](workflows/ci-terraform.md) |
+| `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](workflows/cd-docker.md) |
+| `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners | [→](workflows/cd-kaniko.md) |
+| `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](workflows/cd-pages.md) |
+| `cd-vercel.yml` | Deploy preview or production to Vercel | [→](workflows/cd-vercel.md) |
+| `cd-docs.yml` | Sync docs to a centralized docs repository | [→](workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](workflows/release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](workflows/security.md) |
-| `purge-deployments.yml` | Delete old deployments, keep last N per environment | [→](workflows/purge-deployments.md) |
-| `purge-workflow-runs.yml` | Delete old workflow runs, keep last N per workflow | [→](workflows/purge-workflow-runs.md) |
-| `actions-autoupdate.yml` | Bump pinned action versions and open a PR | [→](workflows/actions-autoupdate.md) |
-| `prek-autoupdate.yml` | Bump prek hook revisions and open a PR | [→](workflows/prek-autoupdate.md) |
-| `label-sync.yml` | Sync `labels.yml` to GitHub labels | [→](workflows/label-sync.md) |
-| `dispatch-docs.yml` | Trigger a remote docs rebuild via `repository_dispatch` | [→](workflows/dispatch-docs.md) |
-| `dependabot-automerge.yml` | Auto-merge Dependabot PRs | [→](workflows/dependabot-automerge.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](workflows/check-bot-commits.md) |
 
 ---
@@ -246,6 +311,9 @@ steps:
 | [`detect-changes`](actions/detect-changes.md) | Output a JSON matrix of changed apps in a monorepo |
 | [`actionlint`](actions/actionlint.md) | Validate GitHub Actions workflow files |
 | [`kubeconform`](actions/kubeconform.md) | Validate Kubernetes manifests |
+| [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
+| [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
+| [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
 
 ---
 
@@ -262,4 +330,4 @@ Complete ready-to-use caller files live in [`examples/`](https://github.com/Kevi
 | `vue-react.yml` | Vue / React (Vite) |
 | `fastapi.yml` | FastAPI (Python) |
 | `monorepo.yml` | Monorepo with change detection |
-| `maintenance.yml` | Purge old deployments and workflow runs |
+| `vitepress.yml` | VitePress docs site |

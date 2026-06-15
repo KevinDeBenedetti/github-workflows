@@ -166,6 +166,9 @@ concurrency:
   group: ci-shell-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   # ── ShellCheck ───────────────────────────────────────────────────────────────
   shellcheck:
@@ -175,7 +178,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: ShellCheck
         uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@main
@@ -191,7 +194,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: actionlint
         uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@main
@@ -207,7 +210,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: ${{ inputs.bats-submodules }}
           token: ${{ secrets.token || github.token }}
@@ -230,7 +233,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: ${{ inputs.bats-submodules }}
 
@@ -249,7 +252,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Check markdown links
         uses: lycheeverse/lychee-action@v2
@@ -266,7 +269,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Check docs links
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@main

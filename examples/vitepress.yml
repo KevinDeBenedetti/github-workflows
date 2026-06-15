@@ -12,7 +12,7 @@ on:
 jobs:
   deploy-docs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd/pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
     with:
       node-version: '20'
       build-command: 'pnpm docs:build'

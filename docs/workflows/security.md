@@ -23,9 +23,10 @@ jobs:
 | `node-working-directory`   | string  | `'.'`                           | Path to the Node.js app                                                     |
 | `run-python-audit`         | boolean | `false`                         | Run `pip-audit` via `uvx`                                                   |
 | `python-working-directory` | string  | `'.'`                           | Path to the Python app                                                      |
-| `run-secret-scan`          | boolean | `true`                          | Run [Gitleaks](https://github.com/gitleaks/gitleaks-action) secret scanning |
+| `run-secret-scan`          | boolean | `true`                          | Run [Gitleaks](https://github.com/gitleaks/gitleaks) secret scanning        |
 | `run-codeql`               | boolean | `true`                          | Run CodeQL SAST analysis                                                    |
 | `codeql-languages`         | string  | `'["javascript","typescript"]'` | JSON array of languages for CodeQL                                          |
+| `runner`                   | string  | `'"ubuntu-latest"'`             | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
 
 ## Jobs
 
@@ -42,4 +43,4 @@ jobs:
 - Gitleaks SARIF results are uploaded to the Security tab on failure.
 - CodeQL runs in a matrix — add multiple languages to scan them in parallel.
 - Requires `security-events: write` permission for Gitleaks and CodeQL (granted automatically).
-- `GITLEAKS_LICENSE` secret is optional; only needed for private repos with the Gitleaks enterprise plan.
+- This workflow declares no secrets; Gitleaks is installed directly from its GitHub release and runs with no license.

@@ -82,8 +82,8 @@ runs:
             fi
           done
         else
-          echo "⚠️  Directory '$APPS_DIR' not found — treating all apps as changed"
-          HAS_CHANGES="true"
+          echo "⚠️  Directory '$APPS_DIR' not found — no apps to build"
+          HAS_CHANGES="false"
           CHANGED_APPS="[]"
         fi
 

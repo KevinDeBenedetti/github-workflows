@@ -55,5 +55,5 @@ The workflow:
 ## Notes
 
 - The check is skipped on non-PR events (push, workflow_dispatch, etc.).
-- Dependabot PRs are handled separately by `dependabot-automerge.yml`; if you use both workflows together, add `dependabot[bot]` to `allowed-bots` on the bot-guard job or scope the bot-guard trigger to exclude dependabot.
+- To allow Dependabot's own commits in PRs, add `dependabot[bot]` to `allowed-bots`.
 - Bot commits that have already landed on the default branch are not checked — this only covers incoming PR commits.

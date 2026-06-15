@@ -50,7 +50,7 @@ on:
         default: ''
     outputs:
       image:
-        description: Full image reference with digest
+        description: Image tag(s) applied to the build (newline-separated, from docker/metadata-action)
         value: ${{ jobs.docker.outputs.image }}
       digest:
         description: Image digest
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Set image name
         id: image

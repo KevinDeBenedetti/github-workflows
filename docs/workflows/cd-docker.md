@@ -7,7 +7,7 @@ Builds a multi-platform Docker image and pushes it to **GitHub Container Registr
 ```yaml
 jobs:
   docker:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/deploy-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
     with:
       image-name: my-api
       platforms: linux/amd64,linux/arm64
@@ -22,13 +22,16 @@ jobs:
 | `dockerfile` | string  | `Dockerfile`              | Path to the Dockerfile, relative to `context`                |
 | `platforms`  | string  | `linux/amd64,linux/arm64` | Comma-separated target platforms                             |
 | `push`       | boolean | `true`                    | Push image to GHCR                                           |
+| `target`     | string  | `''`                      | Build target stage (e.g. `dev`, `prod`)                      |
 | `tag-latest` | boolean | `false`                   | Also tag the image as `:latest` on the default branch        |
+| `version`    | string  | `''`                      | Explicit version tag to apply (e.g. `v1.2.3`). When set, adds a `type=raw` tag with this value. |
+| `build-args` | string  | `''`                      | List of Docker build-args (one per line, `KEY=VALUE`)        |
 
 ## Outputs
 
 | Output   | Description                        |
 | -------- | ---------------------------------- |
-| `image`  | Full image reference with all tags |
+| `image`  | Image tag(s) applied to the build (newline-separated) |
 | `digest` | Image digest                       |
 
 ## Tags applied

@@ -28,14 +28,21 @@ runs:
 
     - name: Run actionlint
       shell: bash
+      env:
+        INPUT_PATHS: ${{ inputs.paths }}
+        INPUT_FLAGS: ${{ inputs.flags }}
       run: |
-        FILES=""
-        for p in ${{ inputs.paths }}; do
+        # Build the file list safely into an array (handles paths with spaces).
+        FILES=()
+        for p in $INPUT_PATHS; do
           if [ -d "$p" ]; then
-            FILES="$FILES $(find "$p" \( -name '*.yml' -o -name '*.yaml' \))"
+            while IFS= read -r -d '' f; do
+              FILES+=("$f")
+            done < <(find "$p" \( -name '*.yml' -o -name '*.yaml' \) -print0)
           else
-            FILES="$FILES $p"
+            FILES+=("$p")
           fi
         done
+        # INPUT_FLAGS is intentionally word-split into separate CLI args.
         # shellcheck disable=SC2086
-        actionlint ${{ inputs.flags }} $FILES
+        actionlint $INPUT_FLAGS "${FILES[@]}"

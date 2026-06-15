@@ -7,12 +7,11 @@
 ## Features
 
 - CI pipelines for Node.js (lint → typecheck → test → build), Python (lint → format → test), and shell (ShellCheck → actionlint → Bats)
-- CI pipelines for **Helm** (lint + template dry-run), **Terraform** (validate + fmt check), and **Ansible** (lint + syntax check)
-- Deploy workflows for Docker/GHCR, GitHub Pages, and Vercel
+- CI pipelines for **Helm** (lint + template dry-run), **Kubernetes** (kubeconform validation), **Terraform** (validate + fmt check), and **Ansible** (lint + syntax check)
+- CD workflows for Docker/GHCR, Kaniko (self-hosted), GitHub Pages, Vercel, and centralized docs sync
 - Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, and monorepo change detection
 - Automated releases via release-please
 - Security scanning: dependency audit, CodeQL, and secret detection
-- Repository maintenance: purge old deployments and workflow run history
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
 
 ## Prerequisites
@@ -42,6 +41,26 @@ jobs:
 ```
 
 → Full usage guide: [docs](https://kevindebenedetti.github.io/github-workflows/getting-started)
+
+## Available workflows
+
+| Workflow | Description | Doc |
+|---|---|---|
+| `ci-node.yml` | Node.js CI (lint → typecheck → test → build) | [→](docs/workflows/ci-node.md) |
+| `ci-python.yml` | Python CI (lint → format → test) | [→](docs/workflows/ci-python.md) |
+| `ci-shell.yml` | Shell CI (ShellCheck → actionlint → Bats) | [→](docs/workflows/ci-shell.md) |
+| `ci-ansible.yml` | Ansible CI (ansible-lint + syntax check) | [→](docs/workflows/ci-ansible.md) |
+| `ci-helm.yml` | Helm CI (lint + template dry-run) | [→](docs/workflows/ci-helm.md) |
+| `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](docs/workflows/ci-kubernetes.md) |
+| `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](docs/workflows/ci-terraform.md) |
+| `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |
+| `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners | [→](docs/workflows/cd-kaniko.md) |
+| `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](docs/workflows/cd-pages.md) |
+| `cd-vercel.yml` | Deploy preview or production to Vercel | [→](docs/workflows/cd-vercel.md) |
+| `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
+| `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
+| `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
+| `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
 
 ## Documentation
 

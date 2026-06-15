@@ -20,13 +20,14 @@ steps:
 | Input | Type | Default | Description |
 |---|---|---|---|
 | `paths` | string | `kubernetes/` | Directory containing Kubernetes manifests |
-| `exclude` | string | `*-values.yaml` | Filename pattern to exclude from `find` |
-| `include-crds-catalog` | boolean | `true` | Validate CRDs against the Datree CRDs-catalog |
+| `exclude` | string | `.*-values\.yaml` | Regex passed to `-ignore-filename-pattern` to exclude files |
+| `include-crds-catalog` | string | `'true'` | Validate CRDs against the Datree CRDs-catalog |
+| `ignore-missing-schemas` | string | `'false'` | Skip validation for resources whose schema is not found (e.g. custom CRDs not in the catalog) |
 
 ## Steps
 
-1. Download and install `kubeconform` `0.7.0` to `/usr/local/bin`
-2. Run `kubeconform -strict -summary` on all `*.yaml` files under `paths` (excluding `exclude`)
+1. Download and install `kubeconform` `0.7.0` to `$RUNNER_TEMP/kubeconform` (added to `PATH`)
+2. Run `kubeconform -strict -summary` on manifests under `paths` (excluding files matching `exclude`)
 
 ## Notes
 

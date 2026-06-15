@@ -34,6 +34,16 @@ jobs:
 | `run-docker`               | boolean | `false`                        | Run Docker integration tests                                                 |
 | `docker-file`              | string  | `tests/docker/Dockerfile.test` | Path to the test Dockerfile                                                  |
 | `docker-targets`           | string  | `'[]'`                         | JSON array of `--target` names to build (e.g. `'["test-bats","test-init"]'`) |
+| `run-link-check`           | boolean | `false`                        | Check markdown files for broken relative links (offline, no HTTP requests)   |
+| `link-check-paths`         | string  | `docs/**/*.md`                 | Space-separated glob patterns of markdown files to check                     |
+| `run-docs-link-check`      | boolean | `false`                        | Check that no relative links in `docs/` escape the `docs/` directory         |
+| `runner`                   | string  | `'"ubuntu-latest"'`            | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
+
+## Secrets
+
+| Secret  | Required | Description                                                                                       |
+| ------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `token` | no       | GitHub token or PAT used to checkout private submodules. Falls back to the default `GITHUB_TOKEN`. |
 
 ## Jobs
 
@@ -44,6 +54,7 @@ jobs:
 | `bats`          | `run-bats: true`                                  |
 | `docker-test`   | `run-docker: true` (matrix over `docker-targets`) |
 | `link-check`    | `run-link-check: true`                            |
+| `docs-link-check` | `run-docs-link-check: true`                     |
 
 ## Notes
 

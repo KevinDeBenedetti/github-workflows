@@ -29,7 +29,14 @@ jobs:
 | `upload-build`        | boolean | `false` | Upload build output as a workflow artifact                                       |
 | `build-artifact-name` | string  | `build` | Name of the uploaded artifact                                                    |
 | `run-link-check`      | boolean | `false` | Check markdown files for broken relative links (offline, no HTTP requests)       |
-| `link-check-paths`    | string  | `docs/**/*.md` | Space-separated glob patterns of markdown files to check                  |
+| `link-check-paths`    | string  | `docs/` | Space-separated paths or directories of markdown files to check                  |
+| `runner`              | string  | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
+
+## Secrets
+
+| Secret         | Required | Description                                                                                       |
+| -------------- | -------- | ------------------------------------------------------------------------------------------------- |
+| `github-token` | no       | GitHub token passed as `GITHUB_TOKEN` env var to the build step (e.g. for scripts calling the GitHub API) |
 
 ## Steps
 
