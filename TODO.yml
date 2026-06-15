@@ -1,9 +1,0 @@
-todos:
-  - id: "FEAT-01"
-    title: "Add dark mode support"
-    github_id: null
-    status: open
-  - id: "BUG-07"
-    title: "Fix login crash"
-    github_id: 57
-    status: closed

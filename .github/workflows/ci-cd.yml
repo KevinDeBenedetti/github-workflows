@@ -3,7 +3,7 @@ name: CI / CD
 on:
   push:
     branches: [main, develop]
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize]
 
 concurrency:
@@ -29,7 +29,7 @@ jobs:
 
   check-bot-commits:
     name: Check bot commits
-    if: github.event_name == 'pull_request_target'
+    if: github.event_name == 'pull_request'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@main
     with:
       allowed-bots: '["dependabot[bot]"]'

@@ -59,9 +59,10 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: |
           vercel pull --yes \
-            --environment=${{ inputs.environment }} \
-            --token=${{ secrets.VERCEL_TOKEN }}
+            --environment="$VERCEL_ENVIRONMENT"
         env:
+          VERCEL_ENVIRONMENT: ${{ inputs.environment }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -69,9 +70,9 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: |
           vercel build \
-            ${{ inputs.environment == 'production' && '--prod' || '' }} \
-            --token=${{ secrets.VERCEL_TOKEN }}
+            ${{ inputs.environment == 'production' && '--prod' || '' }}
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
@@ -80,21 +81,24 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
         run: |
           URL=$(vercel deploy --prebuilt \
-            ${{ inputs.environment == 'production' && '--prod' || '' }} \
-            --token=${{ secrets.VERCEL_TOKEN }})
+            ${{ inputs.environment == 'production' && '--prod' || '' }})
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "🚀 Deployed to: $URL"
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Comment PR with preview URL
         if: inputs.environment == 'preview' && github.event_name == 'pull_request'
         uses: actions/github-script@v7
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+          APP_DIR: ${{ inputs.working-directory }}
         with:
           script: |
-            const url = '${{ steps.deploy.outputs.url }}';
-            const app = '${{ inputs.working-directory }}';
+            const url = process.env.DEPLOY_URL;
+            const app = process.env.APP_DIR;
             const body = `### 🚀 Vercel Preview — \`${app}\`\n\n**URL:** ${url}\n\n_Deployed from commit ${context.sha.slice(0, 7)}_`;
 
             const comments = await github.rest.issues.listComments({
