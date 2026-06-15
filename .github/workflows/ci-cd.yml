@@ -32,4 +32,4 @@ jobs:
     if: github.event_name == 'pull_request'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@main
     with:
-      allowed-bots: '["dependabot[bot]"]'
+      allowed-bots: '["dependabot[bot]", "github-actions[bot]"]'
