@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.12.1...v0.12.2) (2026-06-15)
+
+
+### Bug Fixes
+
+* revert skip release ([265b896](https://github.com/KevinDeBenedetti/github-workflows/commit/265b8964d392d89907a3ddbb152b21f1fa68c401))
+* terraform workflow ([740aa1e](https://github.com/KevinDeBenedetti/github-workflows/commit/740aa1eee0adaa8a791dc403e57c771c59585e75))
+
 ## [0.12.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.12.0...v0.12.1) (2026-06-15)
 
 
