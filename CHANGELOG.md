@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.12.0...v0.12.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* gh pages deployment ([3e9238a](https://github.com/KevinDeBenedetti/github-workflows/commit/3e9238a8773368d0209efbacff85f7900c1e5583))
+* terraform ci ([aaef736](https://github.com/KevinDeBenedetti/github-workflows/commit/aaef7366606372fa9ad17c7467308d545a0a0950))
+
 ## [0.12.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.11.5...v0.12.0) (2026-06-15)
 
 
