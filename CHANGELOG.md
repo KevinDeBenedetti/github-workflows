@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.12.2...v0.13.0) (2026-06-15)
+
+
+### Features
+
+* add github app for release ([44daff2](https://github.com/KevinDeBenedetti/github-workflows/commit/44daff2fc7aca492cfcaf81e456e6157e0df4c2c))
+
 ## [0.12.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.12.1...v0.12.2) (2026-06-15)
 
 
