@@ -16,6 +16,7 @@ jobs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
     with:
       app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+      notify-reviewers: KevinDeBenedetti
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 

@@ -48,6 +48,16 @@ on:
         type: string
         required: false
         default: '"ubuntu-latest"'
+      notify-reviewers:
+        description: >
+          Comma-separated GitHub usernames to request a review from on the
+          release PR (e.g. 'octocat' or 'octocat,hubot'). Each user is added as
+          a requested reviewer so they get a GitHub notification. Runs whenever
+          release-please opens or updates the PR; re-requesting a still-pending
+          reviewer is a no-op, so you are effectively notified once. Leave empty to disable.
+        type: string
+        required: false
+        default: ''
       app-client-id:
         description: >
           Client ID (or App ID) of a GitHub App installed on this repo with
@@ -157,6 +167,23 @@ jobs:
           release-type: ${{ inputs.release-type || '' }}
           config-file: ${{ steps.detect-paths.outputs.config-file }}
           manifest-file: ${{ steps.detect-paths.outputs.manifest-file }}
+
+      - name: Request review on release PR
+        if: inputs.notify-reviewers != '' && steps.rp.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
+          PRS: ${{ steps.rp.outputs.prs }}
+          REVIEWERS: ${{ inputs.notify-reviewers }}
+        shell: bash
+        run: |
+          echo "$PRS" | jq -r '.[].number' | while read -r pr; do
+            [ -n "$pr" ] || continue
+            echo "ℹ️ Requesting review from $REVIEWERS on PR #$pr"
+            gh pr edit "$pr" \
+              --repo "${{ github.repository }}" \
+              --add-reviewer "$REVIEWERS" \
+              || echo "⚠️ Could not request review on PR #$pr"
+          done
 
   tag-workflows:
     name: Tag @v<major> alias
