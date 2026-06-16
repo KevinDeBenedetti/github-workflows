@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.14.0...v0.14.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* pr notification ([be40a16](https://github.com/KevinDeBenedetti/github-workflows/commit/be40a169aafcacffc46d26a424b86bb1287087b9))
+
 ## [0.14.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.13.0...v0.14.0) (2026-06-16)
 
 
