@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.14.1...v0.15.0) (2026-06-16)
+
+
+### Features
+
+* add notify on release PR updates & docs ([cfec09d](https://github.com/KevinDeBenedetti/github-workflows/commit/cfec09d2d5f23059e96cfde78d5e55129f5abf82))
+
 ## [0.14.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.14.0...v0.14.1) (2026-06-16)
 
 
