@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.15.0...v0.15.1) (2026-06-16)
+
+
+### Bug Fixes
+
+* release config ([b0b202d](https://github.com/KevinDeBenedetti/github-workflows/commit/b0b202dc5a86ca8e96facba47c9b71466d1310b2))
+
 ## [0.15.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.14.1...v0.15.0) (2026-06-16)
 
 
