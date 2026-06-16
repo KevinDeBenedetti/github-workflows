@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.14.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.13.0...v0.14.0) (2026-06-16)
+
+
+### Features
+
+* release notification auto ([f9e4959](https://github.com/KevinDeBenedetti/github-workflows/commit/f9e49592ee023b614296c0ac49e4c6c6c87ac106))
+
+
+### Bug Fixes
+
+* release app gh ([2c2fe80](https://github.com/KevinDeBenedetti/github-workflows/commit/2c2fe80f367075e08ea4e27d1c34b05aef9cef8e))
+
 ## [0.13.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.12.2...v0.13.0) (2026-06-15)
 
 
