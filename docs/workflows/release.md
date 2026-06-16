@@ -29,7 +29,8 @@ jobs:
 | `git-user-name`   | string | `''`               | Name for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_NAME` repo variable, then `github-actions[bot]`. |
 | `git-user-email`  | string | `''`               | Email for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_EMAIL` repo variable, then the Actions noreply address. |
 | `runner`          | string | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'`.                                     |
-| `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to notify when a release PR is opened. Each user is requested as a reviewer **and** @mentioned in a PR comment, so a notification reliably reaches them. Leave empty to disable. |
+| `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to notify when a release PR is opened. Each user is requested as a reviewer **and** @mentioned in a PR comment, so a notification reliably reaches them. Each PR is notified at most once. Leave empty to disable. |
+| `release-pending-label` | string | `'autorelease: pending'` | Label used to find the open release PR on runs where release-please didn't create/update it (the fallback path for `notify-reviewers`). Override only if you customized `pull-request-label` in your release-please config. |
 | `app-client-id`   | string | `''`               | Client ID (or App ID) of a GitHub App with contents/pull-requests/issues write. When set, a short-lived App token is used instead of `GITHUB_TOKEN`, so the release PR is attributed to the App (avoids the workflow-approval gate and lets CI run on the release PR). |
 
 ## Secrets
@@ -58,5 +59,6 @@ jobs:
 - The `tag-workflows` job only runs when `released == 'true'`.
 - The major alias (e.g. `v1`) is force-pushed after each release, enabling callers to pin to `@v1` without a breaking update.
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
-- With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker so re-runs of the workflow don't post duplicate notifications on the same PR.
+- With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker. Both the review request and the comment are gated on this marker, so once a PR is notified, later runs (on any push while the PR stays open) skip it entirely — reviewers are never re-requested or re-pinged.
+- Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.
 - A review request alone can be missed (it depends on each user's notification settings), which is why an @mention comment is also posted — mentions notify reliably. This matters when the release PR is opened by a GitHub App (`app-client-id`) rather than by you.

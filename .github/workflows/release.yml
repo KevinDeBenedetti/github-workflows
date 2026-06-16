@@ -52,12 +52,21 @@ on:
         description: >
           Comma-separated GitHub usernames to request a review from on the
           release PR (e.g. 'octocat' or 'octocat,hubot'). Each user is added as
-          a requested reviewer so they get a GitHub notification. Runs whenever
-          release-please opens or updates the PR; re-requesting a still-pending
-          reviewer is a no-op, so you are effectively notified once. Leave empty to disable.
+          a requested reviewer so they get a GitHub notification. Each release PR
+          is notified at most once (tracked via a hidden marker comment), so
+          re-runs on later pushes won't re-request or re-ping. Leave empty to disable.
         type: string
         required: false
         default: ''
+      release-pending-label:
+        description: >
+          Label used to find the open release PR when release-please didn't
+          create/update it this run (the fallback path for notify-reviewers).
+          Must match release-please's pending label — override only if you
+          customized `pull-request-label` in your release-please config.
+        type: string
+        required: false
+        default: 'autorelease: pending'
       app-client-id:
         description: >
           Client ID (or App ID) of a GitHub App installed on this repo with
@@ -175,12 +184,13 @@ jobs:
         # yields neither, yet may still need its (first-time) notification — e.g.
         # notify-reviewers was added after the PR opened, or the first attempt
         # failed. So prefer the `prs` output, but fall back to querying open
-        # release PRs by their default `autorelease: pending` label. Duplicate
-        # notifications are still prevented by the marker guard below.
+        # release PRs by the configured pending label. Duplicate notifications
+        # are still prevented by the marker guard below.
         if: inputs.notify-reviewers != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
           PRS: ${{ steps.rp.outputs.prs }}
+          PENDING_LABEL: ${{ inputs.release-pending-label }}
         shell: bash
         run: |
           if [ -n "$PRS" ] && [ "$PRS" != "null" ]; then
@@ -188,7 +198,7 @@ jobs:
           else
             NUMBERS=$(gh pr list \
               --repo "${{ github.repository }}" \
-              --label "autorelease: pending" \
+              --label "$PENDING_LABEL" \
               --state open \
               --json number --jq '.[].number' \
               || true)
@@ -200,29 +210,13 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "ℹ️ Release PRs to notify: ${NUMBERS:-none}"
 
-      - name: Request review on release PR
-        if: inputs.notify-reviewers != '' && steps.find-prs.outputs.numbers != ''
-        env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
-          NUMBERS: ${{ steps.find-prs.outputs.numbers }}
-          REVIEWERS: ${{ inputs.notify-reviewers }}
-        shell: bash
-        run: |
-          echo "$NUMBERS" | while read -r pr; do
-            [ -n "$pr" ] || continue
-            echo "ℹ️ Requesting review from $REVIEWERS on PR #$pr"
-            gh pr edit "$pr" \
-              --repo "${{ github.repository }}" \
-              --add-reviewer "$REVIEWERS" \
-              || echo "⚠️ Could not request review on PR #$pr"
-          done
-
       - name: Notify reviewers on release PR
-        # Posts an @mention comment on the release PR. A review request alone is
-        # easy to miss (notification settings vary), but an @mention reliably
-        # reaches the user — this is the actual "release PR ready" notification.
-        # Runs on both newly created and existing (updated/untouched) release PRs;
-        # the marker guard ensures each PR is notified at most once.
+        # Requests a review AND posts an @mention comment on each release PR.
+        # A review request alone is easy to miss (notification settings vary),
+        # but an @mention reliably reaches the user. Both actions are gated by a
+        # single hidden marker comment: once a PR has been notified, later runs
+        # (on any push while the PR stays open) skip it entirely — so reviewers
+        # are never re-requested or re-pinged. Each PR is notified at most once.
         if: inputs.notify-reviewers != '' && steps.find-prs.outputs.numbers != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
@@ -230,7 +224,7 @@ jobs:
           REVIEWERS: ${{ inputs.notify-reviewers }}
         shell: bash
         run: |
-          # Hidden marker so re-runs don't post duplicate notification comments.
+          # Hidden marker so re-runs don't re-request reviewers or repost comments.
           MARKER="<!-- release-please-notify -->"
 
           # Build "@user1 @user2" from the comma-separated reviewer list.
@@ -245,10 +239,15 @@ jobs:
             [ -n "$pr" ] || continue
             if gh pr view "$pr" --repo "${{ github.repository }}" --json comments \
                 --jq '.comments[].body' 2>/dev/null | grep -qF "$MARKER"; then
-              echo "ℹ️ Notification already posted on PR #$pr, skipping"
+              echo "ℹ️ Already notified on PR #$pr, skipping"
               continue
             fi
-            echo "ℹ️ Notifying $REVIEWERS on PR #$pr"
+            echo "ℹ️ Requesting review from $REVIEWERS on PR #$pr"
+            gh pr edit "$pr" \
+              --repo "${{ github.repository }}" \
+              --add-reviewer "$REVIEWERS" \
+              || echo "⚠️ Could not request review on PR #$pr"
+            echo "ℹ️ Commenting on PR #$pr"
             gh pr comment "$pr" \
               --repo "${{ github.repository }}" \
               --body "${MARKER}"$'\n'"🚀 ${MENTIONS}a new release PR is ready for review." \
