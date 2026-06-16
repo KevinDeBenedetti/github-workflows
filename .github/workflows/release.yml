@@ -185,6 +185,42 @@ jobs:
               || echo "⚠️ Could not request review on PR #$pr"
           done
 
+      - name: Notify reviewers on release PR
+        # Posts an @mention comment on the release PR. A review request alone is
+        # easy to miss (notification settings vary), but an @mention reliably
+        # reaches the user — this is the actual "new release PR" notification.
+        if: inputs.notify-reviewers != '' && steps.rp.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
+          PRS: ${{ steps.rp.outputs.prs }}
+          REVIEWERS: ${{ inputs.notify-reviewers }}
+        shell: bash
+        run: |
+          # Hidden marker so re-runs don't post duplicate notification comments.
+          MARKER="<!-- release-please-notify -->"
+
+          # Build "@user1 @user2" from the comma-separated reviewer list.
+          MENTIONS=""
+          IFS=',' read -ra USERS <<< "$REVIEWERS"
+          for u in "${USERS[@]}"; do
+            u="$(echo "$u" | xargs)"
+            [ -n "$u" ] && MENTIONS="${MENTIONS}@${u} "
+          done
+
+          echo "$PRS" | jq -r '.[].number' | while read -r pr; do
+            [ -n "$pr" ] || continue
+            if gh pr view "$pr" --repo "${{ github.repository }}" --json comments \
+                --jq '.comments[].body' 2>/dev/null | grep -qF "$MARKER"; then
+              echo "ℹ️ Notification already posted on PR #$pr, skipping"
+              continue
+            fi
+            echo "ℹ️ Notifying $REVIEWERS on PR #$pr"
+            gh pr comment "$pr" \
+              --repo "${{ github.repository }}" \
+              --body "${MARKER}"$'\n'"🚀 ${MENTIONS}a new release PR is ready for review." \
+              || echo "⚠️ Could not comment on PR #$pr"
+          done
+
   tag-workflows:
     name: Tag @v<major> alias
     needs: release

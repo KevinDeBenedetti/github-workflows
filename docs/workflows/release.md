@@ -29,12 +29,15 @@ jobs:
 | `git-user-name`   | string | `''`               | Name for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_NAME` repo variable, then `github-actions[bot]`. |
 | `git-user-email`  | string | `''`               | Email for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_EMAIL` repo variable, then the Actions noreply address. |
 | `runner`          | string | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'`.                                     |
+| `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to notify when a release PR is opened. Each user is requested as a reviewer **and** @mentioned in a PR comment, so a notification reliably reaches them. Leave empty to disable. |
+| `app-client-id`   | string | `''`               | Client ID (or App ID) of a GitHub App with contents/pull-requests/issues write. When set, a short-lived App token is used instead of `GITHUB_TOKEN`, so the release PR is attributed to the App (avoids the workflow-approval gate and lets CI run on the release PR). |
 
 ## Secrets
 
-| Secret          | Required | Description                                                                          |
-| --------------- | -------- | ------------------------------------------------------------------------------------ |
-| `RELEASE_TOKEN` | no       | PAT with `contents: write` and `pull-requests: write`. Falls back to `GITHUB_TOKEN`. |
+| Secret            | Required | Description                                                                          |
+| ----------------- | -------- | ------------------------------------------------------------------------------------ |
+| `RELEASE_TOKEN`   | no       | PAT with `contents: write` and `pull-requests: write`. Falls back to `GITHUB_TOKEN`. |
+| `APP_PRIVATE_KEY` | no       | Private key of the GitHub App referenced by `app-client-id`. Required when `app-client-id` is set. |
 
 ## Outputs
 
@@ -55,3 +58,5 @@ jobs:
 - The `tag-workflows` job only runs when `released == 'true'`.
 - The major alias (e.g. `v1`) is force-pushed after each release, enabling callers to pin to `@v1` without a breaking update.
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
+- With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker so re-runs of the workflow don't post duplicate notifications on the same PR.
+- A review request alone can be missed (it depends on each user's notification settings), which is why an @mention comment is also posted — mentions notify reliably. This matters when the release PR is opened by a GitHub App (`app-client-id`) rather than by you.

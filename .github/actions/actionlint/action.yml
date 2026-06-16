@@ -17,6 +17,9 @@ runs:
     - name: Install actionlint
       shell: bash
       run: |
+        # Pinned to 1.7.11: 1.7.12 regressed its bundled "popular actions" metadata
+        # for actions/create-github-app-token@v3 (false-positive on the `client-id`
+        # input). When bumping past 1.7.11, pass `flags: -ignore create-github-app-token`.
         ACTIONLINT_VERSION="1.7.11"
         INSTALL_DIR="$RUNNER_TEMP/actionlint"
         mkdir -p "$INSTALL_DIR"
