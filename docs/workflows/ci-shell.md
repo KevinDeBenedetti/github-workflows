@@ -37,6 +37,7 @@ jobs:
 | `run-link-check`           | boolean | `false`                        | Check markdown files for broken relative links (offline, no HTTP requests)   |
 | `link-check-paths`         | string  | `docs/**/*.md`                 | Space-separated glob patterns of markdown files to check                     |
 | `run-docs-link-check`      | boolean | `false`                        | Check that no relative links in `docs/` escape the `docs/` directory         |
+| `run-vitepress-check`      | boolean | `false`                        | Check `docs/` markdown for unescaped Vue interpolations that break the VitePress SSR build |
 | `runner`                   | string  | `'"ubuntu-latest"'`            | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
 
 ## Secrets
@@ -55,6 +56,7 @@ jobs:
 | `docker-test`   | `run-docker: true` (matrix over `docker-targets`) |
 | `link-check`    | `run-link-check: true`                            |
 | `docs-link-check` | `run-docs-link-check: true`                     |
+| `vitepress-check` | `run-vitepress-check: true`                     |
 
 ## Notes
 
@@ -62,3 +64,4 @@ jobs:
 - The `bats-submodules` flag applies to both the `bats` and `docker-test` jobs.
 - ShellCheck and actionlint use their own composite actions: [`shellcheck`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/shellcheck), [`actionlint`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/actionlint). actionlint covers YAML syntax, expression type checking, and action input validation — no separate yamllint needed.
 - `link-check` runs [lychee](https://github.com/lycheeverse/lychee) in offline mode — no external HTTP requests are made.
+- `vitepress-check` uses the [`check-vitepress-md`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/check-vitepress-md) action — guards against <code v-pre>{{ }}</code> interpolations that crash the VitePress SSR build (see [cd-docs](./cd-docs.md)).

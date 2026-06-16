@@ -168,15 +168,47 @@ jobs:
           config-file: ${{ steps.detect-paths.outputs.config-file }}
           manifest-file: ${{ steps.detect-paths.outputs.manifest-file }}
 
-      - name: Request review on release PR
-        if: inputs.notify-reviewers != '' && steps.rp.outputs.prs_created == 'true'
+      - name: Find release PRs to notify
+        id: find-prs
+        # release-please only sets `prs`/`prs_created` when it created or updated
+        # a PR this run. An existing release PR left untouched (no new commits)
+        # yields neither, yet may still need its (first-time) notification — e.g.
+        # notify-reviewers was added after the PR opened, or the first attempt
+        # failed. So prefer the `prs` output, but fall back to querying open
+        # release PRs by their default `autorelease: pending` label. Duplicate
+        # notifications are still prevented by the marker guard below.
+        if: inputs.notify-reviewers != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
           PRS: ${{ steps.rp.outputs.prs }}
+        shell: bash
+        run: |
+          if [ -n "$PRS" ] && [ "$PRS" != "null" ]; then
+            NUMBERS=$(echo "$PRS" | jq -r '.[].number')
+          else
+            NUMBERS=$(gh pr list \
+              --repo "${{ github.repository }}" \
+              --label "autorelease: pending" \
+              --state open \
+              --json number --jq '.[].number' \
+              || true)
+          fi
+          {
+            echo "numbers<<EOF"
+            echo "$NUMBERS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "ℹ️ Release PRs to notify: ${NUMBERS:-none}"
+
+      - name: Request review on release PR
+        if: inputs.notify-reviewers != '' && steps.find-prs.outputs.numbers != ''
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
+          NUMBERS: ${{ steps.find-prs.outputs.numbers }}
           REVIEWERS: ${{ inputs.notify-reviewers }}
         shell: bash
         run: |
-          echo "$PRS" | jq -r '.[].number' | while read -r pr; do
+          echo "$NUMBERS" | while read -r pr; do
             [ -n "$pr" ] || continue
             echo "ℹ️ Requesting review from $REVIEWERS on PR #$pr"
             gh pr edit "$pr" \
@@ -188,11 +220,13 @@ jobs:
       - name: Notify reviewers on release PR
         # Posts an @mention comment on the release PR. A review request alone is
         # easy to miss (notification settings vary), but an @mention reliably
-        # reaches the user — this is the actual "new release PR" notification.
-        if: inputs.notify-reviewers != '' && steps.rp.outputs.prs_created == 'true'
+        # reaches the user — this is the actual "release PR ready" notification.
+        # Runs on both newly created and existing (updated/untouched) release PRs;
+        # the marker guard ensures each PR is notified at most once.
+        if: inputs.notify-reviewers != '' && steps.find-prs.outputs.numbers != ''
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
-          PRS: ${{ steps.rp.outputs.prs }}
+          NUMBERS: ${{ steps.find-prs.outputs.numbers }}
           REVIEWERS: ${{ inputs.notify-reviewers }}
         shell: bash
         run: |
@@ -207,7 +241,7 @@ jobs:
             [ -n "$u" ] && MENTIONS="${MENTIONS}@${u} "
           done
 
-          echo "$PRS" | jq -r '.[].number' | while read -r pr; do
+          echo "$NUMBERS" | while read -r pr; do
             [ -n "$pr" ] || continue
             if gh pr view "$pr" --repo "${{ github.repository }}" --json comments \
                 --jq '.comments[].body' 2>/dev/null | grep -qF "$MARKER"; then

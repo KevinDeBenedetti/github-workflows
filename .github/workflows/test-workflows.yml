@@ -20,6 +20,10 @@ jobs:
       run-shellcheck: true
       run-actionlint: true
       run-bats: false
+      # Verify this repo's own docs/ stay VitePress-safe and self-contained:
+      # the central docs site (cd-docs.yml) rebuilds from these files.
+      run-docs-link-check: true
+      run-vitepress-check: true
       # actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3
       # and falsely flags the `client-id` input / a "missing app-id". Ignore those
       # messages so a future actionlint bump doesn't break CI on release.yml.
