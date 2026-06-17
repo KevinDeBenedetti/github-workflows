@@ -314,8 +314,6 @@ steps:
 | [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
-| [`ai-commit-msg`](actions/ai-commit-msg.md) | Pre-fill commit messages from the staged diff via Claude (pre-commit hook) |
-| [`purge-todo-done`](actions/purge-todo-done.md) | Flush completed tasks from `TODO.md`'s Done section at commit time (pre-commit hook) |
 
 ---
 

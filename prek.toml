@@ -4,7 +4,7 @@
 
 minimum_prek_version = "0.3.0"
 fail_fast = false
-default_install_hook_types = ["pre-commit", "prepare-commit-msg"]
+default_install_hook_types = ["pre-commit"]
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
@@ -44,21 +44,3 @@ language = "script"
 entry = ".github/actions/check-vitepress-md/check-vitepress-md.sh"
 files = "^docs/.*\\.md$"
 pass_filenames = true
-
-[[repos.hooks]]
-id = "ai-commit-msg"
-name = "AI commit message (from staged diff)"
-language = "script"
-entry = ".github/actions/ai-commit-msg/ai-commit-msg.sh"
-stages = ["prepare-commit-msg"]
-always_run = true
-
-# Runs after ai-commit-msg so the generated message still "sees" the completed
-# tasks in the staged diff before they're stripped from TODO.md.
-[[repos.hooks]]
-id = "purge-todo-done"
-name = "Purge completed tasks from TODO.md"
-language = "script"
-entry = ".github/actions/purge-todo-done/purge-todo-done.sh"
-stages = ["prepare-commit-msg"]
-always_run = true

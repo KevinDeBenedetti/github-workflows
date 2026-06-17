@@ -19,10 +19,7 @@ jobs:
     with:
       run-shellcheck: true
       run-actionlint: true
-      # Runs tests/*.bats (e.g. the ai-commit-msg hook suite) against this repo's
-      # own composite-action scripts.
-      run-bats: true
-      bats-submodules: false
+      run-bats: false
       # Verify this repo's own docs/ stay VitePress-safe and self-contained:
       # the central docs site (cd-docs.yml) rebuilds from these files.
       run-docs-link-check: true
