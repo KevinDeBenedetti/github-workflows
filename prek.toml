@@ -52,3 +52,13 @@ language = "script"
 entry = ".github/actions/ai-commit-msg/ai-commit-msg.sh"
 stages = ["prepare-commit-msg"]
 always_run = true
+
+# Runs after ai-commit-msg so the generated message still "sees" the completed
+# tasks in the staged diff before they're stripped from TODO.md.
+[[repos.hooks]]
+id = "purge-todo-done"
+name = "Purge completed tasks from TODO.md"
+language = "script"
+entry = ".github/actions/purge-todo-done/purge-todo-done.sh"
+stages = ["prepare-commit-msg"]
+always_run = true
