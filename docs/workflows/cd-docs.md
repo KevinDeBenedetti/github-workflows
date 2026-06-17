@@ -20,7 +20,7 @@ jobs:
 
 | Input              | Type   | Default                                         | Description                                                                        |
 | ------------------ | ------ | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `docs-directory`   | string | `docs`                                          | Docs folder in the calling repo (sent as metadata in the dispatch payload)         |
+| `docs-directory`   | string | `docs`                                          | Docs folder in the calling repo — verified by the `verify` job and sent as metadata in the dispatch payload |
 | `target-repo`      | string | `KevinDeBenedetti/kevindebenedetti.github.io`   | Centralized docs repository (`owner/repo`) that receives the dispatch event        |
 | `target-directory` | string | _(calling repo name)_                           | Logical name for this repo's docs section (sent as metadata in the dispatch payload) |
 | `client-id`        | string | _(required)_                                    | Client ID of the GitHub App installed on `target-repo` (e.g. <code v-pre>${{ vars.DOCS_APP_CLIENT_ID }}</code>) |
@@ -41,9 +41,10 @@ jobs:
 
 1. **Verifies the docs first** — a `verify` job checks out the calling repo and runs
    [`check-docs-links`](../actions/check-docs-links.md) and
-   [`check-vitepress-md`](../actions/check-vitepress-md.md) against `docs/`. The
-   `dispatch` job `needs: verify`, so if either check fails the dispatch is skipped
-   and a broken doc never triggers a failing rebuild on the central site.
+   [`check-vitepress-md`](../actions/check-vitepress-md.md) against `docs-directory`
+   (default `docs`). The `dispatch` job `needs: verify`, so if either check fails
+   the dispatch is skipped and a broken doc never triggers a failing rebuild on the
+   central site.
 2. Resolves the target directory name (defaults to the calling repo name).
 3. Mints a short-lived (1 h) installation token via `actions/create-github-app-token`,
    scoped to `contents:write` on `target-repo` only.

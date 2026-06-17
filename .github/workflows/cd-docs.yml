@@ -54,9 +54,13 @@ jobs:
 
       - name: Check docs links
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@main
+        with:
+          docs-directory: ${{ inputs.docs-directory }}
 
       - name: Check VitePress markdown
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@main
+        with:
+          docs-directory: ${{ inputs.docs-directory }}
 
   dispatch:
     name: Dispatch docs-updated → ${{ inputs.target-repo }}

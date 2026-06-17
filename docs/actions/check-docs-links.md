@@ -11,11 +11,15 @@ steps:
   - uses: actions/checkout@v4
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@main
+    with:
+      docs-directory: docs # optional — defaults to docs
 ```
 
 ## Inputs
 
-_None._
+| Input            | Default | Description                                                   |
+| ---------------- | ------- | ------------------------------------------------------------- |
+| `docs-directory` | `docs`  | Path to the docs folder to check (depth/escape is relative to it) |
 
 ## Notes
 

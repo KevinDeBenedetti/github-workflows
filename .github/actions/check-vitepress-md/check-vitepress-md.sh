@@ -15,11 +15,17 @@
 #   <span v-pre>{{ expr }}</span>     — plain inline text
 #   ::: v-pre / ::: block            — multi-line content
 #
+# Docs directory: $DOCS_DIR (default "docs") — set by the action's
+# `docs-directory` input so callers with a non-default docs folder are scanned.
+#
 # Modes
 #   prek / pre-commit : staged .md files are passed as arguments
-#   CI / standalone   : no arguments → discovers all docs/**/*.md
+#   CI / standalone   : no arguments → discovers all $DOCS_DIR/**/*.md
 
 set -euo pipefail
+
+DOCS_DIR="${DOCS_DIR:-docs}"
+DOCS_DIR="${DOCS_DIR%/}"
 
 errors=0
 checked=0
@@ -72,7 +78,7 @@ if [[ $# -gt 0 ]]; then
 else
   while IFS= read -r -d '' f; do
     check_file "$f"
-  done < <(find docs -name '*.md' -type f -print0 2>/dev/null | sort -z)
+  done < <(find "$DOCS_DIR" -name '*.md' -type f -print0 2>/dev/null | sort -z)
 fi
 
 if (( errors > 0 )); then

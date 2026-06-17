@@ -5,9 +5,17 @@ description: >
   a fenced code block or a v-pre wrapper is evaluated at SSR build time and
   causes TypeError crashes when the referenced variable is undefined.
 
+inputs:
+  docs-directory:
+    description: Path to the docs folder to scan
+    required: false
+    default: docs
+
 runs:
   using: composite
   steps:
     - name: Check VitePress markdown
       shell: bash
+      env:
+        DOCS_DIR: ${{ inputs.docs-directory }}
       run: bash "${{ github.action_path }}/check-vitepress-md.sh"
