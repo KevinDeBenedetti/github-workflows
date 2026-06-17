@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.17.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.16.0...v0.17.0) (2026-06-17)
+
+
+### Features
+
+* **check-docs:** add docs-directory input to link/vitepress actions ([f4dfe13](https://github.com/KevinDeBenedetti/github-workflows/commit/f4dfe13ed5e5cee53835f5f0a36c6e5bae42fb69))
+* **purge-todo-done:** add prepare-commit-msg hook that flushes done tasks ([f3a4dc3](https://github.com/KevinDeBenedetti/github-workflows/commit/f3a4dc3a3eb0285d69f3f791106ff40b27878262))
+
 ## [0.16.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.15.1...v0.16.0) (2026-06-17)
 
 
