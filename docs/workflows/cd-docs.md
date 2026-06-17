@@ -39,17 +39,22 @@ jobs:
 
 ## How it works
 
-1. Resolves the target directory name (defaults to the calling repo name).
-2. Mints a short-lived (1 h) installation token via `actions/create-github-app-token`,
+1. **Verifies the docs first** — a `verify` job checks out the calling repo and runs
+   [`check-docs-links`](../actions/check-docs-links.md) and
+   [`check-vitepress-md`](../actions/check-vitepress-md.md) against `docs/`. The
+   `dispatch` job `needs: verify`, so if either check fails the dispatch is skipped
+   and a broken doc never triggers a failing rebuild on the central site.
+2. Resolves the target directory name (defaults to the calling repo name).
+3. Mints a short-lived (1 h) installation token via `actions/create-github-app-token`,
    scoped to `contents:write` on `target-repo` only.
-3. Sends a `repository_dispatch` event (`docs-updated`) to `target-repo` via the GitHub API.
-4. The dispatch payload includes:
+4. Sends a `repository_dispatch` event (`docs-updated`) to `target-repo` via the GitHub API.
+5. The dispatch payload includes:
    - `repo` — full name of the calling repo (`owner/repo`)
    - `ref` — branch/tag that triggered the dispatch
    - `sha` — commit SHA at time of dispatch
    - `docs_directory` — path to the docs folder in the source repo
    - `target_directory` — logical name for this repo's section in the central site
-5. The central repo's CI/CD picks up the `docs-updated` event and rebuilds the VitePress site.
+6. The central repo's CI/CD picks up the `docs-updated` event and rebuilds the VitePress site.
    Its `sync-docs.ts` re-clones `docs/` from all public repos (including the calling repo)
    before the build.
 

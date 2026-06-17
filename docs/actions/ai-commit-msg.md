@@ -80,3 +80,17 @@ export AI_COMMIT_CLAUDE_BIN="$(command -v claude)"        # what the hook reads
 Also make sure the `prepare-commit-msg` hook type is actually installed
 (`prek install -t prepare-commit-msg`) — the default `pre-commit` install does
 **not** wire up `prepare-commit-msg`, so the hook never runs otherwise.
+
+## Smoke-testing the live generation path
+
+`tests/ai-commit-msg.bats` covers the hook's logic with a fake `claude` (no
+network). To confirm a **real** `claude -p` call returns a usable message, run the
+manual smoke test — it stages a sample diff, drives the hook against the live CLI,
+and fails if nothing valid comes back (no commit is created):
+
+```bash
+tests/smoke/ai-commit-msg-smoke.sh
+```
+
+It is intentionally excluded from CI, which has neither network nor `claude`
+credentials.
