@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.15.1...v0.16.0) (2026-06-17)
+
+
+### Features
+
+* **ai-commit-msg:** add prepare-commit-msg hook that pre-fills messages via Claude ([6253c93](https://github.com/KevinDeBenedetti/github-workflows/commit/6253c93363c63df0a92ff6cd04eac9966b32ca16))
+
 ## [0.15.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.15.0...v0.15.1) (2026-06-16)
 
 
