@@ -18,3 +18,14 @@
   entry: .github/actions/check-vitepress-md/check-vitepress-md.sh
   files: ^docs/.*\.md$
   pass_filenames: true
+
+- id: ai-commit-msg
+  name: AI commit message (from staged diff)
+  description: >
+    Pre-fills the commit message from the staged diff using the `claude` CLI
+    (headless). No-op when a message is already present, nothing is staged, or
+    `claude` is unavailable. Review/edit before completing the commit.
+  language: script
+  entry: .github/actions/ai-commit-msg/ai-commit-msg.sh
+  stages: [prepare-commit-msg]
+  always_run: true

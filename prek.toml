@@ -4,7 +4,7 @@
 
 minimum_prek_version = "0.3.0"
 fail_fast = false
-default_install_hook_types = ["pre-commit"]
+default_install_hook_types = ["pre-commit", "prepare-commit-msg"]
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
@@ -44,3 +44,11 @@ language = "script"
 entry = ".github/actions/check-vitepress-md/check-vitepress-md.sh"
 files = "^docs/.*\\.md$"
 pass_filenames = true
+
+[[repos.hooks]]
+id = "ai-commit-msg"
+name = "AI commit message (from staged diff)"
+language = "script"
+entry = ".github/actions/ai-commit-msg/ai-commit-msg.sh"
+stages = ["prepare-commit-msg"]
+always_run = true
