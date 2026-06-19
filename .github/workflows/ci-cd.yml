@@ -1,18 +1,90 @@
+# =============================================================================
+# CI / CD — Self-test the reusable workflows, then release & sync docs
+#
+# Single workflow wiring this repo's own reusable workflows. The CI jobs run on
+# every push and PR (via local `./` refs, so a PR tests its own version of the
+# workflow, not the published @main one). The release job is the CD half: it
+# gates on the CI jobs so release-please only opens/tags once main is green.
+#
+# Jobs:
+#   ci-shell     — shellcheck + actionlint + docs checks (ci-shell.yml)  [push + PR]
+#   security     — Gitleaks secret scanning (security.yml)               [push + PR]
+#   release      — release-please PR + tags (release.yml)                [push to main only]
+#   deploy-docs  — sync docs → central repo (cd-docs.yml)                [push to main only]
+# =============================================================================
 name: CI / CD
 
 on:
   push:
     branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Don't cancel in-progress release runs on a follow-up push to main —
+  # only superseded PR runs are safe to cancel.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
 
+  # ── CI — Shell ───────────────────────────────────────────────────────────────
+  # Skipped on the release-please PR (head_ref guard) and on the
+  # `chore(main): release X` commit (head_commit guard) — that commit only bumps
+  # version/CHANGELOG, so re-linting it is pointless. release still runs via its
+  # always() gate (skipped ≠ failure).
+  ci-shell:
+    name: CI — Shell
+    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    uses: ./.github/workflows/ci-shell.yml
+    with:
+      run-shellcheck: true
+      run-actionlint: true
+      run-bats: false
+      # Verify this repo's own docs/ stay VitePress-safe and self-contained:
+      # the central docs site (cd-docs.yml) rebuilds from these files.
+      run-docs-link-check: true
+      run-vitepress-check: true
+      # actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3
+      # and falsely flags the `client-id` input / a "missing app-id". Ignore those
+      # messages so a future actionlint bump doesn't break CI on release.yml.
+      # The value must stay quote-free: the action word-splits flags unquoted.
+      actionlint-flags: -ignore create-github-app-token
+    permissions:
+      contents: read
+
+  # ── Security — Secret scan ───────────────────────────────────────────────────
+  security:
+    name: Security — Secret scan
+    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    uses: ./.github/workflows/security.yml
+    with:
+      run-node-audit: false
+      run-python-audit: false
+      run-secret-scan: true
+      run-codeql: false
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+      pull-requests: read
+
+  # ── Release (release-please) ─────────────────────────────────────────────────
+  # CD half: push-to-main only (the CI jobs above also run on PRs). Gated on the
+  # CI jobs so release-please only acts once main is green.
+  #
+  # `always()` + the result check lets this run even when the CI jobs are
+  # SKIPPED (which they are on the `chore(main): release X` commit — see above).
+  # It still blocks if any CI job actually FAILED or was CANCELLED.
   release:
     name: Release
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [ci-shell, security]
+    if: >-
+      ${{ always()
+      && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled') }}
     uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
     with:
       app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
@@ -20,6 +92,7 @@ jobs:
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
+  # ── Deploy docs ──────────────────────────────────────────────────────────────
   deploy-docs:
     name: Sync docs → central repo
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

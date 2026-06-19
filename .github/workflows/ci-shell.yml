@@ -85,6 +85,11 @@ on:
         type: boolean
         required: false
         default: false
+      docs-directory:
+        description: Path to the docs folder checked by docs-link-check and vitepress-check
+        type: string
+        required: false
+        default: docs
       runner:
         description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
         type: string
@@ -164,6 +169,10 @@ on:
         description: Check docs/ markdown for unescaped Vue interpolations that break the VitePress SSR build
         type: boolean
         default: false
+      docs-directory:
+        description: Path to the docs folder checked by docs-link-check and vitepress-check
+        type: string
+        default: docs
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
@@ -282,6 +291,8 @@ jobs:
 
       - name: Check docs links
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@main
+        with:
+          docs-directory: ${{ inputs.docs-directory }}
 
   # ── VitePress markdown check ─────────────────────────────────────────────────
   vitepress-check:
@@ -295,3 +306,5 @@ jobs:
 
       - name: Check VitePress markdown
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@main
+        with:
+          docs-directory: ${{ inputs.docs-directory }}

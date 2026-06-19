@@ -38,6 +38,7 @@ jobs:
 | `link-check-paths`         | string  | `docs/**/*.md`                 | Space-separated glob patterns of markdown files to check                     |
 | `run-docs-link-check`      | boolean | `false`                        | Check that no relative links in `docs/` escape the `docs/` directory         |
 | `run-vitepress-check`      | boolean | `false`                        | Check `docs/` markdown for unescaped Vue interpolations that break the VitePress SSR build |
+| `docs-directory`           | string  | `docs`                         | Path to the docs folder checked by `docs-link-check` and `vitepress-check`  |
 | `runner`                   | string  | `'"ubuntu-latest"'`            | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
 
 ## Secrets
