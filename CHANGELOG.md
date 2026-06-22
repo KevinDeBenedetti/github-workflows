@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.17.0...v0.18.0) (2026-06-22)
+
+
+### Features
+
+* **check-bot-commits:** add configurable runner input ([e30d34e](https://github.com/KevinDeBenedetti/github-workflows/commit/e30d34e87392821b49f8971147bd5b2c88f886fe))
+
 ## [0.17.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.16.0...v0.17.0) (2026-06-17)
 
 
