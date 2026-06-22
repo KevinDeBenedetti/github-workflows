@@ -15,13 +15,18 @@ on:
         type: boolean
         required: false
         default: true
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
 
 jobs:
   # ── Guard: no bot-authored commits in PRs ──────────────────────────────────
   check-authors:
     name: Check for bot-authored commits
     if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
       contents: read
       pull-requests: read
