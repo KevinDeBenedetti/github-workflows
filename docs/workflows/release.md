@@ -62,3 +62,29 @@ jobs:
 - With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker. Both the review request and the comment are gated on this marker, so once a PR is notified, later runs (on any push while the PR stays open) skip it entirely — reviewers are never re-requested or re-pinged.
 - Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.
 - A review request alone can be missed (it depends on each user's notification settings), which is why an @mention comment is also posted — mentions notify reliably. This matters when the release PR is opened by a GitHub App (`app-client-id`) rather than by you.
+
+## Why release commits show `…[bot]` as the author
+
+When `app-client-id` is set, the workflow mints a short-lived **GitHub App
+token** (`Generate App token` → `Release Please` steps) and release-please uses
+it to author the `chore(main): release X` commit (version bump + CHANGELOG).
+GitHub attributes any commit made with an App token to `<app-name>[bot]`, so
+that commit's **author** is the App (e.g. `release-please-global[bot]`) — while
+the **committer** stays whoever merged the release PR. This is why the App shows
+up in the repo's contributor list.
+
+This is expected and intended, not a bug. Using the App identity (instead of the
+default `GITHUB_TOKEN` / `github-actions[bot]`) is what lets CI run on the
+release PR and bypasses the manual workflow-approval gate. Recommendations:
+
+- **Keep it as-is (recommended).** A bot author on release-bump commits is the
+  standard release-please setup and keeps your own contributions cleanly
+  separated from the automated version bumps. GitHub already excludes bots from
+  the repo's *contributions graph*; they only appear on the Contributors list.
+- **Want the commit attributed to a human instead?** Drop `app-client-id` and
+  pass a user **PAT** as `RELEASE_TOKEN` — release commits are then authored by
+  that user. Trade-offs: a PAT is broader-scoped and harder to rotate than a
+  per-repo App, and you lose the App's least-privilege model.
+- **Don't try to block this bot via `check-bot-commits`.** If you run that guard
+  on release PRs, add `release-please-global[bot]` (or your App's login) to its
+  `allowed-bots` list — otherwise it will fail the release PR.

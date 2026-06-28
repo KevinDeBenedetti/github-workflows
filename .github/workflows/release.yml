@@ -113,15 +113,22 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Detect release config paths
         id: detect-paths
+        # Inputs are passed through env (not interpolated into the script body) so
+        # a value containing shell metacharacters can't be executed — the standard
+        # GitHub Actions script-injection guard.
+        env:
+          INPUT_CONFIG_FILE: ${{ inputs.config-file }}
+          INPUT_MANIFEST_FILE: ${{ inputs.manifest-file }}
+          INPUT_INITIAL_VERSION: ${{ inputs.initial-version }}
         shell: bash
         run: |
           # Determine config file path
-          if [ -n "${{ inputs.config-file }}" ]; then
-            CONFIG_FILE="${{ inputs.config-file }}"
+          if [ -n "$INPUT_CONFIG_FILE" ]; then
+            CONFIG_FILE="$INPUT_CONFIG_FILE"
           elif [ -f ".github/release/release-please-config.json" ]; then
             CONFIG_FILE=".github/release/release-please-config.json"
           else
@@ -129,8 +136,8 @@ jobs:
           fi
 
           # Determine manifest file path
-          if [ -n "${{ inputs.manifest-file }}" ]; then
-            MANIFEST_FILE="${{ inputs.manifest-file }}"
+          if [ -n "$INPUT_MANIFEST_FILE" ]; then
+            MANIFEST_FILE="$INPUT_MANIFEST_FILE"
           elif [ -f ".github/release/.release-please-manifest.json" ]; then
             MANIFEST_FILE=".github/release/.release-please-manifest.json"
           else
@@ -140,39 +147,54 @@ jobs:
           {
             echo "config-file=$CONFIG_FILE"
             echo "manifest-file=$MANIFEST_FILE"
-            echo "initial-version=${{ inputs.initial-version }}"
+            echo "initial-version=$INPUT_INITIAL_VERSION"
           } >> "$GITHUB_OUTPUT"
           echo "ℹ️ Using config: $CONFIG_FILE"
           echo "ℹ️ Using manifest: $MANIFEST_FILE"
-          echo "ℹ️ Initial version: ${{ inputs.initial-version }}"
+          echo "ℹ️ Initial version: $INPUT_INITIAL_VERSION"
 
       - name: Initialize manifest with custom version
+        env:
+          MANIFEST_FILE: ${{ steps.detect-paths.outputs.manifest-file }}
+          INITIAL_VERSION: ${{ steps.detect-paths.outputs.initial-version }}
         shell: bash
         run: |
-          MANIFEST_FILE="${{ steps.detect-paths.outputs.manifest-file }}"
           if [ ! -f "$MANIFEST_FILE" ]; then
             mkdir -p "$(dirname "$MANIFEST_FILE")"
-            cat > "$MANIFEST_FILE" << 'EOF'
-          {
-            ".": "${{ steps.detect-paths.outputs.initial-version }}"
-          }
-          EOF
-            echo "✅ Created manifest with initial version: ${{ steps.detect-paths.outputs.initial-version }}"
+            # printf %s keeps the version a literal value (never shell-expanded)
+            printf '{\n  ".": "%s"\n}\n' "$INITIAL_VERSION" > "$MANIFEST_FILE"
+            echo "✅ Created manifest with initial version: $INITIAL_VERSION"
           fi
 
       - name: Generate App token
         id: app-token
         if: inputs.app-client-id != ''
-        uses: actions/create-github-app-token@v3
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
         with:
           client-id: ${{ inputs.app-client-id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
+      - name: Resolve token
+        # Single source of truth for the auth token used by every step below:
+        # App token (if app-client-id set) → RELEASE_TOKEN PAT → GITHUB_TOKEN.
+        # Masked and exposed once as a step output so the precedence lives in one
+        # place instead of being repeated in each step's expression.
+        id: token
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TOKEN="${APP_TOKEN:-${RELEASE_TOKEN:-$GITHUB_TOKEN}}"
+          echo "::add-mask::$TOKEN"
+          echo "value=$TOKEN" >> "$GITHUB_OUTPUT"
+
       - name: Release Please
         id: rp
-        uses: googleapis/release-please-action@v5
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
         with:
-          token: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
+          token: ${{ steps.token.outputs.value }}
           release-type: ${{ inputs.release-type || '' }}
           config-file: ${{ steps.detect-paths.outputs.config-file }}
           manifest-file: ${{ steps.detect-paths.outputs.manifest-file }}
@@ -188,7 +210,7 @@ jobs:
         # are still prevented by the marker guard below.
         if: inputs.notify-reviewers != ''
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
+          GH_TOKEN: ${{ steps.token.outputs.value }}
           PRS: ${{ steps.rp.outputs.prs }}
           PENDING_LABEL: ${{ inputs.release-pending-label }}
         shell: bash
@@ -219,7 +241,7 @@ jobs:
         # are never re-requested or re-pinged. Each PR is notified at most once.
         if: inputs.notify-reviewers != '' && steps.find-prs.outputs.numbers != ''
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token || (secrets.RELEASE_TOKEN != '' && secrets.RELEASE_TOKEN) || github.token }}
+          GH_TOKEN: ${{ steps.token.outputs.value }}
           NUMBERS: ${{ steps.find-prs.outputs.numbers }}
           REVIEWERS: ${{ inputs.notify-reviewers }}
         shell: bash
@@ -264,7 +286,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
 
       - name: Move major version tag
         # e.g. v1.2.3 → also updates tag v1
