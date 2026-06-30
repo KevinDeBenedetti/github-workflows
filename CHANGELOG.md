@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.18.0...v0.18.1) (2026-06-30)
+
+
+### Bug Fixes
+
+* **cd-kaniko:** add memory-reduction flags for executor ([b2cd4dc](https://github.com/KevinDeBenedetti/github-workflows/commit/b2cd4dcfa2713acd51116c72e72566fe75f30c31))
+
 ## [0.18.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.17.0...v0.18.0) (2026-06-22)
 
 
