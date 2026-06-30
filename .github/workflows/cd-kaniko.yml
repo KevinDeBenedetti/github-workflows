@@ -270,12 +270,22 @@ jobs:
           GIT_HOST="${SERVER_URL#https://}"
 
           # shellcheck disable=SC2086
+          # Memory-reduction flags keep the executor under the build pod's cgroup
+          # limit on image trees with a large node_modules (the default full-file
+          # hash snapshot + in-RAM compressed layer caching OOM-kills the pod,
+          # exit 137 at "Taking snapshot of full filesystem"):
+          #   --compressed-caching=false  stop holding compressed layers in RAM
+          #   --snapshot-mode=redo        snapshot by mtime/size, not full hashing
+          #   --use-new-run               lower-memory run/snapshot implementation
           /kaniko/executor \
             --context="git://${GIT_HOST}/${REPO}.git#${REF}#${SHA}" \
             --context-sub-path="${CONTEXT}" \
             --dockerfile="${DOCKERFILE}" \
             --cache=true \
             --cache-repo="${IMAGE_BASE}-cache" \
+            --compressed-caching=false \
+            --snapshot-mode=redo \
+            --use-new-run \
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --label "org.opencontainers.image.revision=${SHA}" \
             --label "org.opencontainers.image.source=${SERVER_URL}/${REPO}" \
