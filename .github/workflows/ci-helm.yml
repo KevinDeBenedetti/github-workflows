@@ -83,7 +83,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: ${{ inputs.helm-version }}
 
@@ -120,7 +120,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v5
         with:
           version: ${{ inputs.helm-version }}
 
@@ -135,8 +135,15 @@ jobs:
             if [[ -f "$chart/Chart.yaml" ]]; then
               found=1
               echo "::group::Templating $chart"
-              helm dependency update "$chart" 2>/dev/null || true
-              helm template "dry-run" "$chart" "${VALUES_ARGS[@]}" --generate-name > /dev/null
+              # Les erreurs de résolution ne font pas échouer l'étape (un chart peut
+              # dépendre d'un repo momentanément injoignable), mais elles doivent être
+              # visibles : sinon `helm template` échoue plus loin sur un « missing in
+              # charts/ directory » dont la cause réelle a été avalée.
+              helm dependency update "$chart" || echo "  ⚠️  helm dependency update a échoué pour $chart — le rendu peut échouer sur des dépendances manquantes"
+              # Nom explicite, jamais --generate-name : les deux sont mutuellement
+              # exclusifs et helm refuse la commande ("cannot set --generate-name and
+              # also specify a name"), ce qui faisait échouer ce job sur le 1er chart.
+              helm template "dry-run" "$chart" "${VALUES_ARGS[@]}" > /dev/null
               echo "  ✅ $chart renders cleanly"
               echo "::endgroup::"
             fi
