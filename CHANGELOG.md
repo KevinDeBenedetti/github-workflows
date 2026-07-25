@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.18.1...v0.18.2) (2026-07-25)
+
+
+### Bug Fixes
+
+* **.github/workflows/ci-helm.yml:** add option to exclude paths during template dry-run ([0ee52fb](https://github.com/KevinDeBenedetti/github-workflows/commit/0ee52fbc2d3dc73ae438bc3bf29b4be81d67ebd7))
+* **ci-helm:** drop --generate-name and bump setup-helm to v5 ([4a16860](https://github.com/KevinDeBenedetti/github-workflows/commit/4a16860520b3531a72e952176f445e214c4992ee))
+
 ## [0.18.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.18.0...v0.18.1) (2026-06-30)
 
 
