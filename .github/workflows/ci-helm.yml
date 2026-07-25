@@ -35,6 +35,16 @@ on:
         type: string
         required: false
         default: ''
+      template-exclude-paths:
+        description: >
+          Space-separated chart paths to skip during the template dry-run only
+          (lint still covers them). Intended for umbrella charts whose
+          dependencies are pulled from a registry: rendering those validates the
+          published artifacts rather than the source tree, which couples this
+          workflow to registry state and can deadlock releases.
+        type: string
+        required: false
+        default: ''
 
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
@@ -62,6 +72,10 @@ on:
         default: false
       template-values:
         description: Path to a values file to use during helm template (optional)
+        type: string
+        default: ''
+      template-exclude-paths:
+        description: Space-separated chart paths to skip during the template dry-run only
         type: string
         default: ''
 
@@ -130,8 +144,16 @@ jobs:
           if [[ -n "${{ inputs.template-values }}" ]]; then
             VALUES_ARGS=(-f "${{ inputs.template-values }}")
           fi
+          # Encadré d'espaces pour permettre un test d'appartenance exact.
+          EXCLUDES=" ${{ inputs.template-exclude-paths }} "
           found=0
           for chart in ${{ inputs.chart-paths }}; do
+            chart="${chart%/}"
+            if [[ "$EXCLUDES" == *" $chart "* ]]; then
+              echo "⏭️  $chart exclu du dry-run (template-exclude-paths)"
+              found=1
+              continue
+            fi
             if [[ -f "$chart/Chart.yaml" ]]; then
               found=1
               echo "::group::Templating $chart"
