@@ -196,7 +196,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: ShellCheck
         uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@main
@@ -212,7 +212,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: actionlint
         uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@main
@@ -228,7 +228,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.bats-submodules }}
           token: ${{ secrets.token || github.token }}
@@ -251,7 +251,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           submodules: ${{ inputs.bats-submodules }}
 
@@ -270,7 +270,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check markdown links
         uses: lycheeverse/lychee-action@v2
@@ -287,7 +287,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check docs links
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@main
@@ -302,7 +302,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check VitePress markdown
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@main

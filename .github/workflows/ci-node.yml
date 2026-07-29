@@ -145,7 +145,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Setup resolves pnpm or bun automatically from the lockfile
       - name: Setup Node.js
@@ -203,7 +203,7 @@ jobs:
       # recent cache for the same dependency set. No-op for non-Next frameworks.
       - name: Cache Next.js build
         if: inputs.run-build && inputs.framework == 'next'
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ${{ inputs.working-directory }}/.next/cache
           key: nextjs-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}-${{ github.sha }}

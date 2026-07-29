@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Check docs links
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@main

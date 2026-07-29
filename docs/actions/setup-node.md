@@ -7,7 +7,7 @@ appropriate dependency cache. Auto-detects the package manager from the lockfile
 
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v7
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
     with:

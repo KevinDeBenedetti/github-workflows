@@ -7,7 +7,7 @@ runs shell unit tests.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v7
     with:
       submodules: true  # required if using bats helpers (bats-support, bats-assert, etc.)
 

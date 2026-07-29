@@ -94,7 +94,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Helm
         uses: azure/setup-helm@v5
@@ -102,13 +102,17 @@ jobs:
           version: ${{ inputs.helm-version }}
 
       - name: Lint charts
+        # See the template step below on why inputs are passed via env.
+        env:
+          CHART_PATHS: ${{ inputs.chart-paths }}
+          LINT_STRICT: ${{ inputs.lint-strict }}
         run: |
           STRICT_FLAG=""
-          if [[ "${{ inputs.lint-strict }}" == "true" ]]; then
+          if [[ "$LINT_STRICT" == "true" ]]; then
             STRICT_FLAG="--strict"
           fi
           found=0
-          for chart in ${{ inputs.chart-paths }}; do
+          for chart in $CHART_PATHS; do
             if [[ -f "$chart/Chart.yaml" ]]; then
               found=1
               echo "::group::Linting $chart"
@@ -117,7 +121,7 @@ jobs:
             fi
           done
           if [[ "$found" -eq 0 ]]; then
-            echo "⚠️  No charts found matching: ${{ inputs.chart-paths }}"
+            echo "⚠️  No charts found matching: $CHART_PATHS"
             exit 1
           fi
 
@@ -131,7 +135,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Install Helm
         uses: azure/setup-helm@v5
@@ -139,38 +143,56 @@ jobs:
           version: ${{ inputs.helm-version }}
 
       - name: Template charts
+        # Inputs go through env rather than being interpolated into the script:
+        # `${{ }}` inside `run:` splices caller-controlled text straight into
+        # bash. Same pattern as release.yml / cd-docs.yml.
+        env:
+          CHART_PATHS: ${{ inputs.chart-paths }}
+          TEMPLATE_VALUES: ${{ inputs.template-values }}
+          EXCLUDE_PATHS: ${{ inputs.template-exclude-paths }}
         run: |
           VALUES_ARGS=()
-          if [[ -n "${{ inputs.template-values }}" ]]; then
-            VALUES_ARGS=(-f "${{ inputs.template-values }}")
+          if [[ -n "$TEMPLATE_VALUES" ]]; then
+            VALUES_ARGS=(-f "$TEMPLATE_VALUES")
           fi
-          # Encadré d'espaces pour permettre un test d'appartenance exact.
-          EXCLUDES=" ${{ inputs.template-exclude-paths }} "
-          found=0
-          for chart in ${{ inputs.chart-paths }}; do
+          # Padded with a space on each side so the membership test matches whole
+          # paths only: "charts/foo" must not match an excluded "charts/foobar".
+          EXCLUDES=" $EXCLUDE_PATHS "
+          # Counted separately, on purpose: an exclusion must never stand in for a
+          # chart that actually rendered, otherwise excluding a path (or naming a
+          # path that does not exist) silently satisfies the guard below and the
+          # job reports success having validated nothing.
+          rendered=0
+          excluded=0
+          for chart in $CHART_PATHS; do
             chart="${chart%/}"
             if [[ "$EXCLUDES" == *" $chart "* ]]; then
-              echo "⏭️  $chart exclu du dry-run (template-exclude-paths)"
-              found=1
+              echo "⏭️  $chart skipped (template-exclude-paths)"
+              excluded=$((excluded + 1))
               continue
             fi
             if [[ -f "$chart/Chart.yaml" ]]; then
-              found=1
+              rendered=$((rendered + 1))
               echo "::group::Templating $chart"
-              # Les erreurs de résolution ne font pas échouer l'étape (un chart peut
-              # dépendre d'un repo momentanément injoignable), mais elles doivent être
-              # visibles : sinon `helm template` échoue plus loin sur un « missing in
-              # charts/ directory » dont la cause réelle a été avalée.
-              helm dependency update "$chart" || echo "  ⚠️  helm dependency update a échoué pour $chart — le rendu peut échouer sur des dépendances manquantes"
-              # Nom explicite, jamais --generate-name : les deux sont mutuellement
-              # exclusifs et helm refuse la commande ("cannot set --generate-name and
-              # also specify a name"), ce qui faisait échouer ce job sur le 1er chart.
+              # A resolution failure does not fail the step (a chart may depend on a
+              # momentarily unreachable repo), but it has to stay visible: otherwise
+              # `helm template` fails further down on a "missing in charts/ directory"
+              # whose real cause has been swallowed.
+              helm dependency update "$chart" || echo "  ⚠️  helm dependency update failed for $chart — rendering may fail on missing dependencies"
+              # Always an explicit name, never --generate-name: the two are mutually
+              # exclusive and helm rejects the command ("cannot set --generate-name and
+              # also specify a name"), which used to fail this job on the first chart.
               helm template "dry-run" "$chart" "${VALUES_ARGS[@]}" > /dev/null
               echo "  ✅ $chart renders cleanly"
               echo "::endgroup::"
             fi
           done
-          if [[ "$found" -eq 0 ]]; then
-            echo "⚠️  No charts found matching: ${{ inputs.chart-paths }}"
+          if [[ "$rendered" -eq 0 ]]; then
+            if [[ "$excluded" -gt 0 ]]; then
+              echo "⚠️  Every chart matching '$CHART_PATHS' was excluded — nothing was validated"
+            else
+              echo "⚠️  No charts found matching: $CHART_PATHS"
+            fi
             exit 1
           fi
+          echo "✅ $rendered chart(s) rendered, $excluded excluded"

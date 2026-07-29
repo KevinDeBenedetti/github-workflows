@@ -10,7 +10,7 @@ referenced variable is undefined.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v7
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@main
     with:

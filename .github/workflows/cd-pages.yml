@@ -39,7 +39,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
         id: setup
@@ -64,7 +64,7 @@ jobs:
           fi
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v5
         with:
           path: ${{ inputs.working-directory }}/${{ inputs.output-directory }}
 
@@ -84,7 +84,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: pages
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       - name: Summary
         run: |

@@ -1,0 +1,51 @@
+# =============================================================================
+# Dependabot — keep this repo's own action pins current
+#
+# This repo publishes reusable workflows and composite actions consumed via
+# `@main`, so a stale pin here propagates to every consumer on their next run.
+# That makes our own pins the highest-value thing to watch.
+#
+# Why two directory entries (see `directories` below):
+#   Dependabot's github-actions fetcher only scans `.github/workflows/` when
+#   `directory` is "/", plus an `action.yml` at the *repository root*. Composite
+#   actions nested under `.github/actions/<name>/action.yml` are invisible to
+#   that entry — each needs its own directory, where the fetcher scans the
+#   directory itself. The glob covers them all, including future ones.
+#   Ref: dependabot-core github_actions/lib/dependabot/github_actions/file_fetcher.rb
+#
+# Deliberately NOT enabling auto-merge: consumers track `@main`, so anything
+# merged here reaches them immediately with no release gate in between.
+# Every bump gets a human look, majors especially.
+# =============================================================================
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directories:
+      - "/"                      # .github/workflows/*.yml
+      - "/.github/actions/*"     # composite actions (setup-node, setup-python, …)
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    # `chore(deps)` is intentional: release-please treats chore as non-releasing,
+    # so routine bumps don't each cut a version. Majors are reviewed by hand and
+    # can be re-titled `fix`/`feat` at merge time if they warrant a release.
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+      - github-actions
+    open-pull-requests-limit: 10
+    groups:
+      # One PR for all patch/minor bumps — low risk, high volume.
+      actions-minor:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      # Majors stay ungrouped (one PR each) so breaking changes are reviewed
+      # in isolation. Notably: astral-sh/setup-uv stopped publishing floating
+      # major tags at v8, so its bumps need an exact version or a SHA.

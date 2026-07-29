@@ -6,7 +6,7 @@ Runs [ShellCheck](https://www.shellcheck.net/) on all `.sh` files in the reposit
 
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v7
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@main
     with:

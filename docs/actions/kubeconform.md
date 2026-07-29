@@ -8,7 +8,7 @@ Optionally validates CRDs against the [Datree CRDs-catalog](https://github.com/d
 
 ```yaml
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@v7
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@main
     with:
