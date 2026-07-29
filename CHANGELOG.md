@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.19.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.18.2...v0.19.0) (2026-07-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **deps:** update GitHub Actions workflows and add Dependabot configuration
+
+### Miscellaneous Chores
+
+* **deps:** update GitHub Actions workflows and add Dependabot configuration ([120e677](https://github.com/KevinDeBenedetti/github-workflows/commit/120e6771f30300db3c1170d488231103211ddba0))
+
 ## [0.18.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.18.1...v0.18.2) (2026-07-25)
 
 
