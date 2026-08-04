@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.20.0...v0.21.0) (2026-08-04)
+
+
+### Features
+
+* **.github/workflows:** add Prometheus rules CI workflow ([8cc5d3a](https://github.com/KevinDeBenedetti/github-workflows/commit/8cc5d3a66f39040283b457d821902700342418e2))
+
 ## [0.20.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.19.0...v0.20.0) (2026-08-04)
 
 
