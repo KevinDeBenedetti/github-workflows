@@ -1,0 +1,148 @@
+name: CI — Prometheus rules
+
+# Validates PrometheusRule CRDs: PromQL parsing (`promtool check rules`) and
+# alert behaviour (`promtool test rules`).
+#
+# Thin wrapper by design: it installs the tooling and runs the CALLER's scripts
+# rather than re-implementing the CRD-unwrapping logic. A reusable workflow
+# checks out the calling repo, so the same scripts back CI and the local prek
+# hooks — no second copy of the logic to keep in sync.
+#
+# Caller requirements (defaults match KevinDeBenedetti/infra):
+#   scripts/promtool-check.sh   PromQL syntax + lint
+#   scripts/promtool-test.sh    alert unit tests (skipped if absent)
+
+on:
+  workflow_call:
+    inputs:
+      # ── Checks ────────────────────────────────────────────────────────────
+      run-check:
+        description: Run the PromQL syntax check script
+        type: boolean
+        required: false
+        default: true
+      run-test:
+        description: Run the alert unit-test script (skipped if the script is absent)
+        type: boolean
+        required: false
+        default: true
+      # ── Config ────────────────────────────────────────────────────────────
+      check-script:
+        description: Path to the syntax-check script in the calling repo
+        type: string
+        required: false
+        default: scripts/promtool-check.sh
+      test-script:
+        description: Path to the unit-test script in the calling repo
+        type: string
+        required: false
+        default: scripts/promtool-test.sh
+      promtool-version:
+        description: Prometheus release providing promtool (without the leading v)
+        type: string
+        required: false
+        default: 3.13.2
+      yq-version:
+        description: mikefarah/yq release tag (with the leading v)
+        type: string
+        required: false
+        default: v4.53.3
+
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      run-check:
+        description: Run the PromQL syntax check script
+        type: boolean
+        default: true
+      run-test:
+        description: Run the alert unit-test script
+        type: boolean
+        default: true
+      check-script:
+        description: Path to the syntax-check script in the calling repo
+        type: string
+        default: scripts/promtool-check.sh
+      test-script:
+        description: Path to the unit-test script in the calling repo
+        type: string
+        default: scripts/promtool-test.sh
+      promtool-version:
+        description: Prometheus release providing promtool (without the leading v)
+        type: string
+        default: 3.13.2
+      yq-version:
+        description: mikefarah/yq release tag (with the leading v)
+        type: string
+        default: v4.53.3
+
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
+concurrency:
+  group: ci-prometheus-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prometheus-rules:
+    name: Prometheus rules
+    runs-on: ${{ fromJson(inputs.runner) }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install promtool + yq
+        env:
+          PROMTOOL_VERSION: ${{ inputs.promtool-version }}
+          YQ_VERSION: ${{ inputs.yq-version }}
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            x86_64)  arch=amd64 ;;
+            aarch64) arch=arm64 ;;
+            *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
+          esac
+          bin="${RUNNER_TEMP}/bin"
+          mkdir -p "$bin"
+          curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.linux-${arch}.tar.gz" \
+            | tar -xz -C "$bin" --strip-components=1 "prometheus-${PROMTOOL_VERSION}.linux-${arch}/promtool"
+          curl -fsSL -o "$bin/yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${arch}"
+          chmod +x "$bin/yq"
+          echo "$bin" >> "$GITHUB_PATH"
+
+      - name: promtool check rules
+        if: inputs.run-check
+        env:
+          CHECK_SCRIPT: ${{ inputs.check-script }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f "$CHECK_SCRIPT" ]]; then
+            echo "::error::${CHECK_SCRIPT} not found in the calling repository"
+            exit 1
+          fi
+          bash "$CHECK_SCRIPT"
+
+      # Unit tests are optional: a repo may ship rules without a test suite yet.
+      - name: promtool test rules
+        if: inputs.run-test
+        env:
+          TEST_SCRIPT: ${{ inputs.test-script }}
+        run: |
+          set -euo pipefail
+          if [[ ! -f "$TEST_SCRIPT" ]]; then
+            echo "::notice::${TEST_SCRIPT} not found — no alert unit tests to run"
+            exit 0
+          fi
+          bash "$TEST_SCRIPT"

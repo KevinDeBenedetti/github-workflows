@@ -53,6 +53,7 @@ jobs:
 | `ci-helm.yml` | Helm CI (lint + template dry-run) | [→](docs/workflows/ci-helm.md) |
 | `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](docs/workflows/ci-kubernetes.md) |
 | `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](docs/workflows/ci-terraform.md) |
+| `ci-prometheus.yml` | Prometheus CI (PromQL check + alert unit tests) | [→](docs/workflows/ci-prometheus.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |
 | `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners | [→](docs/workflows/cd-kaniko.md) |
 | `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](docs/workflows/cd-pages.md) |
