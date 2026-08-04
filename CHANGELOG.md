@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.20.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.19.0...v0.20.0) (2026-08-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* **release.yml:** improve tag handling and add resilience
+
+### Bug Fixes
+
+* **release.yml:** improve tag handling and add resilience ([0fe2f84](https://github.com/KevinDeBenedetti/github-workflows/commit/0fe2f843db398a468e46be881970e419767c3c13))
+
 ## [0.19.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.18.2...v0.19.0) (2026-07-29)
 
 
