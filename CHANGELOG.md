@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.21.0...v0.22.0) (2026-08-04)
+
+
+### Features
+
+* **renovate:** add configuration for managing tool versions in workflows ([ff96a6f](https://github.com/KevinDeBenedetti/github-workflows/commit/ff96a6f22e6e9eb7d59f9b40decf8f53398f52c6))
+
 ## [0.21.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.20.0...v0.21.0) (2026-08-04)
 
 
