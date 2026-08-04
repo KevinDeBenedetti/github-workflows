@@ -41,11 +41,13 @@ on:
         description: Prometheus release providing promtool (without the leading v)
         type: string
         required: false
+        # renovate: datasource=github-releases depName=prometheus/prometheus
         default: 3.13.2
       yq-version:
         description: mikefarah/yq release tag (with the leading v)
         type: string
         required: false
+        # renovate: datasource=github-releases depName=mikefarah/yq
         default: v4.53.3
 
       runner:
@@ -76,10 +78,12 @@ on:
       promtool-version:
         description: Prometheus release providing promtool (without the leading v)
         type: string
+        # renovate: datasource=github-releases depName=prometheus/prometheus
         default: 3.13.2
       yq-version:
         description: mikefarah/yq release tag (with the leading v)
         type: string
+        # renovate: datasource=github-releases depName=mikefarah/yq
         default: v4.53.3
 
       runner:

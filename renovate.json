@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":separateMultipleMajorReleases"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 6am on monday"],
+  "enabledManagers": ["github-actions", "custom.regex"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Tool versions pinned as literals inside workflows (promtool, yq, gitleaks). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+default: (?<currentValue>v?[\\d][^\\s]*)",
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+[A-Z_]+=\"(?<currentValue>v?[\\d][^\"]*)\""
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Self-references (`KevinDeBenedetti/github-workflows/...@main`) are this very repo — a PR pinning them would be noise, and @main is deliberate for internal composite actions.",
+      "matchPackageNames": ["KevinDeBenedetti/github-workflows"],
+      "enabled": false
+    },
+    {
+      "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work.",
+      "matchPackageNames": ["prometheus/prometheus", "gitleaks/gitleaks"],
+      "extractVersion": "^v(?<version>.+)$"
+    },
+    {
+      "description": "promtool and yq are installed by the same step in ci-prometheus.yml — one PR, one review.",
+      "matchPackageNames": ["prometheus/prometheus", "mikefarah/yq"],
+      "groupName": "prometheus tooling",
+      "addLabels": ["dependencies", "prometheus"]
+    },
+    {
+      "description": "Label GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "addLabels": ["dependencies", "github-actions"]
+    }
+  ]
+}
