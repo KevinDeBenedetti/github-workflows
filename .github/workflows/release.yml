@@ -290,13 +290,74 @@ jobs:
 
       - name: Move major version tag
         # e.g. v1.2.3 → also updates tag v1
+        #
+        # Why this is more than `git tag -f && git push --force`: pushing a tag
+        # is a compare-and-swap against the value the *local* clone believes the
+        # remote holds, and `--force` waives the fast-forward requirement, not
+        # that check. So a job whose checkout predates a successful move fails
+        # with `cannot lock ref 'refs/tags/vN': is at X but expected Y` — which
+        # is what a re-run of an already-released run does, every time.
+        # Observed on k3s-lab release 0.15.0: the alias had already been moved,
+        # the re-run still tried to move it from the previous release's value,
+        # and the job went red while the repository state was perfectly correct.
+        #
+        # Hence: re-sync the alias, do nothing when it is already right, and
+        # only then move it.
         env:
           GIT_USER_NAME: ${{ inputs.git-user-name || vars.GIT_USER_NAME || 'github-actions[bot]' }}
           GIT_USER_EMAIL: ${{ inputs.git-user-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}
         run: |
+          set -euo pipefail
+
           TAG="${{ needs.release.outputs.tag }}"
-          MAJOR=$(echo "$TAG" | cut -d. -f1)  # e.g. "v1"
+          MAJOR="${TAG%%.*}"  # v1.2.3 → v1
+
+          if [ -z "$TAG" ] || [ "$MAJOR" = "$TAG" ]; then
+            echo "::error::unusable release tag '$TAG' — expected vMAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
           git config user.name  "$GIT_USER_NAME"
           git config user.email "$GIT_USER_EMAIL"
-          git tag -fa "$MAJOR" -m "Release $TAG"
-          git push origin "$MAJOR" --force
+
+          # Both tags, straight from the remote: the release tag may not be in a
+          # shallow checkout, and the alias is what the push compares against.
+          git fetch --force --no-tags origin \
+            "refs/tags/${TAG}:refs/tags/${TAG}" || {
+              echo "::error::release tag ${TAG} not found on the remote"
+              exit 1
+            }
+          git fetch --force --no-tags origin \
+            "refs/tags/${MAJOR}:refs/tags/${MAJOR}" 2>/dev/null || true
+
+          target="$(git rev-parse --verify "refs/tags/${TAG}^{commit}")"
+          current="$(git rev-parse --verify --quiet "refs/tags/${MAJOR}^{commit}" || true)"
+
+          if [ "$current" = "$target" ]; then
+            echo "✅ ${MAJOR} already points at ${TAG} (${target}) — nothing to do"
+            exit 0
+          fi
+
+          # Tag the release commit explicitly rather than HEAD: the alias must
+          # track the release, not whatever the checkout happens to sit on.
+          git tag -fa "$MAJOR" -m "Release $TAG" "$target"
+
+          for attempt in 1 2 3; do
+            if git push --force origin "refs/tags/${MAJOR}"; then
+              echo "✅ ${MAJOR} → ${TAG} (${target})"
+              exit 0
+            fi
+            echo "⚠️  push of ${MAJOR} rejected (attempt ${attempt}/3) — re-syncing"
+            git fetch --force --no-tags origin \
+              "refs/tags/${MAJOR}:refs/tags/${MAJOR}" 2>/dev/null || true
+            current="$(git rev-parse --verify --quiet "refs/tags/${MAJOR}^{commit}" || true)"
+            if [ "$current" = "$target" ]; then
+              echo "✅ ${MAJOR} already points at ${TAG} — moved concurrently"
+              exit 0
+            fi
+            git tag -fa "$MAJOR" -m "Release $TAG" "$target"
+            sleep 3
+          done
+
+          echo "::error::could not move ${MAJOR} to ${TAG} after 3 attempts"
+          exit 1
