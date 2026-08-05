@@ -1,0 +1,117 @@
+name: CI — prek hooks
+
+# Runs the caller's prek (pre-commit) hooks in CI: `prek run --all-files`.
+#
+# Local hooks only protect machines that ran `prek install`. Anything that lands
+# without a local commit — a Renovate PR, an edit through the GitHub web UI, a
+# contributor who skipped the setup, a `--no-verify` push — bypasses them
+# entirely. This workflow re-runs the same config server-side so the hooks are a
+# gate rather than a convenience.
+#
+# Thin wrapper by design, like ci-prometheus.yml: a reusable workflow checks out
+# the CALLING repo, so it runs that repo's own prek.toml /
+# .pre-commit-config.yaml — one hook definition backing both CI and pre-commit,
+# with nothing to keep in sync twice.
+#
+# Caller requirements:
+#   prek.toml (or .pre-commit-config.yaml) at the root of the calling repo
+
+on:
+  workflow_call:
+    inputs:
+      # ── Run ───────────────────────────────────────────────────────────────
+      extra-args:
+        description: Arguments passed to `prek run` — e.g. '--all-files' or a hook id
+        type: string
+        required: false
+        default: --all-files
+      working-directory:
+        description: Directory holding the prek config
+        type: string
+        required: false
+        default: .
+      # ── Config ────────────────────────────────────────────────────────────
+      prek-version:
+        description: prek release to install, without the leading v (or 'latest')
+        type: string
+        required: false
+        # renovate: datasource=github-releases depName=j178/prek
+        default: 0.4.12
+      cache:
+        description: Cache the prek hook environments between runs
+        type: boolean
+        required: false
+        default: true
+
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      extra-args:
+        description: Arguments passed to `prek run` — e.g. '--all-files' or a hook id
+        type: string
+        default: --all-files
+      working-directory:
+        description: Directory holding the prek config
+        type: string
+        default: .
+      prek-version:
+        description: prek release to install, without the leading v (or 'latest')
+        type: string
+        # renovate: datasource=github-releases depName=j178/prek
+        default: 0.4.12
+      cache:
+        description: Cache the prek hook environments between runs
+        type: boolean
+        default: true
+
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
+concurrency:
+  group: ci-prek-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  prek:
+    name: prek hooks
+    runs-on: ${{ fromJson(inputs.runner) }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Fail loudly rather than letting the action report a confusing error:
+      # a caller that enabled this workflow without a config wants to know.
+      - name: Check prek config exists
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          set -euo pipefail
+          for f in prek.toml .prek.toml .pre-commit-config.yaml .pre-commit-config.yml; do
+            if [[ -f "$f" ]]; then
+              echo "::notice::using $f"
+              exit 0
+            fi
+          done
+          echo "::error::no prek config found in ${PWD} (prek.toml or .pre-commit-config.yaml)"
+          exit 1
+
+      # Pinned by SHA: this runs on write-capable self-hosted runners for some
+      # callers, so a mutable tag would be a supply-chain risk.
+      - name: Run prek hooks
+        uses: j178/prek-action@4e14d07f9231acabce116ccfca13b13dd9755ece # v3.0.0
+        with:
+          extra-args: ${{ inputs.extra-args }}
+          prek-version: ${{ inputs.prek-version }}
+          cache: ${{ inputs.cache }}
+          working-directory: ${{ inputs.working-directory }}

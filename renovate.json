@@ -7,6 +7,7 @@
   ],
   "timezone": "Europe/Paris",
   "schedule": ["before 6am on monday"],
+  "configMigration": true,
   "enabledManagers": ["github-actions", "custom.regex"],
   "customManagers": [
     {
@@ -16,6 +17,14 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+default: (?<currentValue>v?[\\d][^\\s]*)",
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+[A-Z_]+=\"(?<currentValue>v?[\\d][^\"]*)\""
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "prek hook revs (prek.toml) — inline renovate comments (datasource=github-tags). No manager understands prek/pre-commit TOML, so without this the hook pins only move when someone remembers to run `prek autoupdate`.",
+      "managerFilePatterns": ["/^prek\\.toml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\nrev = \"(?<currentValue>v?[\\d][^\"]*)\""
       ]
     }
   ],
@@ -27,7 +36,7 @@
     },
     {
       "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work.",
-      "matchPackageNames": ["prometheus/prometheus", "gitleaks/gitleaks"],
+      "matchPackageNames": ["prometheus/prometheus", "gitleaks/gitleaks", "j178/prek"],
       "extractVersion": "^v(?<version>.+)$"
     },
     {

@@ -54,6 +54,17 @@ jobs:
     permissions:
       contents: read
 
+  # ── CI — prek hooks ──────────────────────────────────────────────────────────
+  # Self-test of ci-prek.yml, and the server-side gate for this repo's own hooks
+  # (prek.toml): trailing whitespace, check-yaml/json, actionlint, and the
+  # renovate-config-validator that nothing else runs.
+  ci-prek:
+    name: CI — prek hooks
+    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    uses: ./.github/workflows/ci-prek.yml
+    permissions:
+      contents: read
+
   # ── Security — Secret scan ───────────────────────────────────────────────────
   security:
     name: Security — Secret scan
@@ -79,7 +90,7 @@ jobs:
   # It still blocks if any CI job actually FAILED or was CANCELLED.
   release:
     name: Release
-    needs: [ci-shell, security]
+    needs: [ci-shell, ci-prek, security]
     if: >-
       ${{ always()
       && github.event_name == 'push' && github.ref == 'refs/heads/main'
