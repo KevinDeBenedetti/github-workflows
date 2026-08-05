@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.22.0...v0.23.0) (2026-08-05)
+
+
+### Features
+
+* **ci:** add CI workflow for prek hooks and update release gates ([fc59952](https://github.com/KevinDeBenedetti/github-workflows/commit/fc5995237d860f4a31f05414e7ddaad2ebc677b3))
+
 ## [0.22.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.21.0...v0.22.0) (2026-08-04)
 
 
