@@ -33,7 +33,7 @@ runs:
       # Pinned to an exact version on purpose: astral-sh stopped publishing
       # floating major/minor tags at v8, so `@v9` does not resolve and would
       # fail the step. Bumps here must name a full version or a SHA.
-      uses: astral-sh/setup-uv@v9.0.0
+      uses: astral-sh/setup-uv@v10.1.0
       with:
         version: latest
         working-directory: ${{ inputs.working-directory }}
