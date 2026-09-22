@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.24.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.23.0...v0.24.0) (2026-09-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **ci:** Add configurable clone depth for Gitleaks secret scanning
+
+### Features
+
+* **ci:** Add configurable clone depth for Gitleaks secret scanning ([188fb26](https://github.com/KevinDeBenedetti/github-workflows/commit/188fb2618a4daca84887c8efcdbd4a020cb55b8c))
+
 ## [0.23.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.22.0...v0.23.0) (2026-08-05)
 
 
