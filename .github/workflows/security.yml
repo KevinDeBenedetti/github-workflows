@@ -28,6 +28,18 @@ on:
         type: boolean
         required: false
         default: true
+      secret-scan-fetch-depth:
+        description: >
+          Clone depth for the secret scan. 0 (default) fetches the full history,
+          which is what a first-ever scan needs — but on a repo carrying large
+          blobs it makes every run pay for the whole history. A finite depth
+          degrades safely: the push range (BEFORE..HEAD) is still scanned
+          whenever BEFORE falls inside the fetched window, and otherwise the
+          scan covers that window instead. Set it to a few dozen commits on a
+          repo where the full clone dominates CI time.
+        type: number
+        required: false
+        default: 0
       run-codeql:
         description: Run CodeQL SAST analysis
         type: boolean
@@ -68,6 +80,10 @@ on:
         description: Run Gitleaks secret scanning
         type: boolean
         default: true
+      secret-scan-fetch-depth:
+        description: Clone depth for the secret scan (0 = full history)
+        type: number
+        default: 0
       run-codeql:
         description: Run CodeQL SAST analysis
         type: boolean
@@ -139,10 +155,13 @@ jobs:
       contents: read
 
     steps:
-      - name: Checkout (full history)
+      # Depth 0 (the default) fetches everything. Callers on a history-heavy
+      # repo can narrow it — the gitleaks step below already falls back to
+      # scanning whatever was fetched when the push range is out of reach.
+      - name: Checkout
         uses: actions/checkout@v7
         with:
-          fetch-depth: 0
+          fetch-depth: ${{ inputs.secret-scan-fetch-depth }}
 
       - name: Install Gitleaks
         run: |
