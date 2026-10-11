@@ -12,7 +12,7 @@ on:
         description: Node.js version
         type: string
         required: false
-        default: '20'
+        default: '24'
       build-command:
         description: Build command to run (leave empty to auto-detect from package manager)
         type: string
@@ -43,7 +43,7 @@ jobs:
 
       - name: Setup Node.js
         id: setup
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.24.0 # x-release-please-version
         with:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}

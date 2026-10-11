@@ -78,8 +78,11 @@ on:
         required: false
         default: '"ubuntu-latest"'
 
+# The group carries the path input(s) so that one caller invoking this workflow
+# several times in the same run (e.g. one call per directory) gets one group per
+# call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-ansible-${{ github.workflow }}-${{ github.ref }}
+  group: ci-ansible-${{ github.workflow }}-${{ github.ref }}-${{ inputs.ansible-dir }}
   cancel-in-progress: true
 
 jobs:
@@ -99,20 +102,21 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
 
+      # Inputs go through env, never interpolated into the script body.
       - name: Install ansible-lint
-        run: |
-          PKG="ansible-lint"
-          if [[ -n "${{ inputs.ansible-lint-version }}" ]]; then
-            PKG="ansible-lint${{ inputs.ansible-lint-version }}"
-          fi
-          pip install --quiet "$PKG"
+        env:
+          ANSIBLE_LINT_VERSION: ${{ inputs.ansible-lint-version }}
+        run: pip install --quiet "ansible-lint${ANSIBLE_LINT_VERSION}"
 
       - name: Run ansible-lint
+        env:
+          ANSIBLE_DIR: ${{ inputs.ansible-dir }}
+          FAIL_ON_ERROR: ${{ inputs.fail-on-error }}
         run: |
-          if [[ "${{ inputs.fail-on-error }}" == "true" ]]; then
-            ansible-lint ${{ inputs.ansible-dir }}
+          if [[ "$FAIL_ON_ERROR" == "true" ]]; then
+            ansible-lint "$ANSIBLE_DIR"
           else
-            ansible-lint ${{ inputs.ansible-dir }} || true
+            ansible-lint "$ANSIBLE_DIR" || true
           fi
 
   # ── Ansible syntax check ─────────────────────────────────────────────────
@@ -136,15 +140,26 @@ jobs:
         run: pip install --quiet ansible
 
       - name: Syntax check all playbooks
+        env:
+          ANSIBLE_DIR: ${{ inputs.ansible-dir }}
+          PLAYBOOK_GLOB: ${{ inputs.playbook-glob }}
         run: |
           found=0
           while IFS= read -r -d '' playbook; do
+            # The glob also matches non-playbook YAML that commonly sits next to
+            # playbooks (requirements.yml, galaxy.yml, vars files…), on which
+            # --syntax-check fails. A playbook is a list of plays: keep only
+            # files whose plays (top-level list items) declare `hosts:` or
+            # `import_playbook:`, either on the `- ` line or indented below it.
+            if ! grep -qE '^(- +|  )(hosts|import_playbook|ansible\.builtin\.import_playbook):' "$playbook"; then
+              echo "⏭️  $playbook skipped (not a playbook)"
+              continue
+            fi
             found=1
             echo "::group::Syntax check: $playbook"
             ansible-playbook --syntax-check "$playbook"
             echo "::endgroup::"
-          done < <(find "${{ inputs.ansible-dir }}" -maxdepth 1 \
-                        -name "${{ inputs.playbook-glob }}" -print0)
+          done < <(find "$ANSIBLE_DIR" -maxdepth 1 -name "$PLAYBOOK_GLOB" -print0)
           if [[ "$found" -eq 0 ]]; then
-            echo "⚠️  No playbooks found in ${{ inputs.ansible-dir }} matching ${{ inputs.playbook-glob }}"
+            echo "⚠️  No playbooks found in $ANSIBLE_DIR matching $PLAYBOOK_GLOB"
           fi

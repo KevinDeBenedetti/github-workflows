@@ -83,12 +83,17 @@ jobs:
 
       - name: Set image name
         id: image
+        # Inputs go through env, never interpolated into the script body.
+        # Lowercased here (OCI repositories must be) so the job summary and the
+        # pushed image agree — metadata-action lowercases on its side anyway.
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
         run: |
-          NAME="${{ inputs.image-name }}"
-          if [ -z "$NAME" ]; then
-            NAME="${{ github.event.repository.name }}"
-          fi
-          echo "full=${REGISTRY}/${{ github.repository_owner }}/${NAME}" >> "$GITHUB_OUTPUT"
+          NAME="${IMAGE_NAME:-$REPO_NAME}"
+          FULL=$(printf '%s/%s/%s' "$REGISTRY" "$OWNER" "$NAME" | tr '[:upper:]' '[:lower:]')
+          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
 
       - name: Docker meta (tags + labels)
         id: meta
@@ -130,8 +135,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           target: ${{ inputs.target }}
           build-args: ${{ inputs.build-args }}
-          cache-from: type=gha,scope=${{ inputs.context }}
-          cache-to: type=gha,scope=${{ inputs.context }},mode=max
+          # Scope includes the target: two stages of one context must not
+          # overwrite each other's cache.
+          cache-from: type=gha,scope=${{ inputs.context }}-${{ inputs.target }}
+          cache-to: type=gha,scope=${{ inputs.context }}-${{ inputs.target }},mode=max
 
       - name: Export digest summary
         run: |

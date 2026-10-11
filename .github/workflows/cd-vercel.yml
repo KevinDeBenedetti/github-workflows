@@ -17,7 +17,13 @@ on:
         description: Node.js version
         type: string
         required: false
-        default: '20'
+        default: '24'
+      vercel-version:
+        description: Vercel CLI version to install (npm version or dist-tag)
+        type: string
+        required: false
+        # renovate: datasource=npm depName=vercel
+        default: 62.4.0
     secrets:
       VERCEL_TOKEN:
         required: true
@@ -50,13 +56,17 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.24.0 # x-release-please-version
         with:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}
 
+      # Pinned (Renovate bumps the default) so a CLI release cannot change a
+      # production deploy between two otherwise identical runs.
       - name: Install Vercel CLI
-        run: npm install -g vercel@latest
+        env:
+          VERCEL_VERSION: ${{ inputs.vercel-version }}
+        run: npm install -g "vercel@${VERCEL_VERSION}"
 
       - name: Pull Vercel environment
         working-directory: ${{ inputs.working-directory }}
@@ -104,14 +114,17 @@ jobs:
             const app = process.env.APP_DIR;
             const body = `### 🚀 Vercel Preview — \`${app}\`\n\n**URL:** ${url}\n\n_Deployed from commit ${context.sha.slice(0, 7)}_`;
 
-            const comments = await github.rest.issues.listComments({
+            // Paginate: listComments returns 30 comments per page, so on a busy
+            // PR the existing preview comment would be missed and duplicated.
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
+              per_page: 100,
             });
 
-            const existing = comments.data.find(c =>
-              c.body.includes(`Vercel Preview — \`${app}\``)
+            const existing = comments.find(c =>
+              (c.body ?? '').includes(`Vercel Preview — \`${app}\``)
             );
 
             if (existing) {

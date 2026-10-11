@@ -299,7 +299,7 @@ Actions can be used individually inside your own workflow steps:
 steps:
   - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
     with:
-      node-version: '20'
+      node-version: '24'
 ```
 
 | Action | Description |

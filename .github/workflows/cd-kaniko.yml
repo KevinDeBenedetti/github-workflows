@@ -159,14 +159,18 @@ jobs:
 
       - name: Set image name
         id: image
+        # Inputs go through env, never interpolated into the script body.
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
         run: |
-          NAME="${{ inputs.image-name }}"
-          [ -z "$NAME" ] && NAME="${{ github.event.repository.name }}"
+          NAME="${IMAGE_NAME:-$REPO_NAME}"
           # OCI registry repositories must be lowercase. github.repository_owner
           # (and possibly the repo name) can contain uppercase, so normalise here
           # — docker/metadata-action used to do this for us before this workflow
           # was rewritten to drive Kaniko directly.
-          FULL=$(printf '%s/%s/%s' "$REGISTRY" "${{ github.repository_owner }}" "$NAME" | tr '[:upper:]' '[:lower:]')
+          FULL=$(printf '%s/%s/%s' "$REGISTRY" "$OWNER" "$NAME" | tr '[:upper:]' '[:lower:]')
           echo "full=${FULL}" >> "$GITHUB_OUTPUT"
 
       - name: GHCR auth for Kaniko
@@ -201,9 +205,12 @@ jobs:
           SHORT_SHA=$(printf '%s' "$SHA" | cut -c1-7)
           add_tag "sha-${SHORT_SHA}"
 
-          # Branch name on push (slashes are illegal in tags → '-').
+          # Branch name on push, sanitised like docker/metadata-action: a tag
+          # allows only [A-Za-z0-9_.-], may not start with '.' or '-', and is
+          # at most 128 characters ('feature/Foo+bar' → 'feature-Foo-bar').
           if [ "$EVENT" = "push" ] && [ "$REF_TYPE" = "branch" ]; then
-            add_tag "$(printf '%s' "$REF_NAME" | tr '/' '-')"
+            BRANCH_TAG=$(printf '%s' "$REF_NAME" | tr -c 'A-Za-z0-9_.-' '-' | sed 's/^[.-]*//' | cut -c1-128)
+            [ -n "$BRANCH_TAG" ] && add_tag "$BRANCH_TAG"
           fi
 
           # Pull-request builds.
@@ -246,30 +253,39 @@ jobs:
           GIT_USERNAME: x-access-token
           GIT_PASSWORD: ${{ github.token }}
         run: |
-          # POSIX sh (busybox) — tags and build-args are newline-separated,
-          # neither may contain spaces.
-          DEST=""
+          # POSIX sh (busybox) has no arrays: the variable part of the command
+          # line is accumulated in the positional parameters ("$@"), so every
+          # value stays ONE argument — a build-arg value may contain spaces.
+          # Globbing is off so a '*' in a value is never expanded.
+          set -f
+          set --
           for tag in $TAGS; do
-            DEST="$DEST --destination ${IMAGE_BASE}:${tag}"
+            set -- "$@" --destination "${IMAGE_BASE}:${tag}"
           done
 
-          ARGS=""
+          # build-args: one KEY=VALUE per line (split on newlines only).
+          OLD_IFS="$IFS"
+          IFS='
+          '
           for arg in $BUILD_ARGS; do
-            ARGS="$ARGS --build-arg $arg"
+            if [ -n "$arg" ]; then
+              set -- "$@" --build-arg "$arg"
+            fi
           done
+          IFS="$OLD_IFS"
 
-          TARGET_FLAG=""
-          [ -n "$TARGET" ] && TARGET_FLAG="--target $TARGET"
-
-          NO_PUSH_FLAG=""
-          [ "$PUSH" = "false" ] && NO_PUSH_FLAG="--no-push"
+          if [ -n "$TARGET" ]; then
+            set -- "$@" --target "$TARGET"
+          fi
+          if [ "$PUSH" = "false" ]; then
+            set -- "$@" --no-push
+          fi
 
           # Context = this repo at this commit (cloned by Kaniko). --context-sub-path
           # narrows it to the app dir, and --dockerfile resolves relative to that
           # sub-path (Kaniko joins SrcContext + sub-path before the dockerfile lookup).
           GIT_HOST="${SERVER_URL#https://}"
 
-          # shellcheck disable=SC2086
           # Memory-reduction flags keep the executor under the build pod's cgroup
           # limit on image trees with a large node_modules (the default full-file
           # hash snapshot + in-RAM compressed layer caching OOM-kills the pod,
@@ -289,10 +305,7 @@ jobs:
             --label "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --label "org.opencontainers.image.revision=${SHA}" \
             --label "org.opencontainers.image.source=${SERVER_URL}/${REPO}" \
-            $DEST \
-            $TARGET_FLAG \
-            $ARGS \
-            $NO_PUSH_FLAG
+            "$@"
 
       - name: Job summary
         if: always()

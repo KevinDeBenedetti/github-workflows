@@ -18,7 +18,7 @@ jobs:
 | Input               | Type   | Default      | Description                                             |
 | ------------------- | ------ | ------------ | ------------------------------------------------------- |
 | `working-directory` | string | `'.'`        | Path to the app root (e.g. `apps/client`)               |
-| `node-version`      | string | `'20'`       | Node.js version                                         |
+| `node-version`      | string | `'24'`       | Node.js version                                         |
 | `build-command`     | string | `''`         | Build command to run (leave empty to auto-detect from the package manager) |
 | `output-directory`  | string | `dist`       | Build output directory, relative to `working-directory` |
 

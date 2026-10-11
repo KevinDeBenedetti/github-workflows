@@ -1,7 +1,7 @@
 # CI — Node.js
 
 Runs **lint → typecheck → test → build** for a Node.js application.
-Auto-detects **pnpm** or **bun** from the lockfile.
+Auto-detects **pnpm**, **bun** or **npm** from the lockfile.
 
 ## Usage
 
@@ -10,7 +10,7 @@ jobs:
   ci:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
     with:
-      node-version: '20'
+      node-version: '24'
       working-directory: '.'
 ```
 
@@ -18,13 +18,14 @@ jobs:
 
 | Input                 | Type    | Default | Description                                                                      |
 | --------------------- | ------- | ------- | -------------------------------------------------------------------------------- |
-| `node-version`        | string  | `'20'`  | Node.js version                                                                  |
+| `node-version`        | string  | `'24'`  | Node.js version                                                                  |
 | `working-directory`   | string  | `'.'`   | Path to the app root (e.g. `apps/web`)                                           |
-| `package-manager`     | string  | `auto`  | `pnpm` \| `bun` \| `auto` — auto-detects from lockfile                           |
+| `package-manager`     | string  | `auto`  | `pnpm` \| `bun` \| `npm` \| `auto` — auto-detects from lockfile                  |
 | `framework`           | string  | `auto`  | `next` \| `nuxt` \| `vite` \| `auto` — resolves build output path when uploading |
 | `run-lint`            | boolean | `true`  | Run `lint` script                                                                |
 | `run-typecheck`       | boolean | `true`  | Run `typecheck` script                                                           |
 | `run-test`            | boolean | `true`  | Run `test` script                                                                |
+| `test-args`           | string  | `--passWithNoTests` | Extra arguments for the `test` script (pnpm/npm) — set `''` for runners rejecting unknown flags |
 | `run-build`           | boolean | `true`  | Run `build` script                                                               |
 | `upload-build`        | boolean | `false` | Upload build output as a workflow artifact                                       |
 | `build-artifact-name` | string  | `build` | Name of the uploaded artifact                                                    |
@@ -44,7 +45,7 @@ jobs:
 2. Setup Node.js + package manager (via [`setup-node`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/setup-node))
 3. Lint
 4. Typecheck
-5. Test (`--passWithNoTests`)
+5. Test (with `test-args`, default `--passWithNoTests`, for pnpm/npm)
 6. Build
 7. Upload artifact *(only when `upload-build: true`)*
 8. Link check *(only when `run-link-check: true`)*

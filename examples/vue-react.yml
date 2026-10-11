@@ -16,7 +16,7 @@ jobs:
   ci:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
     with:
-      node-version: '20'
+      node-version: '24'
       framework: vite
     secrets: inherit
 

@@ -100,8 +100,11 @@ on:
         required: false
         default: '"ubuntu-latest"'
 
+# The group carries the path input(s) so that one caller invoking this workflow
+# several times in the same run (e.g. one call per directory) gets one group per
+# call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-kubernetes-${{ github.workflow }}-${{ github.ref }}
+  group: ci-kubernetes-${{ github.workflow }}-${{ github.ref }}-${{ inputs.kubeconform-paths }}-${{ inputs.env-example-file }}
   cancel-in-progress: true
 
 jobs:
@@ -118,7 +121,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: kubeconform
-        uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@v0.24.0 # x-release-please-version
         with:
           paths: ${{ inputs.kubeconform-paths }}
           exclude: ${{ inputs.kubeconform-exclude }}
@@ -138,14 +141,21 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Ensure required keys are documented in .env.example
+        # Inputs go through env, never interpolated into the script body.
+        env:
+          REQUIRED: ${{ inputs.env-example-required-keys }}
+          ENV_FILE: ${{ inputs.env-example-file }}
         run: |
-          REQUIRED="${{ inputs.env-example-required-keys }}"
-          MISSING=()
-          for key in $REQUIRED; do
-            grep -q "^${key}=" "${{ inputs.env-example-file }}" || MISSING+=("$key")
-          done
-          if [ ${#MISSING[@]} -gt 0 ]; then
-            echo "❌ Missing keys in ${{ inputs.env-example-file }}: ${MISSING[*]}"
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "❌ $ENV_FILE not found"
             exit 1
           fi
-          echo "✅ All required keys present in ${{ inputs.env-example-file }}"
+          MISSING=()
+          for key in $REQUIRED; do
+            grep -qE "^(export[[:space:]]+)?${key}=" "$ENV_FILE" || MISSING+=("$key")
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "❌ Missing keys in $ENV_FILE: ${MISSING[*]}"
+            exit 1
+          fi
+          echo "✅ All required keys present in $ENV_FILE"
