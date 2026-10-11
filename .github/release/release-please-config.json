@@ -6,7 +6,41 @@
       "include-v-tag": true,
       "initial-version": "0.1.0",
       "bump-minor-pre-major": true,
-      "bump-patch-for-minor-pre-major": false
+      "bump-patch-for-minor-pre-major": false,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": ".github/workflows/cd-docs.yml"
+        },
+        {
+          "type": "generic",
+          "path": ".github/workflows/cd-pages.yml"
+        },
+        {
+          "type": "generic",
+          "path": ".github/workflows/cd-vercel.yml"
+        },
+        {
+          "type": "generic",
+          "path": ".github/workflows/ci-kubernetes.yml"
+        },
+        {
+          "type": "generic",
+          "path": ".github/workflows/ci-node.yml"
+        },
+        {
+          "type": "generic",
+          "path": ".github/workflows/ci-python.yml"
+        },
+        {
+          "type": "generic",
+          "path": ".github/workflows/ci-shell.yml"
+        },
+        {
+          "type": "generic",
+          "path": ".github/workflows/security.yml"
+        }
+      ]
     }
   },
   "git-user-name": "github-actions[bot]",

@@ -219,7 +219,7 @@ jobs:
             NUMBERS=$(echo "$PRS" | jq -r '.[].number')
           else
             NUMBERS=$(gh pr list \
-              --repo "${{ github.repository }}" \
+              --repo "$GITHUB_REPOSITORY" \
               --label "$PENDING_LABEL" \
               --state open \
               --json number --jq '.[].number' \
@@ -259,25 +259,25 @@ jobs:
 
           echo "$NUMBERS" | while read -r pr; do
             [ -n "$pr" ] || continue
-            if gh pr view "$pr" --repo "${{ github.repository }}" --json comments \
+            if gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json comments \
                 --jq '.comments[].body' 2>/dev/null | grep -qF "$MARKER"; then
               echo "ℹ️ Already notified on PR #$pr, skipping"
               continue
             fi
             echo "ℹ️ Requesting review from $REVIEWERS on PR #$pr"
             gh pr edit "$pr" \
-              --repo "${{ github.repository }}" \
+              --repo "$GITHUB_REPOSITORY" \
               --add-reviewer "$REVIEWERS" \
               || echo "⚠️ Could not request review on PR #$pr"
             echo "ℹ️ Commenting on PR #$pr"
             gh pr comment "$pr" \
-              --repo "${{ github.repository }}" \
+              --repo "$GITHUB_REPOSITORY" \
               --body "${MARKER}"$'\n'"🚀 ${MENTIONS}a new release PR is ready for review." \
               || echo "⚠️ Could not comment on PR #$pr"
           done
 
   tag-workflows:
-    name: Tag @v<major> alias
+    name: Tag @v<major> alias (@v0.<minor> before 1.0)
     needs: release
     if: needs.release.outputs.released == 'true'
     runs-on: ${{ fromJson(inputs.runner) }}
@@ -290,6 +290,11 @@ jobs:
 
       - name: Move major version tag
         # e.g. v1.2.3 → also updates tag v1
+        #
+        # Before 1.0 the alias is v0.<minor> instead (v0.24.3 → v0.24): semver
+        # gives no stability promise inside 0.x and release-please (with
+        # bump-minor-pre-major) ships breaking changes as minor bumps, so a
+        # moving `v0` would carry callers across breaking changes.
         #
         # Why this is more than `git tag -f && git push --force`: pushing a tag
         # is a compare-and-swap against the value the *local* clone believes the
@@ -306,15 +311,22 @@ jobs:
         env:
           GIT_USER_NAME: ${{ inputs.git-user-name || vars.GIT_USER_NAME || 'github-actions[bot]' }}
           GIT_USER_EMAIL: ${{ inputs.git-user-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}
+          TAG: ${{ needs.release.outputs.tag }}
         run: |
           set -euo pipefail
 
-          TAG="${{ needs.release.outputs.tag }}"
           MAJOR="${TAG%%.*}"  # v1.2.3 → v1
 
           if [ -z "$TAG" ] || [ "$MAJOR" = "$TAG" ]; then
             echo "::error::unusable release tag '$TAG' — expected vMAJOR.MINOR.PATCH"
             exit 1
+          fi
+
+          # Pre-1.0: alias the minor line instead (v0.24.3 → v0.24). The
+          # variable keeps its name; it is "the alias" from here on.
+          if [ "$MAJOR" = "v0" ]; then
+            MINOR="${TAG#v0.}"
+            MAJOR="v0.${MINOR%%.*}"
           fi
 
           git config user.name  "$GIT_USER_NAME"

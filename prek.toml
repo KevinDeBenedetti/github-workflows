@@ -54,3 +54,12 @@ language = "script"
 entry = ".github/actions/check-vitepress-md/check-vitepress-md.sh"
 files = "^docs/.*\\.md$"
 pass_filenames = true
+
+[[repos.hooks]]
+id = "check-workflow-consistency"
+name = "Reusable workflows stay consistent"
+language = "python"
+entry = "python scripts/check-workflow-consistency.py"
+additional_dependencies = ["pyyaml"]
+files = "^(\\.github/workflows/.*\\.ya?ml|\\.github/release/.*\\.json)$"
+pass_filenames = false
