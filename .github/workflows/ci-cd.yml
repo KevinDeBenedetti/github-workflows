@@ -7,7 +7,7 @@
 # gates on the CI jobs so release-please only opens/tags once main is green.
 #
 # Jobs:
-#   ci-shell     — shellcheck + actionlint + docs checks (ci-shell.yml)  [push + PR]
+#   ci-shell     — shellcheck + actionlint + bats + docs checks (ci-shell.yml) [push + PR]
 #   security     — Gitleaks secret scanning (security.yml)               [push + PR]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
 #   deploy-docs  — sync docs → central repo (cd-docs.yml)                [push to main only]
@@ -41,7 +41,10 @@ jobs:
     with:
       run-shellcheck: true
       run-actionlint: true
-      run-bats: false
+      # Unit tests of the docs-check scripts (tests/*.bats).
+      run-bats: true
+      bats-tests-dir: tests/
+      bats-submodules: false
       # Verify this repo's own docs/ stay VitePress-safe and self-contained:
       # the central docs site (cd-docs.yml) rebuilds from these files.
       run-docs-link-check: true
@@ -97,6 +100,13 @@ jobs:
       && !contains(needs.*.result, 'failure')
       && !contains(needs.*.result, 'cancelled') }}
     uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
+    # A called workflow can never get more than its caller grants: spelled out
+    # so release still works if the repo's default token turns read-only.
+    # (contents: write also covers the tag-workflows job's alias push.)
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
     with:
       app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
       notify-reviewers: KevinDeBenedetti
@@ -104,10 +114,19 @@ jobs:
       APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
   # ── Deploy docs ──────────────────────────────────────────────────────────────
+  # Same gate as release: only once the CI jobs passed (or were skipped on the
+  # release commit), so a red main never pushes docs to the central site.
   deploy-docs:
     name: Sync docs → central repo
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [ci-shell, ci-prek, security]
+    if: >-
+      ${{ always()
+      && github.event_name == 'push' && github.ref == 'refs/heads/main'
+      && !contains(needs.*.result, 'failure')
+      && !contains(needs.*.result, 'cancelled') }}
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
+    permissions:
+      contents: read
     with:
       client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
     secrets:

@@ -12,8 +12,8 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Tool versions pinned as literals inside workflows (promtool, yq, gitleaks). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
-      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, gitleaks, actionlint, kubeconform, shellcheck, bats, vercel). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^\\.github/actions/.+\\.ya?ml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+default: (?<currentValue>v?[\\d][^\\s]*)",
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+[A-Z_]+=\"(?<currentValue>v?[\\d][^\"]*)\""
@@ -30,14 +30,20 @@
   ],
   "packageRules": [
     {
-      "description": "Self-references (`KevinDeBenedetti/github-workflows/...@main`) are this very repo — a PR pinning them would be noise, and @main is deliberate for internal composite actions.",
+      "description": "Self-references (`KevinDeBenedetti/github-workflows/...`) are this very repo — the internal composite-action refs are bumped by release-please (x-release-please-version), never by Renovate.",
       "matchPackageNames": ["KevinDeBenedetti/github-workflows"],
       "enabled": false
     },
     {
-      "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work.",
-      "matchPackageNames": ["prometheus/prometheus", "gitleaks/gitleaks", "j178/prek"],
+      "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work. Scoped to .github/: prek.toml pins rhysd/actionlint WITH the v.",
+      "matchPackageNames": ["prometheus/prometheus", "gitleaks/gitleaks", "j178/prek", "rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck"],
+      "matchFileNames": [".github/**"],
       "extractVersion": "^v(?<version>.+)$"
+    },
+    {
+      "description": "actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3 (false positives on `client-id`): callers of the actionlint action that do not pass `-ignore create-github-app-token` would break. Bumps need a deliberate approval from the dependency dashboard.",
+      "matchPackageNames": ["rhysd/actionlint"],
+      "dependencyDashboardApproval": true
     },
     {
       "description": "promtool and yq are installed by the same step in ci-prometheus.yml — one PR, one review.",

@@ -28,10 +28,15 @@ Reference any workflow from your caller workflow file.
 | Stability need | Recommended pin | Example |
 |---|---|---|
 | Development / fast-moving | `@main` | `ci-node.yml@main` |
-| Production / reproducible | Release tag | `ci-node.yml@v3.0.0` |
+| Follow a release line | Minor alias (pre-1.0) | `ci-node.yml@v0.24` |
+| Production / reproducible | Release tag | `ci-node.yml@v0.24.0` |
 | Maximum reproducibility | Commit SHA | `ci-node.yml@abc1234` |
 
 > The README and docs always reflect `@main`. When releasing, consumers should pin to a tag for reproducible builds.
+>
+> The composite actions used *inside* the workflows (`setup-node`, `shellcheck`, …) are pinned to the release they ship with (`@vX.Y.Z`, bumped by release-please), so pinning a workflow to a tag pins the actions it runs too.
+>
+> Before 1.0, breaking changes are released as minor bumps: the moving alias is `v0.<minor>`, not `v0`.
 
 ```yaml
 jobs:
