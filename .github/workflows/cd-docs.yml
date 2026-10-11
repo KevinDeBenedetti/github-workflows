@@ -23,11 +23,14 @@ on:
         default: ''
       client-id:
         description: >
-          Client ID of the GitHub App installed on the target repository.
-          Used with APP_PRIVATE_KEY to mint a short-lived token scoped to
-          contents:write on target-repo only.
+          Deprecated — leave empty. The central site now polls source repos for
+          docs/ changes on a schedule, so no dispatch (and no App) is needed:
+          with client-id empty this workflow only verifies the docs. When set,
+          the legacy `docs-updated` repository_dispatch is still sent, using a
+          token minted from this GitHub App (client-id + APP_PRIVATE_KEY).
         type: string
-        required: true
+        required: false
+        default: ''
     outputs:
       docs-synced:
         description: '"true" when the docs-updated dispatch was sent successfully.'
@@ -35,9 +38,9 @@ on:
     secrets:
       APP_PRIVATE_KEY:
         description: >
-          Private key of the GitHub App (client-id) installed on the target
-          repository. Required to send the repository_dispatch event.
-        required: true
+          Private key of the GitHub App (client-id). Only needed with the
+          deprecated client-id input.
+        required: false
 
 jobs:
   # Verify the docs BEFORE dispatching, so a broken doc never triggers a failing
@@ -62,9 +65,11 @@ jobs:
         with:
           docs-directory: ${{ inputs.docs-directory }}
 
+  # Legacy push-based sync — skipped unless client-id is set (see the input).
   dispatch:
     name: Dispatch docs-updated → ${{ inputs.target-repo }}
     needs: verify
+    if: inputs.client-id != ''
     runs-on: ubuntu-latest
     permissions:
       contents: read

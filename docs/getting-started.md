@@ -223,8 +223,8 @@ jobs:
 
 ### Docs sync
 
-Sync this repo's docs to a centralized docs site via `repository_dispatch`. Requires a
-GitHub App: pass its `client-id` and the `APP_PRIVATE_KEY` secret.
+Verify this repo's docs before the centralized docs site picks them up. The site polls
+public repos for `docs/` changes on a schedule, so no token, App or secret is needed.
 
 ```yaml
 jobs:
@@ -232,9 +232,6 @@ jobs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
     with:
       docs-directory: docs
-      client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
-    secrets:
-      APP_PRIVATE_KEY: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
 ```
 
 → [Full reference](workflows/cd-docs.md)

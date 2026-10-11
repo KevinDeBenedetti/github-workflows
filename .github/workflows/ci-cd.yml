@@ -16,7 +16,6 @@
 #   ci-actions   — same checks through the local composite actions            [push + PR]
 #   security     — Gitleaks secret scanning (security.yml)               [push + PR]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
-#   deploy-docs  — sync docs → central repo (cd-docs.yml)                [push to main only]
 # =============================================================================
 name: CI / CD
 
@@ -52,7 +51,7 @@ jobs:
       bats-tests-dir: tests/
       bats-submodules: false
       # Verify this repo's own docs/ stay VitePress-safe and self-contained:
-      # the central docs site (cd-docs.yml) rebuilds from these files.
+      # the central docs site polls this repo and rebuilds from these files.
       run-docs-link-check: true
       run-vitepress-check: true
       # actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3
@@ -160,22 +159,3 @@ jobs:
       pre-major-alias: minor
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-
-  # ── Deploy docs ──────────────────────────────────────────────────────────────
-  # Same gate as release: only once the CI jobs passed (or were skipped on the
-  # release commit), so a red main never pushes docs to the central site.
-  deploy-docs:
-    name: Sync docs → central repo
-    needs: [ci-shell, ci-actions, ci-prek, security]
-    if: >-
-      ${{ always()
-      && github.event_name == 'push' && github.ref == 'refs/heads/main'
-      && !contains(needs.*.result, 'failure')
-      && !contains(needs.*.result, 'cancelled') }}
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
-    permissions:
-      contents: read
-    with:
-      client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
-    secrets:
-      APP_PRIVATE_KEY: ${{ secrets.DOCS_APP_PRIVATE_KEY }}

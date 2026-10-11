@@ -83,6 +83,10 @@ on:
           is minted and used instead of GITHUB_TOKEN, so the release PR is
           attributed to the App rather than github-actions[bot] — this avoids the
           manual workflow-approval gate and lets CI run on the release PR.
+          If release-please `extra-files` include files under .github/workflows/
+          (e.g. x-release-please-version pins), the App also needs
+          Workflows: write — otherwise release-please fails with "Error adding
+          to tree". GITHUB_TOKEN can never update workflow files.
         type: string
         required: false
         default: ''
