@@ -33,10 +33,11 @@ on:
           Clone depth for the secret scan. 0 (default) fetches the full history,
           which is what a first-ever scan needs — but on a repo carrying large
           blobs it makes every run pay for the whole history. A finite depth
-          degrades safely: the push range (BEFORE..HEAD) is still scanned
-          whenever BEFORE falls inside the fetched window, and otherwise the
-          scan covers that window instead. Set it to a few dozen commits on a
-          repo where the full clone dominates CI time.
+          degrades safely: the push range (BEFORE..HEAD) or the PR range
+          (base..head) is still scanned whenever both ends fall inside the
+          fetched window, and otherwise the scan covers that window instead.
+          Set it to a few dozen commits on a repo where the full clone
+          dominates CI time.
         type: number
         required: false
         default: 0
@@ -46,10 +47,13 @@ on:
         required: false
         default: true
       codeql-languages:
-        description: JSON array of languages for CodeQL (e.g. '["javascript","typescript"]')
+        description: >
+          JSON array of CodeQL languages (e.g. '["javascript-typescript","python"]').
+          JavaScript and TypeScript are ONE CodeQL language: list
+          "javascript-typescript" once rather than both names.
         type: string
         required: false
-        default: '["javascript","typescript"]'
+        default: '["javascript-typescript"]'
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
@@ -89,9 +93,9 @@ on:
         type: boolean
         default: true
       codeql-languages:
-        description: 'JSON array of languages for CodeQL (e.g. ''["javascript","typescript"]'')'
+        description: 'JSON array of CodeQL languages (e.g. ''["javascript-typescript","python"]'')'
         type: string
-        default: '["javascript","typescript"]'
+        default: '["javascript-typescript"]'
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
@@ -112,18 +116,20 @@ jobs:
 
       - name: Setup Node.js
         id: setup
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.24.0 # x-release-please-version
         with:
           working-directory: ${{ inputs.node-working-directory }}
 
       - name: Audit dependencies
         working-directory: ${{ inputs.node-working-directory }}
+        env:
+          PACKAGE_MANAGER: ${{ steps.setup.outputs.package-manager }}
         run: |
-          if [ "${{ steps.setup.outputs.package-manager }}" = "bun" ]; then
-            bun audit --audit-level=high
-          else
-            pnpm audit --audit-level=high
-          fi
+          case "$PACKAGE_MANAGER" in
+            bun) bun audit --audit-level=high ;;
+            npm) npm audit --audit-level=high ;;
+            *)   pnpm audit --audit-level=high ;;
+          esac
 
   # ── Dependency audit (Python) ───────────────────────────────────────────────
   audit-python:
@@ -136,13 +142,21 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Setup Python
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@v0.24.0 # x-release-please-version
         with:
           working-directory: ${{ inputs.python-working-directory }}
 
+      # A bare `uvx pip-audit` audits the throwaway environment uvx creates for
+      # pip-audit itself, not the project. Export the locked dependency set and
+      # audit that instead: fully pinned, so no resolution is needed.
       - name: pip-audit
         working-directory: ${{ inputs.python-working-directory }}
-        run: uvx pip-audit
+        run: |
+          uv export --frozen --format requirements-txt --no-hashes \
+            --no-emit-project --no-emit-workspace \
+            > "$RUNNER_TEMP/requirements-audit.txt"
+          uvx pip-audit --no-deps --disable-pip \
+            -r "$RUNNER_TEMP/requirements-audit.txt"
 
   # ── Secret scanning ─────────────────────────────────────────────────────────
   secret-scan:
@@ -167,27 +181,49 @@ jobs:
         run: |
           # renovate: datasource=github-releases depName=gitleaks/gitleaks
           GITLEAKS_VERSION="8.30.1"
+          case "$(uname -m)" in
+            x86_64)        ARCH=x64 ;;
+            aarch64|arm64) ARCH=arm64 ;;
+            *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
+          esac
           INSTALL_DIR="$RUNNER_TEMP/gitleaks"
           mkdir -p "$INSTALL_DIR"
           curl --retry 3 --retry-delay 5 -sSfL \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
-            -o /tmp/gitleaks.tar.gz
-          tar xz -C "$INSTALL_DIR" -f /tmp/gitleaks.tar.gz gitleaks
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${ARCH}.tar.gz" \
+            -o "$RUNNER_TEMP/gitleaks.tar.gz"
+          tar xz -C "$INSTALL_DIR" -f "$RUNNER_TEMP/gitleaks.tar.gz" gitleaks
           echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 
       - name: Gitleaks
+        env:
+          EVENT: ${{ github.event_name }}
+          BEFORE: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          BEFORE="${{ github.event.before }}"
-          if [ -n "$BEFORE" ] \
+          has_commit() { [ -n "$1" ] && git cat-file -e "$1^{commit}" 2>/dev/null; }
+
+          # Scan range, narrowest first. No --first-parent anywhere: on a PR,
+          # HEAD is the synthetic merge commit whose first parent is the BASE
+          # branch, and on a push to main after a merge commit the feature
+          # commits only sit behind the second parent — following first parents
+          # would skip exactly the commits that need scanning.
+          if [[ "$EVENT" == pull_request* ]] && has_commit "$PR_BASE_SHA" && has_commit "$PR_HEAD_SHA"; then
+            # Every commit the PR brings, whatever the event action.
+            RANGE="${PR_BASE_SHA}..${PR_HEAD_SHA}"
+          elif [ "$EVENT" = "push" ] \
             && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
-            && git cat-file -t "$BEFORE" 2>/dev/null; then
-            LOG_OPTS="--no-merges --first-parent ${BEFORE}..HEAD"
+            && has_commit "$BEFORE"; then
+            RANGE="${BEFORE}..HEAD"
           else
-            LOG_OPTS="--no-merges"
+            # First push of a branch, manual run, or the range fell outside a
+            # shallow clone: scan everything that was fetched.
+            RANGE=""
           fi
+          echo "Scanning: ${RANGE:-all fetched history}"
           gitleaks git --redact -v --exit-code=1 \
             --report-format=sarif --report-path=results.sarif \
-            --log-opts="$LOG_OPTS"
+            --log-opts="--no-merges ${RANGE}"
 
       - name: Upload SARIF report
         if: failure() && hashFiles('results.sarif') != ''
@@ -215,13 +251,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Compiled languages need a build; everything else is analysed from source
+      # (build-mode none), which is faster and needs no toolchain on the runner.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v4
+          build-mode: ${{ contains(fromJson('["c-cpp","cpp","c","go","swift"]'), matrix.language) && 'autobuild' || 'none' }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
