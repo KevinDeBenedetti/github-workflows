@@ -245,11 +245,21 @@ jobs:
           submodules: ${{ inputs.bats-submodules }}
           token: ${{ secrets.token || github.token }}
 
+      # `recursive` is only passed when enabled: it defaults to false in the
+      # action, and sending it to a pinned release that predates the input
+      # makes the runner warn "Unexpected input(s) 'recursive'".
       - name: Bats
+        if: ${{ !inputs.bats-recursive }}
         uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.24.0 # x-release-please-version
         with:
           tests-dir: ${{ inputs.bats-tests-dir }}
-          recursive: ${{ inputs.bats-recursive }}
+
+      - name: Bats (recursive)
+        if: ${{ inputs.bats-recursive }}
+        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.24.0 # x-release-please-version
+        with:
+          tests-dir: ${{ inputs.bats-tests-dir }}
+          recursive: true
 
   # ── Docker integration tests ─────────────────────────────────────────────────
   # Matrix jobs cannot be extracted to composite actions — kept inline.
