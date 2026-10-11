@@ -211,7 +211,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: ShellCheck
-        uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@v0.24.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@v0.25.0 # x-release-please-version
         with:
           severity: ${{ inputs.shellcheck-severity }}
           exclude-paths: ${{ inputs.shellcheck-exclude-paths }}
@@ -227,7 +227,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: actionlint
-        uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@v0.24.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@v0.25.0 # x-release-please-version
         with:
           paths: ${{ inputs.actionlint-paths }}
           flags: ${{ inputs.actionlint-flags }}
@@ -250,13 +250,13 @@ jobs:
       # makes the runner warn "Unexpected input(s) 'recursive'".
       - name: Bats
         if: ${{ !inputs.bats-recursive }}
-        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.24.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.25.0 # x-release-please-version
         with:
           tests-dir: ${{ inputs.bats-tests-dir }}
 
       - name: Bats (recursive)
         if: ${{ inputs.bats-recursive }}
-        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.24.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.25.0 # x-release-please-version
         with:
           tests-dir: ${{ inputs.bats-tests-dir }}
           recursive: true
@@ -316,7 +316,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Check docs links
-        uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@v0.24.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@v0.25.0 # x-release-please-version
         with:
           docs-directory: ${{ inputs.docs-directory }}
 
@@ -331,6 +331,6 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Check VitePress markdown
-        uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@v0.24.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@v0.25.0 # x-release-please-version
         with:
           docs-directory: ${{ inputs.docs-directory }}

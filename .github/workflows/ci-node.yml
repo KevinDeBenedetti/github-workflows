@@ -162,7 +162,7 @@ jobs:
       # Setup resolves pnpm or bun automatically from the lockfile
       - name: Setup Node.js
         id: setup
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.24.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.25.0 # x-release-please-version
         with:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}
