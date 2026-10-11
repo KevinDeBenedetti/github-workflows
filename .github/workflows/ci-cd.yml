@@ -140,7 +140,11 @@ jobs:
       && github.event_name == 'push' && github.ref == 'refs/heads/main'
       && !contains(needs.*.result, 'failure')
       && !contains(needs.*.result, 'cancelled') }}
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
+    # Local ref: this job only runs on push to main, so it is the same file as
+    # @main — but GitHub validates `with:` against the referenced workflow at
+    # parse time on every event, and a remote @main ref rejects any input this
+    # branch adds to release.yml before it is merged.
+    uses: ./.github/workflows/release.yml
     # A called workflow can never get more than its caller grants: spelled out
     # so release still works if the repo's default token turns read-only.
     # (contents: write also covers the tag-workflows job's alias push.)
