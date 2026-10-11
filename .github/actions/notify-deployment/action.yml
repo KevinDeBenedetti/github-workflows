@@ -1,56 +1,80 @@
-name: 'Notify Deployment'
-description: 'Génère un Job Summary Markdown détaillé après un déploiement K8S.'
+name: Notify Deployment
+description: Write a detailed Markdown job summary after a Kubernetes deployment.
+
 inputs:
   app-name:
-    description: 'Nom de l''application (ex: portfolio-dev)'
+    description: Application name (e.g. portfolio-dev)
     required: true
   environment:
-    description: 'Environnement (ex: development, production)'
-    required: true
-    default: 'development'
+    description: Environment (e.g. development, production)
+    required: false
+    default: development
   status:
-    description: 'Statut du déploiement'
-    required: true
-    default: 'success'
+    description: Deployment status ("success" shows ✅, anything else ❌)
+    required: false
+    default: success
   version:
-    description: 'Version de l''image'
+    description: Deployed image version
     required: true
   url:
-    description: 'URL de l''application'
+    description: Application URL, with or without scheme (https:// is added when missing)
     required: false
+    default: ''
   argocd-url:
-    description: 'URL de l''application sur ArgoCD'
+    description: URL of the application in ArgoCD
     required: false
+    default: ''
+  infra-commit-url:
+    description: Link to the infra commit that triggered the deployment (omitted when empty)
+    required: false
+    default: ''
 
 runs:
-  using: "composite"
+  using: composite
   steps:
     - name: Generate Job Summary
       shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        APP_NAME: ${{ inputs.app-name }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        STATUS: ${{ inputs.status }}
+        VERSION: ${{ inputs.version }}
+        APP_URL: ${{ inputs.url }}
+        ARGOCD_URL: ${{ inputs.argocd-url }}
+        INFRA_COMMIT_URL: ${{ inputs.infra-commit-url }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         ICON="✅"
-        if [ "${{ inputs.status }}" != "success" ]; then
+        if [ "$STATUS" != "success" ]; then
           ICON="❌"
         fi
 
-        echo "### ${ICON} Déploiement ${{ inputs.app-name }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "| Propriété | Valeur |" >> $GITHUB_STEP_SUMMARY
-        echo "| :--- | :--- |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Statut** | ${ICON} ${{ inputs.status }} |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Environnement** | \`${{ inputs.environment }}\` |" >> $GITHUB_STEP_SUMMARY
-        echo "| **Version** | \`${{ inputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+        {
+          echo "### ${ICON} Deployment ${APP_NAME}"
+          echo ""
+          echo "| Property | Value |"
+          echo "| :--- | :--- |"
+          echo "| **Status** | ${ICON} ${STATUS} |"
+          echo "| **Environment** | \`${ENVIRONMENT}\` |"
+          echo "| **Version** | \`${VERSION}\` |"
 
-        if [ -n "${{ inputs.url }}" ]; then
-          echo "| **URL** | [${{ inputs.url }}](https://${{ inputs.url }}) |" >> $GITHUB_STEP_SUMMARY
-        fi
+          if [ -n "$APP_URL" ]; then
+            case "$APP_URL" in
+              http://*|https://*) HREF="$APP_URL" ;;
+              *)                  HREF="https://${APP_URL}" ;;
+            esac
+            echo "| **URL** | [${APP_URL}](${HREF}) |"
+          fi
 
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Actions de monitoring :**" >> $GITHUB_STEP_SUMMARY
+          echo ""
+          echo "**Monitoring:**"
 
-        if [ -n "${{ inputs.argocd-url }}" ]; then
-          echo "- 🛰️ [Voir sur ArgoCD](${{ inputs.argocd-url }})" >> $GITHUB_STEP_SUMMARY
-        fi
-
-        echo "- 📝 [Commit Infra](https://github.com/KevinDeBenedetti/infra/commit/main)" >> $GITHUB_STEP_SUMMARY
-        echo "- 📊 [Logs de l'action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          if [ -n "$ARGOCD_URL" ]; then
+            echo "- 🛰️ [View in ArgoCD](${ARGOCD_URL})"
+          fi
+          if [ -n "$INFRA_COMMIT_URL" ]; then
+            echo "- 📝 [Infra commit](${INFRA_COMMIT_URL})"
+          fi
+          echo "- 📊 [Workflow run logs](${RUN_URL})"
+        } >> "$GITHUB_STEP_SUMMARY"

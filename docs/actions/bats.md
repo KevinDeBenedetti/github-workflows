@@ -21,11 +21,12 @@ steps:
 | Input | Type | Default | Description |
 |---|---|---|---|
 | `tests-dir` | string | `tests/` | Directory (or file) containing `.bats` test files |
+| `recursive` | boolean | `true` | Also run `.bats` files in sub-directories (`bats --recursive`) |
 
 ## Steps
 
-1. Install Bats `1.11.0` globally via npm
-2. Run `bats <tests-dir>`
+1. Install a pinned Bats release from the upstream repository into `$RUNNER_TEMP` (no `sudo`, no npm)
+2. Run `bats [--recursive] <tests-dir>`
 
 ## Notes
 

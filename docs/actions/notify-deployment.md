@@ -17,6 +17,7 @@ Composite action that generates a GitHub Job Summary with deployment details, en
     version: 'dev-latest'
     url: 'portfolio.kevindb.dev'
     argocd-url: 'https://argocd.kevindb.dev/applications/portfolio-dev'
+    infra-commit-url: 'https://github.com/KevinDeBenedetti/infra/commit/main'
 ```
 
 :::
@@ -29,8 +30,9 @@ Composite action that generates a GitHub Job Summary with deployment details, en
 | `environment` | Environment name (e.g., development, production) | No | `development` |
 | `status` | Deployment status (success, failure) | No | `success` |
 | `version` | Image version or tag | Yes | — |
-| `url` | Application URL | No | — |
+| `url` | Application URL, with or without scheme (`https://` is added when missing) | No | — |
 | `argocd-url` | ArgoCD application dashboard URL | No | — |
+| `infra-commit-url` | Link to the infra commit behind the deployment | No | — |
 
 ## Output
 
@@ -42,25 +44,25 @@ The action generates a formatted Markdown table in the GitHub Job Summary contai
 - Application URL (if provided)
 - Links to monitoring dashboards:
   - 🛰️ ArgoCD application (if provided)
-  - 📝 Infra commit link
-  - 📊 Action execution logs
+  - 📝 Infra commit (if provided)
+  - 📊 Workflow run logs
 
 ### Example Output
 
 ```
-✅ Déploiement portfolio-dev
+✅ Deployment portfolio-dev
 
-| Propriété | Valeur |
+| Property | Value |
 | :--- | :--- |
-| **Statut** | ✅ success |
-| **Environnement** | `development` |
+| **Status** | ✅ success |
+| **Environment** | `development` |
 | **Version** | `dev-latest` |
 | **URL** | [portfolio.kevindb.dev](https://portfolio.kevindb.dev) |
 
-Actions de monitoring :
-- 🛰️ [Voir sur ArgoCD](https://argocd.kevindb.dev/applications/portfolio-dev)
-- 📝 [Commit Infra](https://github.com/KevinDeBenedetti/infra/commit/main)
-- 📊 [Logs de l'action](...)
+Monitoring:
+- 🛰️ [View in ArgoCD](https://argocd.kevindb.dev/applications/portfolio-dev)
+- 📝 [Infra commit](https://github.com/KevinDeBenedetti/infra/commit/main)
+- 📊 [Workflow run logs](...)
 ```
 
 ## Tips

@@ -23,8 +23,7 @@ steps:
 
 ## Notes
 
-- Scans relative links of the form `](../...)` in every `docs/**/*.md` file.
-- Computes each file's depth within `docs/` and counts the leading `../` segments of each link.
-- Fails (exit `1`) when a link climbs more `../` levels than the file's depth allows, since it would escape `docs/`.
-- Reports each offending link with its file, depth, and the number of levels it goes up, and suggests replacing it with an absolute GitHub URL.
+- Scans every relative inline link / image target (`](target)`, with optional `"title"` or `<...>`) in every `docs/**/*.md` file. Absolute URLs, `/site-absolute` paths and links inside fenced code blocks are ignored.
+- Resolves each target segment by segment from the file's directory (`.`, `..`, `a/../b`, `./../x`), so any path that ends up outside `docs/` is caught — not only links starting with `../`.
+- Fails (exit `1`) on any escaping link, reporting it with its file and line, and suggests replacing it with an absolute GitHub URL.
 - Dual-mode: in CI / standalone runs with no arguments it discovers all `docs/**/*.md`; under prek / pre-commit the staged files are passed as arguments (non-`docs/*.md` paths are ignored).

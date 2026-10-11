@@ -1,23 +1,33 @@
 name: Setup Node.js
 description: >
-  Install Node.js and the right package manager (pnpm or bun),
+  Install Node.js and the right package manager (pnpm, bun or npm),
   restoring the appropriate cache. Auto-detects from lockfile.
 
 inputs:
   node-version:
     description: Node.js version
     required: false
-    default: '20'
+    default: '24'
   working-directory:
     description: Directory to look for lockfile and run install
     required: false
     default: '.'
   package-manager:
     description: >
-      Force a package manager: "pnpm" | "bun" | "auto" (default).
-      "auto" detects from bun.lockb / bun.lock → bun, otherwise → pnpm.
+      Force a package manager: "pnpm" | "bun" | "npm" | "auto" (default).
+      "auto" detects from the lockfile: bun.lockb / bun.lock → bun,
+      package-lock.json → npm, otherwise → pnpm.
     required: false
     default: auto
+  pnpm-version:
+    description: >
+      pnpm version to install. Leave empty (default) to use the
+      `packageManager` field of package.json (working directory first, then
+      the repository root); falls back to the latest release when neither
+      declares one. Setting both this and `packageManager` makes
+      pnpm/action-setup fail with "Multiple versions of pnpm specified".
+    required: false
+    default: ''
   install:
     description: Run install after setup
     required: false
@@ -25,11 +35,11 @@ inputs:
 
 outputs:
   package-manager:
-    description: Resolved package manager ("pnpm" or "bun")
+    description: Resolved package manager ("pnpm", "bun" or "npm")
     value: ${{ steps.resolve.outputs.pm }}
   cache-hit:
     description: Whether the package cache was restored
-    value: ${{ steps.cache-pnpm.outputs.cache-hit || steps.cache-bun.outputs.cache-hit }}
+    value: ${{ steps.cache-pnpm.outputs.cache-hit || steps.cache-bun.outputs.cache-hit || steps.setup-npm.outputs.cache-hit }}
 
 runs:
   using: composite
@@ -39,27 +49,58 @@ runs:
     - name: Resolve package manager
       id: resolve
       shell: bash
+      env:
+        INPUT_PM: ${{ inputs.package-manager }}
+        INPUT_PNPM_VERSION: ${{ inputs.pnpm-version }}
+        DIR: ${{ inputs.working-directory }}
       run: |
-        INPUT="${{ inputs.package-manager }}"
-        DIR="${{ inputs.working-directory }}"
-
-        if [ "$INPUT" != "auto" ]; then
-          PM="$INPUT"
+        if [ "$INPUT_PM" != "auto" ]; then
+          PM="$INPUT_PM"
         elif [ -f "$DIR/bun.lockb" ] || [ -f "$DIR/bun.lock" ]; then
           PM="bun"
+        elif [ -f "$DIR/package-lock.json" ]; then
+          PM="npm"
         else
           PM="pnpm"
         fi
+        case "$PM" in
+          pnpm|bun|npm) ;;
+          *) echo "::error::unsupported package-manager '$PM' (expected pnpm, bun, npm or auto)"; exit 1 ;;
+        esac
 
-        echo "pm=$PM" >> $GITHUB_OUTPUT
+        # pnpm version: explicit input > packageManager field > latest.
+        # When packageManager is set, the version input must stay EMPTY and
+        # pnpm/action-setup is pointed at that package.json instead.
+        PNPM_VERSION="$INPUT_PNPM_VERSION"
+        PKG_JSON="package.json"
+        if [ "$PM" = "pnpm" ] && [ -z "$PNPM_VERSION" ]; then
+          PNPM_VERSION="latest"
+          for f in "$DIR/package.json" "package.json"; do
+            if [ -f "$f" ] && grep -qE '"packageManager"[[:space:]]*:[[:space:]]*"pnpm@' "$f"; then
+              PNPM_VERSION=""
+              PKG_JSON="${f#./}"
+              break
+            fi
+          done
+        fi
+
+        {
+          echo "pm=$PM"
+          echo "pnpm-version=$PNPM_VERSION"
+          echo "package-json=$PKG_JSON"
+        } >> "$GITHUB_OUTPUT"
         echo "📦 Package manager: $PM"
+        if [ "$PM" = "pnpm" ]; then
+          echo "📌 pnpm version: ${PNPM_VERSION:-from packageManager in $PKG_JSON}"
+        fi
 
     # ── 2a. Setup pnpm ───────────────────────────────────────────────────────
     - name: Setup pnpm
       if: steps.resolve.outputs.pm == 'pnpm'
       uses: pnpm/action-setup@v6
       with:
-        version: latest
+        version: ${{ steps.resolve.outputs.pnpm-version }}
+        package_json_file: ${{ steps.resolve.outputs.package-json }}
 
     - name: Setup Node.js (pnpm)
       if: steps.resolve.outputs.pm == 'pnpm'
@@ -71,7 +112,8 @@ runs:
       if: steps.resolve.outputs.pm == 'pnpm'
       id: pnpm-store
       shell: bash
-      run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      working-directory: ${{ inputs.working-directory }}
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
     - name: Restore pnpm cache
       if: steps.resolve.outputs.pm == 'pnpm'
@@ -109,6 +151,17 @@ runs:
         restore-keys: |
           bun-${{ runner.os }}-
 
+    # ── 2c. Setup npm ────────────────────────────────────────────────────────
+    # npm ships with Node.js; setup-node caches ~/.npm keyed on the lockfile.
+    - name: Setup Node.js (npm)
+      if: steps.resolve.outputs.pm == 'npm'
+      id: setup-npm
+      uses: actions/setup-node@v7
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
     # ── 3. Install dependencies ───────────────────────────────────────────────
     - name: Install (pnpm)
       if: inputs.install == 'true' && steps.resolve.outputs.pm == 'pnpm'
@@ -121,3 +174,9 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: bun install --frozen-lockfile
+
+    - name: Install (npm)
+      if: inputs.install == 'true' && steps.resolve.outputs.pm == 'npm'
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: npm ci
