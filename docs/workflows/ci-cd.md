@@ -10,32 +10,26 @@ the default branch. Use it as a reference example for composing the building blo
 on:
   push:
     branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
 ```
 
-- `concurrency` is keyed on <code v-pre>${{ github.workflow }}-${{ github.ref }}</code> with `cancel-in-progress: true`, so a new push supersedes an in-flight run on the same ref.
+- `concurrency` is keyed on <code v-pre>${{ github.workflow }}-${{ github.ref }}</code>; only pull-request runs are cancelled by a newer push, so an in-flight release on `main` always finishes.
 - No top-level `permissions` block — jobs inherit the repository's default token permissions. Each reusable workflow declares its own job-level permissions, capped by what the caller grants.
 
 ## Jobs
 
-| Job           | Runs when      | Calls          | Purpose                                                       |
-| ------------- | -------------- | -------------- | ------------------------------------------------------------- |
-| `release`     | push to `main` | `release.yml`  | Runs release-please to cut releases. Uses `secrets: inherit`. |
-| `deploy-docs` | push to `main` | `cd-docs.yml`  | Dispatches `docs-updated` to the central docs site.           |
-
-### `deploy-docs` wiring
-
-```yaml
-deploy-docs:
-  uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
-  with:
-    client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
-  secrets:
-    APP_PRIVATE_KEY: ${{ secrets.DOCS_APP_PRIVATE_KEY }}
-```
+| Job          | Runs when      | Calls                     | Purpose                                                                 |
+| ------------ | -------------- | ------------------------- | ----------------------------------------------------------------------- |
+| `ci-shell`   | push + PR      | `ci-shell.yml`            | ShellCheck, actionlint, Bats and docs checks, with the released actions |
+| `ci-actions` | push + PR      | `./.github/actions/*`     | Same checks through this checkout's own composite actions               |
+| `ci-prek`    | push + PR      | `ci-prek.yml`             | This repo's prek hooks                                                  |
+| `security`   | push + PR      | `security.yml`            | Gitleaks secret scan                                                    |
+| `release`    | push to `main` | `./…/release.yml` (local) | release-please PR, tags and `v0.<minor>` alias, once CI is green        |
 
 ## Notes
 
-- `release` and `deploy-docs` are gated on `github.event_name == 'push' && github.ref == 'refs/heads/main'`, so they never run on `develop` pushes.
-- `release` uses `secrets: inherit` to forward the repository secrets to `release.yml`; `deploy-docs` passes the docs App private key explicitly.
-- See [`cd-docs.md`](./cd-docs.md) for the docs sync workflow's full inputs and secrets.
-- The [`check-bot-commits`](./check-bot-commits.md) reusable workflow is still available for other repos, but is not wired into this pipeline (the only bots opening PRs here are trusted automation).
+- The CI jobs are skipped on the release-please PR and on the `chore(main): release` commit; `release` still runs (skipped ≠ failed).
+- `release` uses a local ref: GitHub validates `with:` inputs against the referenced workflow at parse time, so a remote `@main` ref would reject inputs a branch adds to `release.yml` before they are merged.
+- Docs are not pushed anywhere: the central docs site polls this repo on a schedule (see [`cd-docs.md`](./cd-docs.md)). `ci-shell` verifies them.
