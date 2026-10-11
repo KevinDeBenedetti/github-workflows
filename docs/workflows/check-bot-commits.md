@@ -47,7 +47,7 @@ jobs:
 ## Behaviour
 
 The workflow:
-1. Lists all commits in the PR via the GitHub API
+1. Lists all commits in the PR via the GitHub API (paginated; an API error fails the job instead of passing unchecked)
 2. Checks each commit's author login for the `[bot]` suffix
 3. Passes if no bot authors are found (or all found bots are in `allowed-bots`)
 4. Fails (or warns) otherwise, printing each unauthorised bot author

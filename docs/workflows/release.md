@@ -52,12 +52,13 @@ jobs:
 | Job             | Description                                               |
 | --------------- | --------------------------------------------------------- |
 | `release`       | Runs release-please; creates release PR or GitHub Release |
-| `tag-workflows` | Moves the `v<major>` alias tag after each release         |
+| `tag-workflows` | Moves the `v<major>` alias tag (`v0.<minor>` before 1.0) after each release |
 
 ## Notes
 
 - The `tag-workflows` job only runs when `released == 'true'`.
 - The major alias (e.g. `v1`) is force-pushed after each release, enabling callers to pin to `@v1` without a breaking update.
+- Before 1.0 the alias is `v0.<minor>` (e.g. `v0.25`) instead of `v0`: with `bump-minor-pre-major`, release-please ships breaking changes as minor bumps, so a moving `v0` would carry callers across them. A pre-existing `v0` tag is no longer moved.
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
 - With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker. Both the review request and the comment are gated on this marker, so once a PR is notified, later runs (on any push while the PR stays open) skip it entirely — reviewers are never re-requested or re-pinged.
 - Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.

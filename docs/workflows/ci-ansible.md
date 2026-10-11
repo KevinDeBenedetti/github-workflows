@@ -38,4 +38,5 @@ jobs:
 
 - The `ansible-lint` job always runs; the `ansible-syntax-check` job runs only when `run-syntax-check: true`.
 - The syntax check searches `ansible-dir` at depth 1 for files matching `playbook-glob`; if none are found it logs a warning instead of failing.
+- Matching files that are not playbooks (no play declaring `hosts:` / `import_playbook:`, e.g. `requirements.yml`, `galaxy.yml`) are skipped rather than failing the syntax check.
 - `ansible-lint-version` is a raw pip version specifier appended to the package name (e.g. `ansible-lint>=25.0,<26`).

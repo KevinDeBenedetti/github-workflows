@@ -42,17 +42,24 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Fetch full commit metadata: login, GitHub account type, and git author name/email
-          COMMITS=$(gh api "repos/${REPO}/pulls/${PR_NUMBER}/commits" \
+          # Fetch full commit metadata: login, GitHub account type, and git author name/email.
+          # --paginate: the endpoint returns 30 commits per page by default, so
+          # without it a bot commit past the first page would go unchecked.
+          # An API failure must fail the job — swallowing it would let the
+          # guard pass having checked nothing.
+          if ! COMMITS=$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/commits?per_page=100" \
             --jq '.[] | {
               login:  (.author.login  // .commit.author.name),
               type:   (.author.type   // "Unknown"),
               name:   .commit.author.name,
               email:  .commit.author.email
-            }' 2>/dev/null || true)
+            }'); then
+            echo "::error::Could not list the commits of PR #${PR_NUMBER} — refusing to pass unchecked."
+            exit 1
+          fi
 
           if [ -z "$COMMITS" ]; then
-            echo "No commits found (or PR has no commits yet). Skipping."
+            echo "No commits found in this PR. Skipping."
             exit 0
           fi
 

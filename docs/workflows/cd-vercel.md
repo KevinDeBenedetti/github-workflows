@@ -23,7 +23,8 @@ jobs:
 | ------------------- | ------ | --------- | --------------------------------------------- |
 | `environment`       | string | `preview` | Target environment: `preview` \| `production` |
 | `working-directory` | string | `'.'`     | Path to the app root (e.g. `apps/web`)        |
-| `node-version`      | string | `'20'`    | Node.js version                               |
+| `node-version`      | string | `'24'`    | Node.js version                               |
+| `vercel-version`    | string | pinned    | Vercel CLI version (bumped by Renovate)       |
 
 ## Secrets
 

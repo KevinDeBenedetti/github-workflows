@@ -59,8 +59,11 @@ on:
         required: false
         default: '"ubuntu-latest"'
 
+# The group carries the path input(s) so that one caller invoking this workflow
+# several times in the same run (e.g. one call per directory) gets one group per
+# call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-terraform-${{ github.workflow }}-${{ github.ref }}
+  group: ci-terraform-${{ github.workflow }}-${{ github.ref }}-${{ inputs.tf-dir }}
   cancel-in-progress: true
 
 jobs:

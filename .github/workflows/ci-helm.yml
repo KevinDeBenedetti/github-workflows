@@ -79,8 +79,11 @@ on:
         type: string
         default: ''
 
+# The group carries the path input(s) so that one caller invoking this workflow
+# several times in the same run (e.g. one call per directory) gets one group per
+# call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-helm-${{ github.workflow }}-${{ github.ref }}
+  group: ci-helm-${{ github.workflow }}-${{ github.ref }}-${{ inputs.chart-paths }}
   cancel-in-progress: true
 
 jobs:

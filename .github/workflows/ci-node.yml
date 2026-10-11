@@ -7,14 +7,14 @@ on:
         description: Node.js version
         type: string
         required: false
-        default: '20'
+        default: '24'
       working-directory:
         description: Path to the app (e.g. apps/web, or "." for standalone)
         type: string
         required: false
         default: '.'
       package-manager:
-        description: '"pnpm" | "bun" | "auto" (default — detects from lockfile)'
+        description: '"pnpm" | "bun" | "npm" | "auto" (default — detects from lockfile)'
         type: string
         required: false
         default: auto
@@ -40,6 +40,14 @@ on:
         type: boolean
         required: false
         default: true
+      test-args:
+        description: >
+          Extra arguments appended to the test script (pnpm and npm only).
+          The default suits Jest/Vitest; set it to '' for runners that reject
+          unknown flags (e.g. `node --test`).
+        type: string
+        required: false
+        default: --passWithNoTests
       run-build:
         description: Run build script
         type: boolean
@@ -82,13 +90,13 @@ on:
       node-version:
         description: Node.js version
         type: string
-        default: '20'
+        default: '24'
       working-directory:
         description: Path to the app (e.g. apps/web, or "." for standalone)
         type: string
         default: '.'
       package-manager:
-        description: '"pnpm" | "bun" | "auto" (default — detects from lockfile)'
+        description: '"pnpm" | "bun" | "npm" | "auto" (default — detects from lockfile)'
         type: string
         default: auto
       framework:
@@ -107,6 +115,10 @@ on:
         description: Run test suite
         type: boolean
         default: true
+      test-args:
+        description: Extra arguments appended to the test script (pnpm and npm only)
+        type: string
+        default: --passWithNoTests
       run-build:
         description: Run build script
         type: boolean
@@ -150,7 +162,7 @@ jobs:
       # Setup resolves pnpm or bun automatically from the lockfile
       - name: Setup Node.js
         id: setup
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.24.0 # x-release-please-version
         with:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}
@@ -160,13 +172,14 @@ jobs:
       - name: Set run alias
         id: run-alias
         shell: bash
+        env:
+          PM: ${{ steps.setup.outputs.package-manager }}
         run: |
-          PM="${{ steps.setup.outputs.package-manager }}"
-          if [ "$PM" = "bun" ]; then
-            echo "cmd=bun run" >> "$GITHUB_OUTPUT"
-          else
-            echo "cmd=pnpm" >> "$GITHUB_OUTPUT"
-          fi
+          case "$PM" in
+            bun) echo "cmd=bun run" >> "$GITHUB_OUTPUT" ;;
+            npm) echo "cmd=npm run" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "cmd=pnpm"    >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: Lint
         if: inputs.run-lint
@@ -182,12 +195,17 @@ jobs:
         if: inputs.run-test
         working-directory: ${{ inputs.working-directory }}
         shell: bash
+        env:
+          PM: ${{ steps.setup.outputs.package-manager }}
+          TEST_ARGS: ${{ inputs.test-args }}
         run: |
-          if [ "${{ steps.setup.outputs.package-manager }}" = "bun" ]; then
-            bun run test
-          else
-            pnpm test --passWithNoTests
-          fi
+          # TEST_ARGS is intentionally word-split into separate arguments.
+          # shellcheck disable=SC2086
+          case "$PM" in
+            bun) bun run test ;;
+            npm) npm test -- $TEST_ARGS ;;
+            *)   pnpm test $TEST_ARGS ;;
+          esac
 
       - name: Check markdown links
         if: inputs.run-link-check
@@ -206,9 +224,9 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ${{ inputs.working-directory }}/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}-${{ github.sha }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/package-lock.json', inputs.working-directory)) }}-${{ github.sha }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}-
+            nextjs-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/package-lock.json', inputs.working-directory)) }}-
 
       - name: Build
         if: inputs.run-build
@@ -228,9 +246,10 @@ jobs:
         if: inputs.upload-build && inputs.run-build
         id: output-path
         shell: bash
+        env:
+          FW: ${{ inputs.framework }}
+          DIR: ${{ inputs.working-directory }}
         run: |
-          FW="${{ inputs.framework }}"
-          DIR="${{ inputs.working-directory }}"
 
           if [ "$FW" = "auto" ]; then
             # Detect from config files
