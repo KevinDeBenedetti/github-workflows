@@ -10,6 +10,13 @@ inputs:
     description: Path glob passed to find -not -path to exclude from analysis
     required: false
     default: '*/test_helper/*'
+  default-shell:
+    description: >
+      Dialect assumed for scripts with neither a shebang nor a
+      `# shellcheck shell=` directive (e.g. sourced libraries). Scripts that
+      declare their shell are checked as that shell.
+    required: false
+    default: bash
 
 runs:
   using: composite
@@ -17,12 +24,18 @@ runs:
     - name: Install ShellCheck
       shell: bash
       run: |
+        # renovate: datasource=github-releases depName=koalaman/shellcheck
         SHELLCHECK_VERSION="0.11.0"
+        case "$(uname -m)" in
+          x86_64)        ARCH=x86_64 ;;
+          aarch64|arm64) ARCH=aarch64 ;;
+          *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
+        esac
         INSTALL_DIR="$RUNNER_TEMP/shellcheck"
         mkdir -p "$INSTALL_DIR"
         curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
           -o "$RUNNER_TEMP/shellcheck.tar.xz" \
-          "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.x86_64.tar.xz"
+          "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.${ARCH}.tar.xz"
         # Decompress with python3 (lzma) — the actions-runner image has no xz.
         python3 -c "import lzma, shutil, sys; shutil.copyfileobj(lzma.open(sys.argv[1]), open(sys.argv[2], 'wb'))" \
           "$RUNNER_TEMP/shellcheck.tar.xz" "$RUNNER_TEMP/shellcheck.tar"
@@ -32,11 +45,33 @@ runs:
 
     - name: Run ShellCheck
       shell: bash
+      env:
+        SEVERITY: ${{ inputs.severity }}
+        EXCLUDE_PATHS: ${{ inputs.exclude-paths }}
+        DEFAULT_SHELL: ${{ inputs.default-shell }}
       run: |
-        find . -type f -name "*.sh" \
-          -not -path "${{ inputs.exclude-paths }}" \
-          -exec shellcheck \
-            --severity=${{ inputs.severity }} \
-            --shell=bash \
-            --format=gcc \
-            {} +
+        # Scripts that declare their dialect (shebang or `shellcheck shell=`
+        # directive) are checked as that dialect — forcing --shell=bash would
+        # hide POSIX-sh portability issues in #!/bin/sh scripts. Only scripts
+        # that declare nothing fall back to DEFAULT_SHELL (otherwise SC2148).
+        DECLARED=()
+        UNDECLARED=()
+        while IFS= read -r -d '' f; do
+          if head -n 1 "$f" | grep -q '^#!' || grep -qE '^#[[:space:]]*shellcheck[[:space:]]+shell=' "$f"; then
+            DECLARED+=("$f")
+          else
+            UNDECLARED+=("$f")
+          fi
+        done < <(find . \
+          \( -path ./.git -o -path '*/node_modules' -o -path '*/.venv' \) -prune -o \
+          -type f -name '*.sh' -not -path "$EXCLUDE_PATHS" -print0)
+
+        status=0
+        if [ "${#DECLARED[@]}" -gt 0 ]; then
+          shellcheck --severity="$SEVERITY" --format=gcc "${DECLARED[@]}" || status=1
+        fi
+        if [ "${#UNDECLARED[@]}" -gt 0 ]; then
+          shellcheck --severity="$SEVERITY" --shell="$DEFAULT_SHELL" --format=gcc "${UNDECLARED[@]}" || status=1
+        fi
+        echo "Checked $(( ${#DECLARED[@]} + ${#UNDECLARED[@]} )) script(s)."
+        exit "$status"

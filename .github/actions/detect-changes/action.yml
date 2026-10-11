@@ -20,7 +20,9 @@ outputs:
   has-changes:
     description: Whether any app changed ("true" / "false")
     value: ${{ steps.detect.outputs.has_changes }}
-  # Per-app flags — useful for if: conditions without matrix
+  # Per-app flags — useful for if: conditions without matrix. Composite
+  # actions cannot declare outputs dynamically, so only these three names are
+  # exposed; for any other app use `changed-apps` (e.g. contains(fromJson(...), 'name')).
   changed-api:
     description: Whether apps/api changed
     value: ${{ steps.detect.outputs.changed_api }}
@@ -37,17 +39,21 @@ runs:
     - name: Detect changed apps
       id: detect
       shell: bash
+      env:
+        APPS_DIR: ${{ inputs.apps-directory }}
+        BASE_REF: ${{ inputs.base-ref }}
+        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        BEFORE: ${{ github.event.before }}
       run: |
-        APPS_DIR="${{ inputs.apps-directory }}"
-        BASE_REF="${{ inputs.base-ref }}"
+        set -euo pipefail
 
         # Resolve base commit: input > PR base > previous commit on push
         if [ -n "$BASE_REF" ]; then
           BASE_COMMIT="$BASE_REF"
-        elif [ -n "${{ github.event.pull_request.base.sha }}" ]; then
-          BASE_COMMIT="${{ github.event.pull_request.base.sha }}"
+        elif [ -n "$PR_BASE_SHA" ]; then
+          BASE_COMMIT="$PR_BASE_SHA"
         else
-          BASE_COMMIT="${{ github.event.before }}"
+          BASE_COMMIT="$BEFORE"
           # Fallback: compare with HEAD~1 if before is null/zeros
           if [ -z "$BASE_COMMIT" ] || [ "$BASE_COMMIT" = "0000000000000000000000000000000000000000" ]; then
             BASE_COMMIT="HEAD~1"
@@ -56,38 +62,42 @@ runs:
 
         echo "Comparing against: $BASE_COMMIT"
 
-        # Discover all app directories
+        # The base must be in the clone. With the default shallow checkout it
+        # usually is not, and a failing `git diff` used to be read as "nothing
+        # changed" — every downstream job was then skipped without a word.
+        if ! git rev-parse --verify --quiet "${BASE_COMMIT}^{commit}" > /dev/null; then
+          echo "::error::Base commit '$BASE_COMMIT' is not in the clone — check out with 'fetch-depth: 0' (actions/checkout) before this action."
+          exit 1
+        fi
+
         CHANGED_APPS="[]"
         HAS_CHANGES="false"
 
         if [ -d "$APPS_DIR" ]; then
+          shopt -s nullglob
           for APP_PATH in "$APPS_DIR"/*/; do
             APP_NAME=$(basename "$APP_PATH")
+            SAFE_NAME=$(printf '%s' "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '_')
 
-            # Check if any file changed inside this app
-            DIFF=$(git diff --name-only "$BASE_COMMIT" HEAD -- "$APP_PATH" 2>/dev/null || echo "")
+            # Check if any file changed inside this app (a git failure aborts
+            # the step through set -e instead of passing as "no change").
+            DIFF=$(git diff --name-only "$BASE_COMMIT" HEAD -- "$APP_PATH")
 
             if [ -n "$DIFF" ]; then
               echo "✅ Changed: $APP_NAME"
-              CHANGED_APPS=$(echo "$CHANGED_APPS" | jq --arg app "$APP_NAME" '. + [$app]')
+              CHANGED_APPS=$(echo "$CHANGED_APPS" | jq -c --arg app "$APP_NAME" '. + [$app]')
               HAS_CHANGES="true"
-
-              # Emit individual flag (sanitize name for output key)
-              SAFE_NAME=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '_')
-              echo "changed_${SAFE_NAME}=true" >> $GITHUB_OUTPUT
+              echo "changed_${SAFE_NAME}=true" >> "$GITHUB_OUTPUT"
             else
               echo "⏭️  Unchanged: $APP_NAME"
-              SAFE_NAME=$(echo "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '_')
-              echo "changed_${SAFE_NAME}=false" >> $GITHUB_OUTPUT
+              echo "changed_${SAFE_NAME}=false" >> "$GITHUB_OUTPUT"
             fi
           done
         else
           echo "⚠️  Directory '$APPS_DIR' not found — no apps to build"
-          HAS_CHANGES="false"
-          CHANGED_APPS="[]"
         fi
 
-        echo "changed_apps=$CHANGED_APPS" >> $GITHUB_OUTPUT
-        echo "has_changes=$HAS_CHANGES"    >> $GITHUB_OUTPUT
+        echo "changed_apps=$CHANGED_APPS" >> "$GITHUB_OUTPUT"
+        echo "has_changes=$HAS_CHANGES"    >> "$GITHUB_OUTPUT"
         echo ""
         echo "Summary → changed apps: $CHANGED_APPS"

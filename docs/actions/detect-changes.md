@@ -60,8 +60,11 @@ jobs:
 ## Notes
 
 - Requires `fetch-depth: 0` (or at least enough history to compare against the base ref) in your
-  checkout step.
+  checkout step. When the base commit is missing from the clone the action **fails** with an
+  explicit error instead of reporting "no change" (which used to skip every downstream job).
 - Per-app boolean outputs (`changed-api`, `changed-web`, `changed-client`) are useful for
-  `if:` conditions when you don't need a matrix.
+  `if:` conditions when you don't need a matrix. Composite actions cannot declare outputs
+  dynamically, so only these three names exist; for any other app test `changed-apps`, e.g.
+  `contains(fromJson(steps.changes.outputs.changed-apps), 'admin')`.
 - App names are sanitized (lowercased, non-alphanumeric characters replaced with `_`) in the
   output key names.
