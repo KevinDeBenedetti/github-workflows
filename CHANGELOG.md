@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.25.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.24.0...v0.25.0) (2026-10-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **release:** the v0 alias is no longer moved; pin @v0.<minor> instead.
+* **workflows:** node-version defaults to 24 in ci-node, cd-pages and cd-vercel.
+* **actions:** setup-node defaults to Node 24; shellcheck checks #!/bin/sh scripts as POSIX sh; notify-deployment only links an infra commit when infra-commit-url is set.
+* **security:** codeql-languages defaults to ["javascript-typescript"].
+
+### Features
+
+* **release:** pin internal actions to the release, v0.&lt;minor&gt; alias ([d94a486](https://github.com/KevinDeBenedetti/github-workflows/commit/d94a48608f8c6bb442722555c7ead32f45f32a78))
+
+
+### Bug Fixes
+
+* **actions:** harden composite actions and test the docs checks ([9519ae5](https://github.com/KevinDeBenedetti/github-workflows/commit/9519ae51e1e7b5ba4f2786ce98e712e3f882114b))
+* **ci:** prevent runner warnings for deprecated 'recursive' input in Bats action ([4803dcb](https://github.com/KevinDeBenedetti/github-workflows/commit/4803dcb9f66b18708640f1faca4ebe82cf2441d1))
+* **security:** scan every PR and merged commit, audit the real Python deps ([6c31a59](https://github.com/KevinDeBenedetti/github-workflows/commit/6c31a59222348bbc11585337c39a7189ac77975d))
+* **workflows:** bot-commit guard pagination, per-call concurrency, injection hardening ([875ed88](https://github.com/KevinDeBenedetti/github-workflows/commit/875ed884fa9c7e17171d63cdf53eb1bbd383a9dd))
+
 ## [0.24.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.23.0...v0.24.0) (2026-09-22)
 
 
