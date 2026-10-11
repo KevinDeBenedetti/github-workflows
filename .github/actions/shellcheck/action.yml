@@ -54,14 +54,33 @@ runs:
         # directive) are checked as that dialect — forcing --shell=bash would
         # hide POSIX-sh portability issues in #!/bin/sh scripts. Only scripts
         # that declare nothing fall back to DEFAULT_SHELL (otherwise SC2148).
+        # A shebang ShellCheck cannot parse (zsh, fish…) would fail with SC1071,
+        # so those scripts also fall back to DEFAULT_SHELL, as before.
+        shebang_dialect() {
+          local line words i
+          IFS= read -r line < "$1" || true
+          [[ $line == '#!'* ]] || return 0
+          read -ra words <<< "${line#\#!}"
+          i=0
+          # `#!/usr/bin/env [-S] [-opts] shell`: skip env and its options.
+          if [[ ${words[0]##*/} == env ]]; then
+            i=1
+            while [[ ${words[i]:-} == -* ]]; do i=$((i + 1)); done
+          fi
+          echo "${words[i]##*/}"
+        }
+
         DECLARED=()
         UNDECLARED=()
         while IFS= read -r -d '' f; do
-          if head -n 1 "$f" | grep -q '^#!' || grep -qE '^#[[:space:]]*shellcheck[[:space:]]+shell=' "$f"; then
+          if grep -qE '^#[[:space:]]*shellcheck[[:space:]]+shell=' "$f"; then
             DECLARED+=("$f")
-          else
-            UNDECLARED+=("$f")
+            continue
           fi
+          case "$(shebang_dialect "$f")" in
+            sh|bash|dash|ksh|busybox) DECLARED+=("$f") ;;
+            *)                        UNDECLARED+=("$f") ;;
+          esac
         done < <(find . \
           \( -path ./.git -o -path '*/node_modules' -o -path '*/.venv' \) -prune -o \
           -type f -name '*.sh' -not -path "$EXCLUDE_PATHS" -print0)

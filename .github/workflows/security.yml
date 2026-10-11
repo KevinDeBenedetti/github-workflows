@@ -141,10 +141,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # No `uv sync`: the audit reads the lockfile via `uv export`, so
+      # installing the project (and building native deps) would be wasted.
       - name: Setup Python
         uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@v0.24.0 # x-release-please-version
         with:
           working-directory: ${{ inputs.python-working-directory }}
+          install: 'false'
 
       # A bare `uvx pip-audit` audits the throwaway environment uvx creates for
       # pip-audit itself, not the project. Export the locked dependency set and
@@ -253,11 +256,13 @@ jobs:
 
       # Compiled languages need a build; everything else is analysed from source
       # (build-mode none), which is faster and needs no toolchain on the runner.
+      # java-kotlin stays on autobuild: build-mode none extracts Java only and
+      # would silently drop Kotlin sources.
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ contains(fromJson('["c-cpp","cpp","c","go","swift"]'), matrix.language) && 'autobuild' || 'none' }}
+          build-mode: ${{ contains(fromJson('["c-cpp","cpp","c","go","swift","java-kotlin","java","kotlin"]'), matrix.language) && 'autobuild' || 'none' }}
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4

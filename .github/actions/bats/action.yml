@@ -7,9 +7,12 @@ inputs:
     required: false
     default: tests/
   recursive:
-    description: Also run .bats files in sub-directories of tests-dir (bats -r)
+    description: >
+      Also run .bats files in sub-directories of tests-dir (bats -r). Off by
+      default: vendored helpers under tests/test_helper/ (bats-support,
+      bats-assert) ship their own suites, which would run too.
     required: false
-    default: 'true'
+    default: 'false'
 
 runs:
   using: composite

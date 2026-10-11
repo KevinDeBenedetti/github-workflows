@@ -144,14 +144,36 @@ jobs:
           ANSIBLE_DIR: ${{ inputs.ansible-dir }}
           PLAYBOOK_GLOB: ${{ inputs.playbook-glob }}
         run: |
+          # The glob also matches non-playbook YAML that commonly sits next to
+          # playbooks (requirements.yml, galaxy.yml, vars files…), on which
+          # --syntax-check fails. A playbook is a list of plays: parse the file
+          # (PyYAML ships with ansible) and keep it when a top-level list item
+          # declares `hosts` or `import_playbook`, whatever the indentation.
+          # Custom tags (!vault, !unsafe) are ignored; unparseable YAML is kept
+          # so --syntax-check reports the error instead of skipping the file.
+          is_playbook() {
+            python3 - "$1" <<'PY'
+          import sys, yaml
+          class Loader(yaml.SafeLoader):
+              pass
+          Loader.add_multi_constructor("", lambda loader, suffix, node: None)
+          try:
+              with open(sys.argv[1]) as f:
+                  docs = list(yaml.load_all(f, Loader=Loader))
+          except yaml.YAMLError:
+              sys.exit(0)
+          keys = {"hosts", "import_playbook", "ansible.builtin.import_playbook"}
+          sys.exit(0 if any(
+              isinstance(doc, list)
+              and any(isinstance(play, dict) and keys & play.keys() for play in doc)
+              for doc in docs
+          ) else 1)
+          PY
+          }
+
           found=0
           while IFS= read -r -d '' playbook; do
-            # The glob also matches non-playbook YAML that commonly sits next to
-            # playbooks (requirements.yml, galaxy.yml, vars files…), on which
-            # --syntax-check fails. A playbook is a list of plays: keep only
-            # files whose plays (top-level list items) declare `hosts:` or
-            # `import_playbook:`, either on the `- ` line or indented below it.
-            if ! grep -qE '^(- +|  )(hosts|import_playbook|ansible\.builtin\.import_playbook):' "$playbook"; then
+            if ! is_playbook "$playbook"; then
               echo "⏭️  $playbook skipped (not a playbook)"
               continue
             fi

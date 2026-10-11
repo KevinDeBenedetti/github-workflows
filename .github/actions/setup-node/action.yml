@@ -15,7 +15,8 @@ inputs:
   package-manager:
     description: >
       Force a package manager: "pnpm" | "bun" | "npm" | "auto" (default).
-      "auto" detects from the lockfile: bun.lockb / bun.lock → bun,
+      "auto" detects from the nearest lockfile (working directory first,
+      then the repository root, for workspaces): bun.lockb / bun.lock → bun,
       package-lock.json → npm, otherwise → pnpm.
     required: false
     default: auto
@@ -54,19 +55,43 @@ runs:
         INPUT_PNPM_VERSION: ${{ inputs.pnpm-version }}
         DIR: ${{ inputs.working-directory }}
       run: |
+        # Workspaces (npm, pnpm, bun) keep a single lockfile at the repository
+        # root, so a lockfile in the working directory wins, then the root's.
+        find_lock() {
+          local d n
+          for d in "$DIR" "."; do
+            for n in "$@"; do
+              if [ -f "$d/$n" ]; then echo "$d/$n"; return; fi
+            done
+          done
+        }
+
         if [ "$INPUT_PM" != "auto" ]; then
           PM="$INPUT_PM"
-        elif [ -f "$DIR/bun.lockb" ] || [ -f "$DIR/bun.lock" ]; then
-          PM="bun"
-        elif [ -f "$DIR/package-lock.json" ]; then
-          PM="npm"
         else
-          PM="pnpm"
+          case "$(find_lock bun.lockb bun.lock package-lock.json pnpm-lock.yaml)" in
+            */bun.lock|*/bun.lockb) PM="bun" ;;
+            */package-lock.json)    PM="npm" ;;
+            *)                      PM="pnpm" ;;
+          esac
         fi
         case "$PM" in
           pnpm|bun|npm) ;;
           *) echo "::error::unsupported package-manager '$PM' (expected pnpm, bun, npm or auto)"; exit 1 ;;
         esac
+
+        # npm: cache and `npm ci` from the lockfile's directory (the workspace
+        # root when the working directory is a workspace member).
+        NPM_LOCKFILE=""
+        NPM_DIR="$DIR"
+        if [ "$PM" = "npm" ]; then
+          NPM_LOCKFILE="$(find_lock package-lock.json)"
+          if [ -z "$NPM_LOCKFILE" ]; then
+            echo "::error::package-manager npm needs a package-lock.json in '$DIR' or the repository root"
+            exit 1
+          fi
+          NPM_DIR="$(dirname "$NPM_LOCKFILE")"
+        fi
 
         # pnpm version: explicit input > packageManager field > latest.
         # When packageManager is set, the version input must stay EMPTY and
@@ -88,6 +113,8 @@ runs:
           echo "pm=$PM"
           echo "pnpm-version=$PNPM_VERSION"
           echo "package-json=$PKG_JSON"
+          echo "npm-lockfile=$NPM_LOCKFILE"
+          echo "npm-dir=$NPM_DIR"
         } >> "$GITHUB_OUTPUT"
         echo "📦 Package manager: $PM"
         if [ "$PM" = "pnpm" ]; then
@@ -160,7 +187,7 @@ runs:
       with:
         node-version: ${{ inputs.node-version }}
         cache: npm
-        cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+        cache-dependency-path: ${{ steps.resolve.outputs.npm-lockfile }}
 
     # ── 3. Install dependencies ───────────────────────────────────────────────
     - name: Install (pnpm)
@@ -178,5 +205,5 @@ runs:
     - name: Install (npm)
       if: inputs.install == 'true' && steps.resolve.outputs.pm == 'npm'
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ steps.resolve.outputs.npm-dir }}
       run: npm ci

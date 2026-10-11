@@ -35,6 +35,15 @@ setup() {
   [[ "$output" == *"2 link(s) escape"* ]]
 }
 
+@test "checks every link on a line, not only the first" {
+  printf 'See [ok](../x.md), [bad](../../y.md) and ![img](../../../z.png).\n' > docs/guide/a.md
+  run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"'../../y.md' escapes"* ]]
+  [[ "$output" == *"'../../../z.png' escapes"* ]]
+  [[ "$output" == *"2 link(s) escape"* ]]
+}
+
 @test "ignores absolute URLs and links inside fenced code blocks" {
   printf '[a](https://example.com/../../x)\n[b](/abs/path.md)\n```md\n[c](../../../z.md)\n```\n' > docs/guide/a.md
   run bash "$SCRIPT"

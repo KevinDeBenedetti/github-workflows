@@ -31,6 +31,7 @@ jobs:
 | `runner`          | string | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'`.                                     |
 | `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to notify when a release PR is opened. Each user is requested as a reviewer **and** @mentioned in a PR comment, so a notification reliably reaches them. Each PR is notified at most once. Leave empty to disable. |
 | `release-pending-label` | string | `'autorelease: pending'` | Label used to find the open release PR on runs where release-please didn't create/update it (the fallback path for `notify-reviewers`). Override only if you customized `pull-request-label` in your release-please config. |
+| `pre-major-alias` | string | `both`             | Alias tag(s) moved while at 0.x: `both` (`v0` + `v0.<minor>`), `minor` (`v0.<minor>` only) or `major` (`v0` only). Ignored from 1.0. |
 | `app-client-id`   | string | `''`               | Client ID (or App ID) of a GitHub App with contents/pull-requests/issues write. When set, a short-lived App token is used instead of `GITHUB_TOKEN`, so the release PR is attributed to the App (avoids the workflow-approval gate and lets CI run on the release PR). |
 
 ## Secrets
@@ -52,13 +53,13 @@ jobs:
 | Job             | Description                                               |
 | --------------- | --------------------------------------------------------- |
 | `release`       | Runs release-please; creates release PR or GitHub Release |
-| `tag-workflows` | Moves the `v<major>` alias tag (`v0.<minor>` before 1.0) after each release |
+| `tag-workflows` | Moves the `v<major>` alias tag (before 1.0: `v0` and/or `v0.<minor>`, per `pre-major-alias`) after each release |
 
 ## Notes
 
 - The `tag-workflows` job only runs when `released == 'true'`.
 - The major alias (e.g. `v1`) is force-pushed after each release, enabling callers to pin to `@v1` without a breaking update.
-- Before 1.0 the alias is `v0.<minor>` (e.g. `v0.25`) instead of `v0`: with `bump-minor-pre-major`, release-please ships breaking changes as minor bumps, so a moving `v0` would carry callers across them. A pre-existing `v0` tag is no longer moved.
+- Before 1.0, `pre-major-alias` picks the alias(es): `both` (default) moves `v0` and `v0.<minor>` (e.g. `v0.25`); `minor` moves only `v0.<minor>` — with `bump-minor-pre-major`, release-please ships breaking changes as minor bumps, so a moving `v0` carries callers across them; `major` moves only `v0`. Switching to `minor` freezes an existing `v0` tag: tell callers pinned to `@v0` to move to `@v0.<minor>`.
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
 - With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker. Both the review request and the comment are gated on this marker, so once a PR is notified, later runs (on any push while the PR stays open) skip it entirely — reviewers are never re-requested or re-pinged.
 - Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.

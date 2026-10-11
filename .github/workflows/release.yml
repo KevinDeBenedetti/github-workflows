@@ -67,6 +67,15 @@ on:
         type: string
         required: false
         default: 'autorelease: pending'
+      pre-major-alias:
+        description: >
+          Which alias tag(s) to move while the version is 0.x: 'both' (default)
+          moves v0 and v0.<minor>; 'minor' moves only v0.<minor>, so callers on
+          an alias never cross a breaking (minor) bump; 'major' moves only v0.
+          Ignored from 1.0 on, where v<major> is moved.
+        type: string
+        required: false
+        default: both
       app-client-id:
         description: >
           Client ID (or App ID) of a GitHub App installed on this repo with
@@ -290,11 +299,14 @@ jobs:
 
       - name: Move major version tag
         # e.g. v1.2.3 → also updates tag v1
+        # e.g. v1.2.3 → also updates tag v1
         #
-        # Before 1.0 the alias is v0.<minor> instead (v0.24.3 → v0.24): semver
-        # gives no stability promise inside 0.x and release-please (with
-        # bump-minor-pre-major) ships breaking changes as minor bumps, so a
-        # moving `v0` would carry callers across breaking changes.
+        # Before 1.0 (inputs.pre-major-alias): semver gives no stability promise
+        # inside 0.x and release-please (with bump-minor-pre-major) ships
+        # breaking changes as minor bumps, so a moving `v0` carries callers
+        # across them. `minor` moves only v0.<minor> (v0.24.3 → v0.24); `major`
+        # only v0; `both` (default, so existing @v0 callers keep receiving
+        # releases) moves both.
         #
         # Why this is more than `git tag -f && git push --force`: pushing a tag
         # is a compare-and-swap against the value the *local* clone believes the
@@ -312,6 +324,7 @@ jobs:
           GIT_USER_NAME: ${{ inputs.git-user-name || vars.GIT_USER_NAME || 'github-actions[bot]' }}
           GIT_USER_EMAIL: ${{ inputs.git-user-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}
           TAG: ${{ needs.release.outputs.tag }}
+          PRE_MAJOR_ALIAS: ${{ inputs.pre-major-alias }}
         run: |
           set -euo pipefail
 
@@ -322,54 +335,67 @@ jobs:
             exit 1
           fi
 
-          # Pre-1.0: alias the minor line instead (v0.24.3 → v0.24). The
-          # variable keeps its name; it is "the alias" from here on.
+          ALIASES=("$MAJOR")
           if [ "$MAJOR" = "v0" ]; then
             MINOR="${TAG#v0.}"
-            MAJOR="v0.${MINOR%%.*}"
+            MINOR_ALIAS="v0.${MINOR%%.*}"  # v0.24.3 → v0.24
+            case "$PRE_MAJOR_ALIAS" in
+              both)  ALIASES=(v0 "$MINOR_ALIAS") ;;
+              minor) ALIASES=("$MINOR_ALIAS") ;;
+              major) ALIASES=(v0) ;;
+              *) echo "::error::unsupported pre-major-alias '$PRE_MAJOR_ALIAS' (expected both, minor or major)"; exit 1 ;;
+            esac
           fi
 
           git config user.name  "$GIT_USER_NAME"
           git config user.email "$GIT_USER_EMAIL"
 
-          # Both tags, straight from the remote: the release tag may not be in a
-          # shallow checkout, and the alias is what the push compares against.
+          # The release tag straight from the remote: it may not be in a
+          # shallow checkout.
           git fetch --force --no-tags origin \
             "refs/tags/${TAG}:refs/tags/${TAG}" || {
               echo "::error::release tag ${TAG} not found on the remote"
               exit 1
             }
-          git fetch --force --no-tags origin \
-            "refs/tags/${MAJOR}:refs/tags/${MAJOR}" 2>/dev/null || true
-
           target="$(git rev-parse --verify "refs/tags/${TAG}^{commit}")"
-          current="$(git rev-parse --verify --quiet "refs/tags/${MAJOR}^{commit}" || true)"
 
-          if [ "$current" = "$target" ]; then
-            echo "✅ ${MAJOR} already points at ${TAG} (${target}) — nothing to do"
-            exit 0
-          fi
-
-          # Tag the release commit explicitly rather than HEAD: the alias must
-          # track the release, not whatever the checkout happens to sit on.
-          git tag -fa "$MAJOR" -m "Release $TAG" "$target"
-
-          for attempt in 1 2 3; do
-            if git push --force origin "refs/tags/${MAJOR}"; then
-              echo "✅ ${MAJOR} → ${TAG} (${target})"
-              exit 0
-            fi
-            echo "⚠️  push of ${MAJOR} rejected (attempt ${attempt}/3) — re-syncing"
+          move_alias() {
+            local alias="$1" current attempt
+            # The alias from the remote too: it is what the push compares against.
             git fetch --force --no-tags origin \
-              "refs/tags/${MAJOR}:refs/tags/${MAJOR}" 2>/dev/null || true
-            current="$(git rev-parse --verify --quiet "refs/tags/${MAJOR}^{commit}" || true)"
-            if [ "$current" = "$target" ]; then
-              echo "✅ ${MAJOR} already points at ${TAG} — moved concurrently"
-              exit 0
-            fi
-            git tag -fa "$MAJOR" -m "Release $TAG" "$target"
-            sleep 3
-          done
+              "refs/tags/${alias}:refs/tags/${alias}" 2>/dev/null || true
+            current="$(git rev-parse --verify --quiet "refs/tags/${alias}^{commit}" || true)"
 
-          echo "::error::could not move ${MAJOR} to ${TAG} after 3 attempts"
-          exit 1
+            if [ "$current" = "$target" ]; then
+              echo "✅ ${alias} already points at ${TAG} (${target}) — nothing to do"
+              return 0
+            fi
+
+            # Tag the release commit explicitly rather than HEAD: the alias must
+            # track the release, not whatever the checkout happens to sit on.
+            git tag -fa "$alias" -m "Release $TAG" "$target"
+
+            for attempt in 1 2 3; do
+              if git push --force origin "refs/tags/${alias}"; then
+                echo "✅ ${alias} → ${TAG} (${target})"
+                return 0
+              fi
+              echo "⚠️  push of ${alias} rejected (attempt ${attempt}/3) — re-syncing"
+              git fetch --force --no-tags origin \
+                "refs/tags/${alias}:refs/tags/${alias}" 2>/dev/null || true
+              current="$(git rev-parse --verify --quiet "refs/tags/${alias}^{commit}" || true)"
+              if [ "$current" = "$target" ]; then
+                echo "✅ ${alias} already points at ${TAG} — moved concurrently"
+                return 0
+              fi
+              git tag -fa "$alias" -m "Release $TAG" "$target"
+              sleep 3
+            done
+
+            echo "::error::could not move ${alias} to ${TAG} after 3 attempts"
+            return 1
+          }
+
+          for alias in "${ALIASES[@]}"; do
+            move_alias "$alias"
+          done

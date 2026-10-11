@@ -48,6 +48,11 @@ on:
         type: boolean
         required: false
         default: true
+      bats-recursive:
+        description: Also run .bats files in sub-directories of bats-tests-dir (vendored test_helper suites included)
+        type: boolean
+        required: false
+        default: false
       run-docker:
         description: Run Docker integration tests
         type: boolean
@@ -141,6 +146,10 @@ on:
         description: Checkout git submodules required by Bats helpers
         type: boolean
         default: true
+      bats-recursive:
+        description: Also run .bats files in sub-directories of bats-tests-dir (vendored test_helper suites included)
+        type: boolean
+        default: false
       run-docker:
         description: Run Docker integration tests
         type: boolean
@@ -240,6 +249,7 @@ jobs:
         uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.24.0 # x-release-please-version
         with:
           tests-dir: ${{ inputs.bats-tests-dir }}
+          recursive: ${{ inputs.bats-recursive }}
 
   # ── Docker integration tests ─────────────────────────────────────────────────
   # Matrix jobs cannot be extracted to composite actions — kept inline.
