@@ -28,15 +28,17 @@ Reference any workflow from your caller workflow file.
 | Stability need | Recommended pin | Example |
 |---|---|---|
 | Development / fast-moving | `@main` | `ci-node.yml@main` |
-| Follow a release line | Minor alias (pre-1.0) | `ci-node.yml@v0.24` |
-| Production / reproducible | Release tag | `ci-node.yml@v0.24.0` |
+| Follow a release line | Minor alias (pre-1.0) | `ci-node.yml@v0.<minor>` (e.g. `@v0.25`) |
+| Production / reproducible | Release tag | `ci-node.yml@vX.Y.Z` (see [releases](https://github.com/KevinDeBenedetti/github-workflows/releases)) |
 | Maximum reproducibility | Commit SHA | `ci-node.yml@abc1234` |
 
 > The README and docs always reflect `@main`. When releasing, consumers should pin to a tag for reproducible builds.
 >
 > The composite actions used *inside* the workflows (`setup-node`, `shellcheck`, …) are pinned to the release they ship with (`@vX.Y.Z`, bumped by release-please), so pinning a workflow to a tag pins the actions it runs too.
 >
-> Before 1.0, breaking changes are released as minor bumps: the moving alias is `v0.<minor>`, not `v0`.
+> **`@main` caveat:** between releases, a workflow on `@main` still calls the actions of the *last* release. A change that spans a workflow and an action (e.g. a new `package-manager: npm` value handled by `ci-node.yml` but implemented in `setup-node`) only works end-to-end once it is tagged. Use a tag or the minor alias for anything that must not break.
+>
+> Before 1.0, breaking changes are released as minor bumps: this repo moves only the `v0.<minor>` alias, not `v0` (`release.yml`'s `pre-major-alias: minor`).
 
 ```yaml
 jobs:

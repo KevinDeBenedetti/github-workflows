@@ -33,10 +33,10 @@ steps:
 
 ## Steps
 
-1. Resolve package manager (`bun.lockb` / `bun.lock` → bun, `package-lock.json` → npm, otherwise → pnpm)
+1. Resolve package manager from the nearest lockfile — `working-directory` first, then the repository root, so workspace members work (`bun.lockb` / `bun.lock` → bun, `package-lock.json` → npm, otherwise → pnpm)
 2. Setup pnpm, bun or npm (with Node.js)
 3. Restore cache (pnpm store, `~/.bun/install/cache`, or `~/.npm` via setup-node)
-4. Install dependencies (`pnpm install --frozen-lockfile`, `bun install --frozen-lockfile` or `npm ci`)
+4. Install dependencies (`pnpm install --frozen-lockfile`, `bun install --frozen-lockfile` or `npm ci`, the latter run where `package-lock.json` lives)
 
 ## Notes
 

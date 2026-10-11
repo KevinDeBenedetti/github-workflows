@@ -6,8 +6,14 @@
 # workflow, not the published @main one). The release job is the CD half: it
 # gates on the CI jobs so release-please only opens/tags once main is green.
 #
+# The reusable workflows pin their composite actions to the last release
+# (`…/.github/actions/x@vX.Y.Z`), so ci-shell below exercises the workflow
+# wiring with the RELEASED actions. ci-actions runs the PR's own copies
+# (`./.github/actions/x`) so an action change is tested before it ships.
+#
 # Jobs:
 #   ci-shell     — shellcheck + actionlint + bats + docs checks (ci-shell.yml) [push + PR]
+#   ci-actions   — same checks through the local composite actions            [push + PR]
 #   security     — Gitleaks secret scanning (security.yml)               [push + PR]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
 #   deploy-docs  — sync docs → central repo (cd-docs.yml)                [push to main only]
@@ -57,6 +63,41 @@ jobs:
     permissions:
       contents: read
 
+  # ── CI — Local composite actions ─────────────────────────────────────────────
+  # Runs this checkout's ./.github/actions/* (not the @vX.Y.Z pins ci-shell.yml
+  # uses), so a PR that changes an action tests its own version of it.
+  ci-actions:
+    name: CI — Local actions
+    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: ShellCheck (local action)
+        uses: ./.github/actions/shellcheck
+
+      - name: actionlint (local action)
+        uses: ./.github/actions/actionlint
+        with:
+          # See ci-shell above for why create-github-app-token is ignored.
+          flags: -ignore create-github-app-token
+
+      - name: Bats (local action)
+        uses: ./.github/actions/bats
+        with:
+          tests-dir: tests/
+
+      - name: Docs link check (local action)
+        uses: ./.github/actions/check-docs-links
+
+      - name: VitePress markdown check (local action)
+        uses: ./.github/actions/check-vitepress-md
+
   # ── CI — prek hooks ──────────────────────────────────────────────────────────
   # Self-test of ci-prek.yml, and the server-side gate for this repo's own hooks
   # (prek.toml): trailing whitespace, check-yaml/json, actionlint, and the
@@ -93,7 +134,7 @@ jobs:
   # It still blocks if any CI job actually FAILED or was CANCELLED.
   release:
     name: Release
-    needs: [ci-shell, ci-prek, security]
+    needs: [ci-shell, ci-actions, ci-prek, security]
     if: >-
       ${{ always()
       && github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -110,6 +151,9 @@ jobs:
     with:
       app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
       notify-reviewers: KevinDeBenedetti
+      # Move only v0.<minor>: breaking changes ship as minor bumps before 1.0,
+      # so this repo's callers must never be carried across one by an alias.
+      pre-major-alias: minor
     secrets:
       APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
 
@@ -118,7 +162,7 @@ jobs:
   # release commit), so a red main never pushes docs to the central site.
   deploy-docs:
     name: Sync docs → central repo
-    needs: [ci-shell, ci-prek, security]
+    needs: [ci-shell, ci-actions, ci-prek, security]
     if: >-
       ${{ always()
       && github.event_name == 'push' && github.ref == 'refs/heads/main'

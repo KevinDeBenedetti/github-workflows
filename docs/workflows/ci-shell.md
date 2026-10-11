@@ -31,6 +31,7 @@ jobs:
 | `run-bats`                 | boolean | `true`                         | Run Bats unit tests                                                          |
 | `bats-tests-dir`           | string  | `tests/`                       | Directory (or file) containing `.bats` test files                            |
 | `bats-submodules`          | boolean | `true`                         | Checkout git submodules required by Bats helpers                             |
+| `bats-recursive`           | boolean | `false`                        | Also run `.bats` files in sub-directories of `bats-tests-dir`                |
 | `run-docker`               | boolean | `false`                        | Run Docker integration tests                                                 |
 | `docker-file`              | string  | `tests/docker/Dockerfile.test` | Path to the test Dockerfile                                                  |
 | `docker-targets`           | string  | `'[]'`                         | JSON array of `--target` names to build (e.g. `'["test-bats","test-init"]'`) |

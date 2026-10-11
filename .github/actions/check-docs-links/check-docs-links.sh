@@ -20,6 +20,7 @@ DOCS_DIR="${DOCS_DIR:-docs}"
 DOCS_DIR="${DOCS_DIR%/}"
 
 errors=0
+link_re='\]\(([^)]+)\)'
 
 # escapes <dir-of-file-relative-to-docs> <link-target>
 # Returns 0 when the target resolves outside the docs directory. Pure bash
@@ -75,11 +76,13 @@ for file in "${files[@]+"${files[@]}"}"; do
     fi
     (( in_fence )) && continue
 
-    # Every inline link/image target on the line: ](target) or ](target "title")
-    while IFS= read -r link; do
-      [[ -n "$link" ]] || continue
-      target="${link#](}"
-      target="${target%)}"
+    # Every inline link/image target on the line: ](target) or ](target "title").
+    # Matched with bash's =~ (leftmost match, then the rest of the line), not a
+    # grep per line: no fork per line keeps large docs trees fast.
+    rest="$line"
+    while [[ "$rest" =~ $link_re ]]; do
+      rest="${rest#*"${BASH_REMATCH[0]}"}"
+      target="${BASH_REMATCH[1]}"
       target="${target#<}"
       target="${target%%[[:space:]]*}"   # drop an optional "title"
       target="${target%>}"
@@ -94,7 +97,7 @@ for file in "${files[@]+"${files[@]}"}"; do
         echo "       Replace with an absolute GitHub URL."
         errors=$((errors + 1))
       fi
-    done < <(grep -oE '\]\([^)]+\)' <<< "$line" || true)
+    done
   done < "$file"
 done
 

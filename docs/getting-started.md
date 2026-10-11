@@ -19,7 +19,7 @@ jobs:
     secrets: inherit
 ```
 
-> **Production tip:** Pin to a commit SHA instead of `@main` for reproducible builds.
+> **Production tip:** Pin to a release tag (`@vX.Y.Z`) or the minor alias (`@v0.<minor>`) instead of `@main`. The workflows call their composite actions at the last released version, so on `@main` a feature that needs both a workflow change and an action change only works once it has been released.
 
 > **Important:** All workflow files must live at the flat root of `.github/workflows/`.
 > GitHub Actions does not support reusable workflows in subdirectories.

@@ -21,7 +21,7 @@ steps:
 | Input | Type | Default | Description |
 |---|---|---|---|
 | `tests-dir` | string | `tests/` | Directory (or file) containing `.bats` test files |
-| `recursive` | boolean | `true` | Also run `.bats` files in sub-directories (`bats --recursive`) |
+| `recursive` | boolean | `false` | Also run `.bats` files in sub-directories (`bats --recursive`). Off by default: vendored helpers under `test_helper/` ship their own suites |
 
 ## Steps
 
