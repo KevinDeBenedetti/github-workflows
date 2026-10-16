@@ -1,0 +1,17 @@
+# Weekly Lighthouse audit of every page — drop this file in .github/workflows/
+name: Lighthouse
+
+on:
+  schedule:
+    - cron: "43 5 * * 1"
+  workflow_dispatch:
+
+jobs:
+  unlighthouse:
+    # Pin to a release tag or commit SHA for reproducible runs.
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/perf-unlighthouse.yml@main
+    permissions:
+      contents: read
+    with:
+      site: https://example.com
+      budget: 80

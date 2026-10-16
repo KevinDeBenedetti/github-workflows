@@ -21,6 +21,15 @@
     },
     {
       "customType": "regex",
+      "description": "Docker image pinned by tag AND digest in a workflow input default (perf-sitespeed.yml). The generic manager above requires a numeric default, which an image reference is not; this one keeps tag and digest moving together.",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
+      "datasourceTemplate": "docker",
+      "matchStrings": [
+        "# renovate: datasource=docker depName=(?<depName>[^\\s]+)\\n\\s+default: [^:\\s]+(?:/[^:\\s]+)*:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
+      ]
+    },
+    {
+      "customType": "regex",
       "description": "prek hook revs (prek.toml) — inline renovate comments (datasource=github-tags). No manager understands prek/pre-commit TOML, so without this the hook pins only move when someone remembers to run `prek autoupdate`.",
       "managerFilePatterns": ["/^prek\\.toml$/"],
       "matchStrings": [

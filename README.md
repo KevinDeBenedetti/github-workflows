@@ -61,6 +61,8 @@ jobs:
 | `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](docs/workflows/ci-kubernetes.md) |
 | `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](docs/workflows/ci-terraform.md) |
 | `ci-prometheus.yml` | Prometheus CI (PromQL check + alert unit tests) | [→](docs/workflows/ci-prometheus.md) |
+| `perf-sitespeed.yml` | Core Web Vitals monitoring with sitespeed.io (budget + CSV history) | [→](docs/workflows/perf-sitespeed.md) |
+| `perf-unlighthouse.yml` | Lighthouse audit of every page (perf, a11y, SEO) with Unlighthouse, scheduled | [→](docs/workflows/perf-unlighthouse.md) |
 | `ci-prek.yml` | prek / pre-commit hooks run server-side (`prek run --all-files`) | [→](docs/workflows/ci-prek.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |
 | `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners | [→](docs/workflows/cd-kaniko.md) |

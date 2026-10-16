@@ -1,0 +1,20 @@
+# Daily Core Web Vitals monitoring — drop this file in .github/workflows/
+# Needs perf/urls.txt (one URL per line) and perf/budget.json in your repo:
+#   {"budget": {"googleWebVitals": {"largestContentfulPaint": 2500,
+#               "cumulativeLayoutShift": 0.1, "totalBlockingTime": 300}}}
+name: Perf
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  sitespeed:
+    # Pin to a release tag or commit SHA for reproducible runs.
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/perf-sitespeed.yml@main
+    # Caller permissions cap the called workflow: the history job needs write.
+    permissions:
+      contents: write
+    with:
+      device: both

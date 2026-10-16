@@ -1,0 +1,188 @@
+name: Perf — Unlighthouse
+
+# Lighthouse audit of EVERY page of a site with Unlighthouse (crawl + sitemap),
+# scoring performance, accessibility, best practices and SEO page by page.
+#
+# The job fails when any page scores below `budget` (GitHub's failure email is
+# the alert). The per-page scores are written to the step summary and the full
+# static HTML report is kept as an artifact.
+#
+# Intended to be called from a `schedule:` caller. Do NOT run it on a
+# cluster-internal runner (k3s-*): auditing from the site's own network skews
+# the scores. Keep the default GitHub-hosted runner.
+
+on:
+  workflow_call:
+    inputs:
+      site:
+        description: Site to audit (e.g. https://example.com)
+        type: string
+        required: true
+      budget:
+        description: Minimum score (1-100) every page must reach on every category
+        type: number
+        required: false
+        default: 75
+      device:
+        description: "desktop | mobile"
+        type: string
+        required: false
+        default: desktop
+      samples:
+        description: Lighthouse runs per page (scores are averaged)
+        type: number
+        required: false
+        default: 1
+      urls:
+        description: Comma-separated relative paths to audit instead of crawling (e.g. /,/about)
+        type: string
+        required: false
+        default: ""
+      exclude-urls:
+        description: Comma-separated relative paths or regexes to skip (e.g. /admin/*)
+        type: string
+        required: false
+        default: ""
+      unlighthouse-version:
+        description: "@unlighthouse/cli version"
+        type: string
+        required: false
+        # renovate: datasource=npm depName=@unlighthouse/cli
+        default: 0.19.1
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Site to audit (e.g. https://example.com)
+        type: string
+        required: true
+      budget:
+        description: Minimum score (1-100) every page must reach on every category
+        type: number
+        default: 75
+      device:
+        description: "desktop | mobile"
+        type: string
+        default: desktop
+      samples:
+        description: Lighthouse runs per page (scores are averaged)
+        type: number
+        default: 1
+      urls:
+        description: Comma-separated relative paths to audit instead of crawling (e.g. /,/about)
+        type: string
+        default: ""
+      exclude-urls:
+        description: Comma-separated relative paths or regexes to skip (e.g. /admin/*)
+        type: string
+        default: ""
+      unlighthouse-version:
+        description: "@unlighthouse/cli version"
+        type: string
+        # renovate: datasource=npm depName=@unlighthouse/cli
+        default: 0.19.1
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
+# A scheduled audit must not be cancelled by the next trigger.
+concurrency:
+  group: perf-unlighthouse-${{ github.workflow }}-${{ github.ref }}-${{ inputs.site }}-${{ inputs.device }}
+  cancel-in-progress: false
+
+jobs:
+  unlighthouse:
+    name: Unlighthouse (${{ inputs.device }})
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate inputs
+        env:
+          SITE: ${{ inputs.site }}
+          DEVICE: ${{ inputs.device }}
+          BUDGET: ${{ inputs.budget }}
+        run: |
+          set -euo pipefail
+          [[ "$SITE" =~ ^https?:// ]] || { echo "::error::site must start with http:// or https:// (got '${SITE}')"; exit 1; }
+          case "$DEVICE" in
+            desktop|mobile) ;;
+            *) echo "::error::device must be desktop or mobile (got '${DEVICE}')"; exit 1 ;;
+          esac
+          if [[ ! "$BUDGET" =~ ^[0-9]+$ ]] || (( BUDGET < 1 || BUDGET > 100 )); then
+            echo "::error::budget must be an integer between 1 and 100 (got '${BUDGET}')"
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+
+      # Non-zero exit when a page is under budget — this step is what fails the job.
+      - name: Run Unlighthouse
+        env:
+          SITE: ${{ inputs.site }}
+          BUDGET: ${{ inputs.budget }}
+          DEVICE: ${{ inputs.device }}
+          SAMPLES: ${{ inputs.samples }}
+          URLS: ${{ inputs.urls }}
+          EXCLUDE_URLS: ${{ inputs.exclude-urls }}
+          VERSION: ${{ inputs.unlighthouse-version }}
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium)"
+          export CHROME_PATH
+          args=(--site "$SITE" --budget "$BUDGET" "--${DEVICE}" --samples "$SAMPLES"
+                --build-static --output-path .unlighthouse)
+          [[ -n "$URLS" ]] && args+=(--urls "$URLS")
+          [[ -n "$EXCLUDE_URLS" ]] && args+=(--exclude-urls "$EXCLUDE_URLS")
+          npm exec --yes --package="@unlighthouse/cli@${VERSION}" -- unlighthouse-ci "${args[@]}"
+
+      # Runs even when the budget failed. Tolerates both shapes of ci-result.json
+      # (object keyed by path, or array of {path, ...}).
+      - name: Summarize scores
+        if: always()
+        env:
+          DEVICE: ${{ inputs.device }}
+          BUDGET: ${{ inputs.budget }}
+        run: |
+          set -euo pipefail
+          f="$(find .unlighthouse -name 'ci-result.json' -print -quit 2>/dev/null || true)"
+          {
+            echo "### Unlighthouse — ${DEVICE} (budget ${BUDGET})"
+            echo
+            if [[ -z "$f" ]]; then
+              echo "_No ci-result.json produced._"
+            else
+              echo "| Page | Perf | A11y | Best practices | SEO |"
+              echo "|---|---|---|---|---|"
+              jq -r --argjson b "$BUDGET" '
+                def n: if . == null then "" elif . <= 1 then (. * 100 | round) else round end;
+                def mark: if . == "" then "" elif . < $b then "❌ \(.)" else "\(.)" end;
+                (if type == "array" then map({key: (.path // .url), value: .}) else to_entries end)
+                | sort_by(.key)[]
+                | .value as $v
+                | "| \(.key) | \(($v.performance | n) | mark) | \(($v.accessibility | n) | mark) | \((($v["best-practices"] // $v.bestPractices) | n) | mark) | \(($v.seo | n) | mark) |"
+              ' "$f" 2>/dev/null || echo "| _could not parse ${f}_ | | | | |"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: unlighthouse-report-${{ inputs.device }}
+          path: .unlighthouse
+          retention-days: 30
+          if-no-files-found: warn
