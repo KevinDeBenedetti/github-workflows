@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.26.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.25.0...v0.26.0) (2026-10-16)
+
+
+### Features
+
+* **perf:** add sitespeed.io and Unlighthouse performance workflows ([42bd36e](https://github.com/KevinDeBenedetti/github-workflows/commit/42bd36e45e67c3a69a2e4c68a0c8aa89c8e81420))
+
 ## [0.25.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.24.0...v0.25.0) (2026-10-11)
 
 

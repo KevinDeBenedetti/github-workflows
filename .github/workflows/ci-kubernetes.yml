@@ -121,7 +121,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: kubeconform
-        uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@v0.25.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@v0.26.0 # x-release-please-version
         with:
           paths: ${{ inputs.kubeconform-paths }}
           exclude: ${{ inputs.kubeconform-exclude }}
