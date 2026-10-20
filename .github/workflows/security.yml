@@ -116,7 +116,7 @@ jobs:
 
       - name: Setup Node.js
         id: setup
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.26.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.27.0 # x-release-please-version
         with:
           working-directory: ${{ inputs.node-working-directory }}
 
@@ -144,7 +144,7 @@ jobs:
       # No `uv sync`: the audit reads the lockfile via `uv export`, so
       # installing the project (and building native deps) would be wasted.
       - name: Setup Python
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@v0.26.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@v0.27.0 # x-release-please-version
         with:
           working-directory: ${{ inputs.python-working-directory }}
           install: 'false'
