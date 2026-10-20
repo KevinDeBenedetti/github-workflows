@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.27.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.26.0...v0.27.0) (2026-10-20)
+
+
+### Features
+
+* **seo:** add scheduled SEO crawl for broken links and page tags ([c375b16](https://github.com/KevinDeBenedetti/github-workflows/commit/c375b16b4e66da1ed1d1837dc52c91eed3c41442))
+
 ## [0.26.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.25.0...v0.26.0) (2026-10-16)
 
 
