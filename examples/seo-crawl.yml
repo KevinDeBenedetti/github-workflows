@@ -1,0 +1,16 @@
+# Weekly SEO crawl (broken links, redirects, tags) — drop this file in .github/workflows/
+name: SEO
+
+on:
+  schedule:
+    - cron: "11 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  seo:
+    # Pin to a release tag or commit SHA for reproducible runs.
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/seo-crawl.yml@main
+    permissions:
+      contents: read
+    with:
+      site: https://example.com

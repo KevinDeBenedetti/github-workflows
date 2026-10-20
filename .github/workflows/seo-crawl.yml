@@ -1,0 +1,301 @@
+name: SEO — Crawl
+
+# SEO crawl of a live site, two checks in one job:
+#   1. Broken links and redirects, with linkinator (recursive crawl of the site).
+#   2. On-page tags per page: missing/duplicate <title> and meta description,
+#      missing or multiple <h1>, missing canonical (small built-in crawler).
+#
+# Broken links fail the job (GitHub's failure email is the alert). Tag issues
+# are warnings in the step summary unless `fail-on-tag-issues` is true.
+# Complements perf-unlighthouse.yml, which scores pages but does not detect
+# broken links or duplicate tags.
+#
+# Do NOT run it on a cluster-internal runner (k3s-*): crawl from outside so the
+# result matches what search engines see.
+
+on:
+  workflow_call:
+    inputs:
+      site:
+        description: Site to crawl (e.g. https://example.com)
+        type: string
+        required: true
+      max-pages:
+        description: Maximum number of pages the tag crawler visits
+        type: number
+        required: false
+        default: 500
+      check-external:
+        description: Also check links pointing to other domains (slower, noisier)
+        type: boolean
+        required: false
+        default: true
+      skip:
+        description: Comma-separated regexes of URLs linkinator must skip
+        type: string
+        required: false
+        default: ""
+      redirects:
+        description: "How linkinator treats redirects: allow | warn | error"
+        type: string
+        required: false
+        default: warn
+      fail-on-tag-issues:
+        description: Fail the job on missing/duplicate tags (default is warning only)
+        type: boolean
+        required: false
+        default: false
+      linkinator-version:
+        description: linkinator version
+        type: string
+        required: false
+        # renovate: datasource=npm depName=linkinator
+        default: 8.1.0
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Site to crawl (e.g. https://example.com)
+        type: string
+        required: true
+      max-pages:
+        description: Maximum number of pages the tag crawler visits
+        type: number
+        default: 500
+      check-external:
+        description: Also check links pointing to other domains (slower, noisier)
+        type: boolean
+        default: true
+      skip:
+        description: Comma-separated regexes of URLs linkinator must skip
+        type: string
+        default: ""
+      redirects:
+        description: "How linkinator treats redirects: allow | warn | error"
+        type: string
+        default: warn
+      fail-on-tag-issues:
+        description: Fail the job on missing/duplicate tags (default is warning only)
+        type: boolean
+        default: false
+      linkinator-version:
+        description: linkinator version
+        type: string
+        # renovate: datasource=npm depName=linkinator
+        default: 8.1.0
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
+# A scheduled crawl must not be cancelled by the next trigger.
+concurrency:
+  group: seo-crawl-${{ github.workflow }}-${{ github.ref }}-${{ inputs.site }}
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    name: SEO crawl
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+
+    steps:
+      - name: Validate inputs
+        env:
+          SITE: ${{ inputs.site }}
+          REDIRECTS: ${{ inputs.redirects }}
+        run: |
+          set -euo pipefail
+          [[ "$SITE" =~ ^https?:// ]] || { echo "::error::site must start with http:// or https:// (got '${SITE}')"; exit 1; }
+          case "$REDIRECTS" in
+            allow|warn|error) ;;
+            *) echo "::error::redirects must be allow, warn or error (got '${REDIRECTS}')"; exit 1 ;;
+          esac
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+
+      # Exit code is captured by the final gate so the tag check and the
+      # reports still run when links are broken.
+      - name: Check links and redirects
+        id: links
+        continue-on-error: true
+        env:
+          SITE: ${{ inputs.site }}
+          CHECK_EXTERNAL: ${{ inputs.check-external }}
+          SKIP: ${{ inputs.skip }}
+          REDIRECTS: ${{ inputs.redirects }}
+          VERSION: ${{ inputs.linkinator-version }}
+        run: |
+          set -euo pipefail
+          mkdir -p seo-result
+          args=("$SITE" --recurse --redirects "$REDIRECTS" --format json)
+          if [[ "$CHECK_EXTERNAL" != "true" ]]; then
+            origin="$(printf '%s' "$SITE" | sed -E 's#^(https?://[^/]+).*#\1#')"
+            escaped="$(printf '%s' "$origin" | sed -e 's/[][\.*^$+?(){}|/]/\\&/g')"
+            args+=(--skip "^(?!${escaped})")
+          fi
+          IFS=',' read -ra patterns <<< "$SKIP"
+          for p in "${patterns[@]}"; do
+            [[ -n "$p" ]] && args+=(--skip "$p")
+          done
+          npm exec --yes --package="linkinator@${VERSION}" -- linkinator "${args[@]}" > seo-result/links.json
+
+      - name: Check page tags
+        id: tags
+        continue-on-error: true
+        env:
+          SITE: ${{ inputs.site }}
+          MAX_PAGES: ${{ inputs.max-pages }}
+          FAIL_ON_ISSUES: ${{ inputs.fail-on-tag-issues }}
+        run: |
+          set -euo pipefail
+          mkdir -p seo-result
+          node --input-type=module - <<'NODE'
+          import { writeFileSync } from "node:fs";
+
+          const site = new URL(process.env.SITE);
+          const max = Number(process.env.MAX_PAGES);
+          const failOnIssues = process.env.FAIL_ON_ISSUES === "true";
+          const norm = (u) => { u.hash = ""; return u.href; };
+          const decode = (s) => s.replace(/\s+/g, " ").trim();
+
+          const queue = [norm(new URL(site.href))];
+          const seen = new Set(queue);
+          // Seed with the sitemap when there is one.
+          try {
+            const r = await fetch(new URL("/sitemap.xml", site), { signal: AbortSignal.timeout(15000) });
+            if (r.ok) {
+              for (const m of (await r.text()).matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) {
+                try {
+                  const u = new URL(m[1]);
+                  if (u.origin === site.origin && !seen.has(norm(u))) { seen.add(norm(u)); queue.push(norm(u)); }
+                } catch {}
+              }
+            }
+          } catch {}
+
+          const pages = [];
+          const attr = (tag, name) => tag.match(new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i"))?.slice(2).find((v) => v !== undefined);
+
+          async function visit(url) {
+            let res;
+            try {
+              res = await fetch(url, { signal: AbortSignal.timeout(15000), headers: { "user-agent": "seo-crawl/1.0" } });
+            } catch { return; }
+            if (!(res.headers.get("content-type") ?? "").includes("text/html")) return;
+            const html = await res.text();
+            const page = { url, status: res.status, issues: [] };
+
+            page.title = decode(html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "");
+            const metas = [...html.matchAll(/<meta\b[^>]*>/gi)].map((m) => m[0]);
+            const desc = metas.find((t) => attr(t, "name")?.toLowerCase() === "description");
+            page.description = decode(attr(desc ?? "", "content") ?? "");
+            const robots = metas.find((t) => attr(t, "name")?.toLowerCase() === "robots");
+            page.noindex = /noindex/i.test(attr(robots ?? "", "content") ?? "");
+            page.h1 = [...html.matchAll(/<h1\b[^>]*>/gi)].length;
+            page.canonical = [...html.matchAll(/<link\b[^>]*>/gi)]
+              .map((m) => m[0]).find((t) => attr(t, "rel")?.toLowerCase() === "canonical");
+
+            if (!page.title) page.issues.push("missing title");
+            if (!page.description) page.issues.push("missing meta description");
+            if (page.h1 === 0) page.issues.push("missing h1");
+            if (page.h1 > 1) page.issues.push(`${page.h1} h1`);
+            if (!page.canonical) page.issues.push("missing canonical");
+            pages.push(page);
+
+            for (const m of html.matchAll(/<a\b[^>]*>/gi)) {
+              const href = attr(m[0], "href");
+              if (!href || /^(mailto:|tel:|javascript:)/i.test(href)) continue;
+              try {
+                const u = new URL(href, res.url);
+                if (u.origin !== site.origin) continue;
+                const n = norm(u);
+                if (!seen.has(n) && seen.size < max) { seen.add(n); queue.push(n); }
+              } catch {}
+            }
+          }
+
+          const workers = Array.from({ length: 5 }, async () => {
+            while (pages.length < max) {
+              const next = queue.shift();
+              if (!next) { await new Promise((r) => setTimeout(r, 200)); if (!queue.length) return; continue; }
+              await visit(next);
+            }
+          });
+          await Promise.all(workers);
+
+          // Duplicates (indexable pages only).
+          const indexable = pages.filter((p) => !p.noindex && p.status < 400);
+          for (const field of ["title", "description"]) {
+            const groups = new Map();
+            for (const p of indexable) if (p[field]) groups.set(p[field], [...(groups.get(p[field]) ?? []), p]);
+            for (const group of groups.values())
+              if (group.length > 1) for (const p of group) p.issues.push(`duplicate ${field === "title" ? "title" : "meta description"} (${group.length} pages)`);
+          }
+
+          const flagged = pages.filter((p) => p.issues.length);
+          writeFileSync("seo-result/tags.json", JSON.stringify(pages, null, 2));
+
+          const lines = [`### SEO tags — ${pages.length} pages crawled, ${flagged.length} with issues`, ""];
+          if (flagged.length) {
+            lines.push("| Page | Issues |", "|---|---|");
+            for (const p of flagged) lines.push(`| ${p.url} | ${p.issues.join(", ")} |`);
+          } else lines.push("_No issues._");
+          writeFileSync("seo-result/tags-summary.md", lines.join("\n") + "\n");
+
+          if (flagged.length) console.log(`::warning::${flagged.length} page(s) with tag issues`);
+          if (failOnIssues && flagged.length) process.exit(1);
+          NODE
+
+      - name: Summarize
+        if: always()
+        run: |
+          set -euo pipefail
+          {
+            echo "### Links and redirects"
+            echo
+            if [[ -s seo-result/links.json ]] && jq -e . seo-result/links.json >/dev/null 2>&1; then
+              jq -r '
+                [.links[] | select(.state == "BROKEN")] as $b
+                | "\(.links | length) links checked, \($b | length) broken.\n",
+                  (if ($b | length) > 0 then
+                    "| Status | URL | Found on |", "|---|---|---|",
+                    ($b[] | "| \(.status // "n/a") | \(.url) | \(.parent // "") |")
+                  else empty end)' seo-result/links.json
+            else
+              echo "_No linkinator report produced._"
+            fi
+            echo
+            cat seo-result/tags-summary.md 2>/dev/null || echo "_No tag report produced._"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: seo-crawl-result
+          path: seo-result
+          retention-days: 30
+          if-no-files-found: warn
+
+      # Fail only now, so both checks and both reports always run.
+      - name: Fail on issues
+        if: ${{ steps.links.outcome == 'failure' || steps.tags.outcome == 'failure' }}
+        env:
+          LINKS: ${{ steps.links.outcome }}
+          TAGS: ${{ steps.tags.outcome }}
+        run: |
+          echo "::error::links check: ${LINKS}, tags check: ${TAGS} — see the step summary"
+          exit 1

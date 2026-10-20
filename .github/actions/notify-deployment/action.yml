@@ -28,6 +28,10 @@ inputs:
     description: Link to the infra commit that triggered the deployment (omitted when empty)
     required: false
     default: ''
+  infra-link-label:
+    description: Text of the infra link (e.g. "Infra PR" when infra-commit-url points to a pull request)
+    required: false
+    default: Infra commit
 
 runs:
   using: composite
@@ -43,6 +47,7 @@ runs:
         APP_URL: ${{ inputs.url }}
         ARGOCD_URL: ${{ inputs.argocd-url }}
         INFRA_COMMIT_URL: ${{ inputs.infra-commit-url }}
+        INFRA_LINK_LABEL: ${{ inputs.infra-link-label }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       run: |
         ICON="✅"
@@ -74,7 +79,7 @@ runs:
             echo "- 🛰️ [View in ArgoCD](${ARGOCD_URL})"
           fi
           if [ -n "$INFRA_COMMIT_URL" ]; then
-            echo "- 📝 [Infra commit](${INFRA_COMMIT_URL})"
+            echo "- 📝 [${INFRA_LINK_LABEL}](${INFRA_COMMIT_URL})"
           fi
           echo "- 📊 [Workflow run logs](${RUN_URL})"
         } >> "$GITHUB_STEP_SUMMARY"

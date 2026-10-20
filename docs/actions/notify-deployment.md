@@ -33,6 +33,7 @@ Composite action that generates a GitHub Job Summary with deployment details, en
 | `url` | Application URL, with or without scheme (`https://` is added when missing) | No | — |
 | `argocd-url` | ArgoCD application dashboard URL | No | — |
 | `infra-commit-url` | Link to the infra commit behind the deployment | No | — |
+| `infra-link-label` | Text of that link (e.g. `Infra PR` when the URL points to a pull request) | No | `Infra commit` |
 
 ## Output
 
