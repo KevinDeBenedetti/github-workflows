@@ -21,7 +21,7 @@ jobs:
 | `run-validate`      | boolean | `true`               | Run `terraform validate` (requires init)                     |
 | `run-fmt-check`     | boolean | `true`               | Run `terraform fmt -check -diff` to enforce formatting       |
 | `tf-dir`            | string  | `terraform`          | Path to the Terraform root module directory                  |
-| `terraform-version` | string  | `latest`             | Terraform version to install                                 |
+| `terraform-version` | string  | pinned (Renovate)    | Terraform version to install (`latest` still accepted)       |
 | `runner`            | string  | `'"ubuntu-latest"'`  | Runner labels as JSON — `'"ubuntu-latest"'` or a label array |
 
 ## Steps

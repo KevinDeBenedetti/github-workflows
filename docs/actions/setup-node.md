@@ -21,7 +21,8 @@ steps:
 | `node-version` | string | `'24'` | Node.js version to install |
 | `working-directory` | string | `'.'` | Directory to look for lockfile and run install |
 | `package-manager` | string | `auto` | `pnpm` \| `bun` \| `npm` \| `auto` — auto-detects from lockfile |
-| `pnpm-version` | string | `''` | pnpm version. Empty → the `packageManager` field of `package.json` (working directory, then repo root), else latest |
+| `pnpm-version` | string | `''` | pnpm version. Empty → the `packageManager` field of `package.json` (working directory, then repo root), else a pinned release (bumped by Renovate) |
+| `bun-version` | string | pinned | Bun version installed when the package manager resolves to bun |
 | `install` | boolean | `true` | Run install after setup |
 
 ## Outputs

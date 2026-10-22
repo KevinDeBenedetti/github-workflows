@@ -26,9 +26,13 @@ runs:
       run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
         # renovate: datasource=github-releases depName=koalaman/shellcheck
         SHELLCHECK_VERSION="0.11.0"
+        # SHA-256 of the release asset per architecture, for the version above.
+        # Refresh after a version bump: scripts/update-tool-checksums.py
+        SHELLCHECK_SHA256_amd64="8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198"
+        SHELLCHECK_SHA256_arm64="12b331c1d2db6b9eb13cfca64306b1b157a86eb69db83023e261eaa7e7c14588"
         case "$(uname -m)" in
-          x86_64)        ARCH=x86_64 ;;
-          aarch64|arm64) ARCH=aarch64 ;;
+          x86_64)        ARCH=x86_64;  KEY=amd64 ;;
+          aarch64|arm64) ARCH=aarch64; KEY=arm64 ;;
           *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
         esac
         INSTALL_DIR="$RUNNER_TEMP/shellcheck"
@@ -36,6 +40,9 @@ runs:
         curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
           -o "$RUNNER_TEMP/shellcheck.tar.xz" \
           "https://github.com/koalaman/shellcheck/releases/download/v${SHELLCHECK_VERSION}/shellcheck-v${SHELLCHECK_VERSION}.linux.${ARCH}.tar.xz"
+        if [ "$KEY" = amd64 ]; then WANT="$SHELLCHECK_SHA256_amd64"; else WANT="$SHELLCHECK_SHA256_arm64"; fi
+        echo "$WANT  $RUNNER_TEMP/shellcheck.tar.xz" | sha256sum --check --strict --quiet - \
+          || { echo "::error::ShellCheck ${SHELLCHECK_VERSION} ($(uname -m)) does not match its pinned SHA-256 — after a version bump, run scripts/update-tool-checksums.py"; exit 1; }
         # Decompress with python3 (lzma) — the actions-runner image has no xz.
         python3 -c "import lzma, shutil, sys; shutil.copyfileobj(lzma.open(sys.argv[1]), open(sys.argv[2], 'wb'))" \
           "$RUNNER_TEMP/shellcheck.tar.xz" "$RUNNER_TEMP/shellcheck.tar"

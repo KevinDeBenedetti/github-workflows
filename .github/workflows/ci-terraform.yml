@@ -22,10 +22,11 @@ on:
         required: false
         default: terraform
       terraform-version:
-        description: Terraform version to install (e.g. 1.10.0). Defaults to latest.
+        description: Terraform version to install (e.g. 1.10.0, or 'latest')
         type: string
         required: false
-        default: latest
+        # renovate: datasource=github-releases depName=hashicorp/terraform
+        default: 1.17.0
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
@@ -49,9 +50,10 @@ on:
         type: string
         default: terraform
       terraform-version:
-        description: Terraform version to install (e.g. 1.10.0). Defaults to latest.
+        description: Terraform version to install (e.g. 1.10.0, or 'latest')
         type: string
-        default: latest
+        # renovate: datasource=github-releases depName=hashicorp/terraform
+        default: 1.17.0
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'

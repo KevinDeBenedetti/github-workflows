@@ -19,6 +19,7 @@ steps:
 |---|---|---|---|
 | `python-version` | string | `'3.12'` | Python version to install |
 | `working-directory` | string | `'.'` | Directory containing `pyproject.toml` |
+| `uv-version` | string | pinned | uv version to install (bumped by Renovate) |
 | `install` | boolean | `true` | Run `uv sync` after setup |
 
 ## Outputs

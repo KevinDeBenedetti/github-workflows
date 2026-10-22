@@ -10,7 +10,16 @@ on:
         required: false
         default: ansible/
       ansible-lint-version:
-        description: ansible-lint version to install (pip specifier, e.g. '>=25.0,<26')
+        description: >
+          ansible-lint version to install (pip specifier, e.g. '>=25.0,<26').
+          Empty → the version pinned in this workflow.
+        type: string
+        required: false
+        default: ''
+      ansible-version:
+        description: >
+          ansible version for the syntax check (pip specifier, e.g. '<12' on
+          Python < 3.12). Empty → the version pinned in this workflow.
         type: string
         required: false
         default: ''
@@ -52,7 +61,11 @@ on:
         type: string
         default: ansible/
       ansible-lint-version:
-        description: ansible-lint version to install (pip specifier, e.g. '>=25.0,<26')
+        description: ansible-lint version to install (pip specifier). Empty → pinned version
+        type: string
+        default: ''
+      ansible-version:
+        description: ansible version for the syntax check (pip specifier). Empty → pinned version
         type: string
         default: ''
       python-version:
@@ -111,7 +124,11 @@ jobs:
       - name: Install ansible-lint
         env:
           ANSIBLE_LINT_VERSION: ${{ inputs.ansible-lint-version }}
-        run: pip install --quiet "ansible-lint${ANSIBLE_LINT_VERSION}"
+        run: |
+          # Pinned default instead of whatever PyPI serves today.
+          # renovate: datasource=pypi depName=ansible-lint
+          PINNED="26.10.1"
+          pip install --quiet "ansible-lint${ANSIBLE_LINT_VERSION:-==$PINNED}"
 
       - name: Run ansible-lint
         env:
@@ -144,7 +161,14 @@ jobs:
           python-version: ${{ inputs.python-version }}
 
       - name: Install ansible
-        run: pip install --quiet ansible
+        env:
+          ANSIBLE_VERSION: ${{ inputs.ansible-version }}
+        run: |
+          # Pinned default (needs Python >= 3.12 — older interpreters: set
+          # ansible-version, e.g. '<12').
+          # renovate: datasource=pypi depName=ansible
+          PINNED="14.5.0"
+          pip install --quiet "ansible${ANSIBLE_VERSION:-==$PINNED}"
 
       - name: Syntax check all playbooks
         env:

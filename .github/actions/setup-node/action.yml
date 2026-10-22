@@ -24,11 +24,16 @@ inputs:
     description: >
       pnpm version to install. Leave empty (default) to use the
       `packageManager` field of package.json (working directory first, then
-      the repository root); falls back to the latest release when neither
+      the repository root); falls back to a pinned release when neither
       declares one. Setting both this and `packageManager` makes
       pnpm/action-setup fail with "Multiple versions of pnpm specified".
     required: false
     default: ''
+  bun-version:
+    description: Bun version to install when the package manager resolves to bun
+    required: false
+    # renovate: datasource=npm depName=bun
+    default: 1.4.3
   install:
     description: Run install after setup
     required: false
@@ -93,13 +98,16 @@ runs:
           NPM_DIR="$(dirname "$NPM_LOCKFILE")"
         fi
 
-        # pnpm version: explicit input > packageManager field > latest.
+        # pnpm version: explicit input > packageManager field > pinned fallback.
         # When packageManager is set, the version input must stay EMPTY and
         # pnpm/action-setup is pointed at that package.json instead.
         PNPM_VERSION="$INPUT_PNPM_VERSION"
         PKG_JSON="package.json"
         if [ "$PM" = "pnpm" ] && [ -z "$PNPM_VERSION" ]; then
-          PNPM_VERSION="latest"
+          # A pinned release rather than `latest`, so a freshly published (or
+          # compromised) pnpm never reaches CI unreviewed. Renovate bumps it.
+          # renovate: datasource=npm depName=pnpm
+          PNPM_VERSION="12.14.0"
           for f in "$DIR/package.json" "package.json"; do
             if [ -f "$f" ] && grep -qE '"packageManager"[[:space:]]*:[[:space:]]*"pnpm@' "$f"; then
               PNPM_VERSION=""
@@ -160,7 +168,7 @@ runs:
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       with:
-        bun-version: latest
+        bun-version: ${{ inputs.bun-version }}
 
     - name: Setup Node.js (bun)
       if: steps.resolve.outputs.pm == 'bun'
