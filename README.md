@@ -74,6 +74,10 @@ jobs:
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
 
+## Security
+
+These workflows run with the tokens and secrets of the repositories that call them. See [SECURITY.md](SECURITY.md) to report a vulnerability and for safe-usage guidelines (pin a release, pass secrets explicitly, least-privilege permissions).
+
 ## Documentation
 
 Full documentation is available at **https://kevindebenedetti.github.io/github-workflows/**.

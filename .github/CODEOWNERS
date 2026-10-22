@@ -1,0 +1,6 @@
+# Every change needs the maintainer's review once "Require review from Code
+# Owners" is enabled on the main branch ruleset — workflows and actions here
+# run with the tokens and secrets of every calling repository.
+*                   @KevinDeBenedetti
+/.github/           @KevinDeBenedetti
+/scripts/           @KevinDeBenedetti

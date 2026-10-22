@@ -13,6 +13,7 @@
 #
 # Jobs:
 #   ci-shell     — shellcheck + actionlint + bats + docs checks (ci-shell.yml) [push + PR]
+#   ci-zizmor    — GitHub Actions security lint (zizmor)                [push + PR]
 #   ci-actions   — same checks through the local composite actions            [push + PR]
 #   security     — Gitleaks secret scanning (security.yml)               [push + PR]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
@@ -100,6 +101,31 @@ jobs:
       - name: VitePress markdown check (local action)
         uses: ./.github/actions/check-vitepress-md
 
+  # ── CI — zizmor (GitHub Actions security lint) ───────────────────────────────
+  # Template injection, over-broad permissions, unpinned uses, credential
+  # persistence… across every workflow and composite action of this repo.
+  # Policy in .github/zizmor.yml. Online audits (impostor commits behind SHA
+  # pins, known-vulnerable action versions) use the read-only job token.
+  ci-zizmor:
+    name: CI — zizmor
+    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # renovate: datasource=pypi depName=zizmor
+          ZIZMOR_VERSION="1.31.1"
+          pipx run "zizmor==${ZIZMOR_VERSION}" --format=github --min-severity=medium .
+
   # ── CI — prek hooks ──────────────────────────────────────────────────────────
   # Self-test of ci-prek.yml, and the server-side gate for this repo's own hooks
   # (prek.toml): trailing whitespace, check-yaml/json, actionlint, and the
@@ -136,7 +162,7 @@ jobs:
   # It still blocks if any CI job actually FAILED or was CANCELLED.
   release:
     name: Release
-    needs: [ci-shell, ci-actions, ci-prek, security]
+    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, security]
     if: >-
       ${{ always()
       && github.event_name == 'push' && github.ref == 'refs/heads/main'
