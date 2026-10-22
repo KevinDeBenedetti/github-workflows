@@ -10,6 +10,11 @@ inputs:
     description: Directory containing pyproject.toml
     required: false
     default: '.'
+  uv-version:
+    description: uv version to install
+    required: false
+    # renovate: datasource=pypi depName=uv
+    default: 0.13.5
   install:
     description: Run uv sync after setup
     required: false
@@ -35,7 +40,8 @@ runs:
       # fail the step. Bumps here must name a full version or a SHA.
       uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
       with:
-        version: latest
+        # Pinned rather than `latest` (Renovate bumps the input default).
+        version: ${{ inputs.uv-version }}
         working-directory: ${{ inputs.working-directory }}
         # Explicitly true rather than the 'auto' default: 'auto' resolves to
         # RUNNER_ENVIRONMENT == 'github-hosted', so on a self-hosted runner

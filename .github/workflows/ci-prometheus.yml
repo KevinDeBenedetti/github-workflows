@@ -127,11 +127,32 @@ jobs:
             *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
           esac
           bin="${RUNNER_TEMP}/bin"
-          mkdir -p "$bin"
-          curl -fsSL "https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}/prometheus-${PROMTOOL_VERSION}.linux-${arch}.tar.gz" \
-            | tar -xz -C "$bin" --strip-components=1 "prometheus-${PROMTOOL_VERSION}.linux-${arch}/promtool"
-          curl -fsSL -o "$bin/yq" "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${arch}"
-          chmod +x "$bin/yq"
+          dl="${RUNNER_TEMP}/dl"
+          mkdir -p "$bin" "$dl"
+
+          # Both versions are caller inputs, so no checksum can be pinned here:
+          # each asset is checked against the SHA-256 list published in the
+          # same release (catches a corrupted or swapped asset, not a fully
+          # compromised release).
+          prom="prometheus-${PROMTOOL_VERSION}.linux-${arch}.tar.gz"
+          base="https://github.com/prometheus/prometheus/releases/download/v${PROMTOOL_VERSION}"
+          curl -fsSL -o "$dl/$prom" "$base/$prom"
+          curl -fsSL -o "$dl/prom-sha256sums.txt" "$base/sha256sums.txt"
+          want=$(awk -v f="$prom" '$2 == f {print $1}' "$dl/prom-sha256sums.txt")
+          echo "${want:?no SHA-256 for $prom in sha256sums.txt}  $dl/$prom" | sha256sum --check --strict --quiet -
+          tar -xz -C "$bin" --strip-components=1 -f "$dl/$prom" "prometheus-${PROMTOOL_VERSION}.linux-${arch}/promtool"
+
+          # yq publishes one `checksums` file with ~20 hash columns; their
+          # order is listed in `checksums_hashes_order` (column 1 is the name).
+          yq="yq_linux_${arch}"
+          base="https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}"
+          curl -fsSL -o "$dl/$yq" "$base/$yq"
+          curl -fsSL -o "$dl/yq-checksums" "$base/checksums"
+          curl -fsSL -o "$dl/yq-checksums-order" "$base/checksums_hashes_order"
+          col=$(grep -nx 'SHA-256' "$dl/yq-checksums-order" | cut -d: -f1)
+          want=$(awk -v f="$yq" -v c="$(( ${col:?SHA-256 not listed in checksums_hashes_order} + 1 ))" '$1 == f {print $c}' "$dl/yq-checksums")
+          echo "${want:?no SHA-256 for $yq in checksums}  $dl/$yq" | sha256sum --check --strict --quiet -
+          install -m 0755 "$dl/$yq" "$bin/yq"
           echo "$bin" >> "$GITHUB_PATH"
 
       - name: promtool check rules

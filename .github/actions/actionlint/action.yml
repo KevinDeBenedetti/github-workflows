@@ -22,9 +22,13 @@ runs:
         # input). When bumping past 1.7.11, pass `flags: -ignore create-github-app-token`.
         # renovate: datasource=github-releases depName=rhysd/actionlint
         ACTIONLINT_VERSION="1.7.11"
+        # SHA-256 of the release asset per architecture, for the version above.
+        # Refresh after a version bump: scripts/update-tool-checksums.py
+        ACTIONLINT_SHA256_amd64="900919a84f2229bac68ca9cd4103ea297abc35e9689ebb842c6e34a3d1b01b0a"
+        ACTIONLINT_SHA256_arm64="21bc0dfb57a913fe175298c2a9e906ee630f747cb66d0a934d0d4b69f4ee1235"
         case "$(uname -m)" in
-          x86_64)        ARCH=amd64 ;;
-          aarch64|arm64) ARCH=arm64 ;;
+          x86_64)        ARCH=amd64; KEY=amd64 ;;
+          aarch64|arm64) ARCH=arm64; KEY=arm64 ;;
           *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
         esac
         INSTALL_DIR="$RUNNER_TEMP/actionlint"
@@ -32,6 +36,9 @@ runs:
         curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
           -o "$RUNNER_TEMP/actionlint.tar.gz" \
           "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_${ARCH}.tar.gz"
+        if [ "$KEY" = amd64 ]; then WANT="$ACTIONLINT_SHA256_amd64"; else WANT="$ACTIONLINT_SHA256_arm64"; fi
+        echo "$WANT  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum --check --strict --quiet - \
+          || { echo "::error::actionlint ${ACTIONLINT_VERSION} ($(uname -m)) does not match its pinned SHA-256 — after a version bump, run scripts/update-tool-checksums.py"; exit 1; }
         tar xz -C "$INSTALL_DIR" actionlint < "$RUNNER_TEMP/actionlint.tar.gz"
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 

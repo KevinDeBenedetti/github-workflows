@@ -19,7 +19,8 @@ jobs:
 | Input                  | Type    | Default            | Description                                                                 |
 | ---------------------- | ------- | ------------------ | --------------------------------------------------------------------------- |
 | `ansible-dir`          | string  | `ansible/`         | Directory containing Ansible playbooks/roles                                |
-| `ansible-lint-version` | string  | `''`               | ansible-lint version to install (pip specifier, e.g. `>=25.0,<26`)          |
+| `ansible-lint-version` | string  | `''`               | ansible-lint version to install (pip specifier, e.g. `>=25.0,<26`); empty → pinned version |
+| `ansible-version`      | string  | `''`               | ansible version for the syntax check (pip specifier, e.g. `<12` on Python < 3.12); empty → pinned version |
 | `python-version`       | string  | `'3.12'`           | Python version to use                                                       |
 | `fail-on-error`        | boolean | `true`             | Fail the job on lint violations; `false` runs in advisory mode (warnings)   |
 | `run-syntax-check`     | boolean | `false`            | Run `ansible-playbook --syntax-check` on matching playbooks                 |
