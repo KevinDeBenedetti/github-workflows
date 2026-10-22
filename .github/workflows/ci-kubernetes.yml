@@ -103,6 +103,9 @@ on:
 # The group carries the path input(s) so that one caller invoking this workflow
 # several times in the same run (e.g. one call per directory) gets one group per
 # call — with a shared group, cancel-in-progress makes the calls cancel each other.
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: ci-kubernetes-${{ github.workflow }}-${{ github.ref }}-${{ inputs.kubeconform-paths }}-${{ inputs.env-example-file }}
   cancel-in-progress: true
@@ -119,6 +122,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: kubeconform
         uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@v0.27.0 # x-release-please-version
@@ -139,6 +144,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Ensure required keys are documented in .env.example
         # Inputs go through env, never interpolated into the script body.

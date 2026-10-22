@@ -21,6 +21,9 @@ on:
         required: false
         default: '"ubuntu-latest"'
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 jobs:
   # ── Guard: no bot-authored commits in PRs ──────────────────────────────────
   check-authors:

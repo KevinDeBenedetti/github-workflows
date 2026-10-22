@@ -79,6 +79,9 @@ on:
 # The group carries the path input(s) so that one caller invoking this workflow
 # several times in the same run (e.g. one call per directory) gets one group per
 # call — with a shared group, cancel-in-progress makes the calls cancel each other.
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: ci-prek-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
   cancel-in-progress: true
@@ -93,6 +96,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Fail loudly rather than letting the action report a confusing error:
       # a caller that enabled this workflow without a config wants to know.

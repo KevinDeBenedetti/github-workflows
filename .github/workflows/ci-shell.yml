@@ -209,6 +209,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: ShellCheck
         uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@v0.27.0 # x-release-please-version
@@ -225,6 +227,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: actionlint
         uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@v0.27.0 # x-release-please-version
@@ -242,6 +246,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.bats-submodules }}
           token: ${{ secrets.token || github.token }}
 
@@ -276,6 +281,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           submodules: ${{ inputs.bats-submodules }}
 
       - name: Build ${{ matrix.target }}
@@ -297,6 +303,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Check markdown links
         uses: lycheeverse/lychee-action@v2
@@ -314,6 +322,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Check docs links
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@v0.27.0 # x-release-please-version
@@ -329,6 +339,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Check VitePress markdown
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@v0.27.0 # x-release-please-version

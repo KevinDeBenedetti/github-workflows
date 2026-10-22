@@ -116,16 +116,24 @@ on:
         required: false
         default: '"ubuntu-latest"'
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 jobs:
   # ── Dependency audit (Node) ─────────────────────────────────────────────────
   audit-node:
     name: Audit Node.js dependencies
     if: inputs.run-node-audit
     runs-on: ${{ fromJson(inputs.runner) }}
+    # Installing dependencies runs their lifecycle scripts: read-only token.
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         id: setup
@@ -149,10 +157,15 @@ jobs:
     name: Audit Python dependencies
     if: inputs.run-python-audit
     runs-on: ${{ fromJson(inputs.runner) }}
+    # Installing dependencies runs their lifecycle scripts: read-only token.
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # No `uv sync`: the audit reads the lockfile via `uv export`, so
       # installing the project (and building native deps) would be wasted.
@@ -191,6 +204,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          persist-credentials: false
           fetch-depth: ${{ inputs.secret-scan-fetch-depth }}
 
       - name: Install Gitleaks
@@ -323,6 +337,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Compiled languages need a build; everything else is analysed from source
       # (build-mode none), which is faster and needs no toolchain on the runner.

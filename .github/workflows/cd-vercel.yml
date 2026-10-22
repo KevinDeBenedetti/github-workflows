@@ -36,6 +36,9 @@ on:
         description: URL of the Vercel deployment
         value: ${{ jobs.deploy.outputs.deployment-url }}
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: deploy-vercel-${{ inputs.environment }}-${{ inputs.working-directory }}-${{ github.ref }}
   cancel-in-progress: false  # never cancel a running deploy
@@ -54,6 +57,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.27.0 # x-release-please-version

@@ -90,6 +90,9 @@ on:
         type: string
         default: 'uv run pytest --tb=short -q'
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: ci-python-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
   cancel-in-progress: true
@@ -107,6 +110,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Python
         uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@v0.27.0 # x-release-please-version
@@ -126,15 +131,22 @@ jobs:
         if: inputs.run-typecheck
         run: uv run ty check --output-format github --quiet
 
+      # test-command is a shell command by design: it is run with `bash -c`
+      # from env rather than spliced into the script, so the step source never
+      # contains caller text (no ${{ }} expansion inside run:).
       - name: Test (pytest)
         if: inputs.run-test && !inputs.run-coverage
-        run: ${{ inputs.test-command }}
+        env:
+          TEST_COMMAND: ${{ inputs.test-command }}
+        run: bash -c "$TEST_COMMAND"
 
       - name: Test with coverage (pytest-cov)
         if: inputs.run-test && inputs.run-coverage
+        env:
+          COVERAGE_FAIL_UNDER: ${{ inputs.coverage-fail-under }}
         run: >
           uv run pytest
           --tb=short -q
           --cov
           --cov-report=term-missing
-          --cov-fail-under=${{ inputs.coverage-fail-under }}
+          --cov-fail-under="$COVERAGE_FAIL_UNDER"

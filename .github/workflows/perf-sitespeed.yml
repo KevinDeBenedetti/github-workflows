@@ -96,6 +96,9 @@ on:
         default: '"ubuntu-latest"'
 
 # A scheduled measurement must not be cancelled by the next trigger.
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: perf-sitespeed-${{ github.workflow }}-${{ github.ref }}-${{ inputs.urls-file }}
   cancel-in-progress: false
@@ -115,6 +118,8 @@ jobs:
       # The URLs and the budget live in the calling repository.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Validate inputs
         env:

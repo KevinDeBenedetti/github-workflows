@@ -81,6 +81,9 @@ on:
 # The group carries the path input(s) so that one caller invoking this workflow
 # several times in the same run (e.g. one call per directory) gets one group per
 # call — with a shared group, cancel-in-progress makes the calls cancel each other.
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: ci-ansible-${{ github.workflow }}-${{ github.ref }}-${{ inputs.ansible-dir }}
   cancel-in-progress: true
@@ -96,6 +99,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Python ${{ inputs.python-version }}
         uses: actions/setup-python@v7
@@ -130,6 +135,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Python ${{ inputs.python-version }}
         uses: actions/setup-python@v7

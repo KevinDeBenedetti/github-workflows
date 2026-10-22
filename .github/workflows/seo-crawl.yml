@@ -96,6 +96,9 @@ on:
         default: '"ubuntu-latest"'
 
 # A scheduled crawl must not be cancelled by the next trigger.
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: seo-crawl-${{ github.workflow }}-${{ github.ref }}-${{ inputs.site }}
   cancel-in-progress: false

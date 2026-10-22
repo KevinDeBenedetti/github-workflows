@@ -90,6 +90,14 @@ on:
         type: string
         required: false
         default: ''
+      app-workflows-permission:
+        description: >
+          Also request `workflows: write` on the App token. Needed when the
+          release PR updates files under .github/workflows/ (release-please
+          extra-files); the App must have that permission.
+        type: boolean
+        required: false
+        default: false
     secrets:
       RELEASE_TOKEN:
         description: PAT with write access (defaults to GITHUB_TOKEN if not set)
@@ -104,6 +112,9 @@ on:
       tag:
         description: Tag name of the release (e.g. v1.2.3)
         value: ${{ jobs.release.outputs.tag }}
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
 
 concurrency:
   group: release-${{ github.ref }}
@@ -127,6 +138,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Detect release config paths
         id: detect-paths
@@ -186,6 +199,15 @@ jobs:
         with:
           client-id: ${{ inputs.app-client-id }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          # Scoped to what release-please and the reviewer notification need,
+          # instead of every permission of the App installation.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+          # Only when the release PR edits files under .github/workflows/
+          # (e.g. x-release-please-version pins): GitHub refuses such pushes
+          # without it. Requesting it fails if the App does not have it.
+          permission-workflows: ${{ inputs.app-workflows-permission && 'write' || '' }}
 
       - name: Resolve token
         # Single source of truth for the auth token used by every step below:
@@ -300,6 +322,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true # git push of the alias tag below uses these credentials
 
       - name: Move major version tag
         # e.g. v1.2.3 → also updates tag v1
