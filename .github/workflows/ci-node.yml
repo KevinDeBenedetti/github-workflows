@@ -144,6 +144,9 @@ on:
         type: string
         default: '"ubuntu-latest"'
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: ci-node-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
   cancel-in-progress: true
@@ -158,6 +161,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Setup resolves pnpm or bun automatically from the lockfile
       - name: Setup Node.js

@@ -42,6 +42,9 @@ on:
           deprecated client-id input.
         required: false
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 jobs:
   # Verify the docs BEFORE dispatching, so a broken doc never triggers a failing
   # rebuild on the central site. If either check fails, `dispatch` is skipped.
@@ -54,6 +57,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Check docs links
         uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@v0.27.0 # x-release-please-version
@@ -102,6 +107,8 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ steps.target.outputs.owner }}
           repositories: ${{ steps.target.outputs.repo }}
+          # Only what repository_dispatch needs — not the App's full installation scope.
+          permission-contents: write
 
       - name: Dispatch docs-updated event
         id: dispatch
@@ -124,16 +131,22 @@ jobs:
             -f "client_payload[target_directory]=${TARGET_DIR}"
           echo "dispatched=true" >> "$GITHUB_OUTPUT"
 
+      # Everything goes through env: github.ref_name is a branch name, and git
+      # allows `$(...)` in those — interpolated into the script it would run.
       - name: Summary
+        env:
+          DOCS_DIR: ${{ inputs.docs-directory }}
+          REF_NAME: ${{ github.ref_name }}
+          TARGET_REPO: ${{ inputs.target-repo }}
         run: |
           {
             echo "### 📄 Docs Update Dispatched"
             echo ""
             echo "| | |"
             echo "|---|---|"
-            echo "| 📦 **Source repo** | \`${{ github.repository }}\` |"
-            echo "| 📂 **Docs folder** | \`${{ inputs.docs-directory }}/\` |"
-            echo "| 🔀 **Ref** | \`${{ github.ref_name }}\` \`${{ github.sha }}\` |"
-            echo "| 🎯 **Target** | \`${{ inputs.target-repo }}\` |"
+            echo "| 📦 **Source repo** | \`${GITHUB_REPOSITORY}\` |"
+            echo "| 📂 **Docs folder** | \`${DOCS_DIR}/\` |"
+            echo "| 🔀 **Ref** | \`${REF_NAME}\` \`${GITHUB_SHA}\` |"
+            echo "| 🎯 **Target** | \`${TARGET_REPO}\` |"
             echo "| ✅ **Status** | \`docs-updated\` event dispatched — rebuild triggered |"
           } >> "$GITHUB_STEP_SUMMARY"

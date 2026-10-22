@@ -26,6 +26,9 @@ on:
     branches: [main, develop]
   workflow_dispatch:
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # Don't cancel in-progress release runs on a follow-up push to main —
@@ -153,6 +156,8 @@ jobs:
       pull-requests: write
     with:
       app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+      # The release PR bumps the x-release-please-version pins in .github/workflows/.
+      app-workflows-permission: true
       notify-reviewers: KevinDeBenedetti
       # Move only v0.<minor>: breaking changes ship as minor bumps before 1.0,
       # so this repo's callers must never be carried across one by an alias.

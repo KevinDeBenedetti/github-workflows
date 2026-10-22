@@ -32,14 +32,22 @@ on:
         description: GitHub token passed as GITHUB_TOKEN env var to the build step (e.g. for scripts that call the GitHub API)
         required: false
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 jobs:
   build:
     name: Build (${{ inputs.working-directory }})
     runs-on: ubuntu-latest
+    # The build runs the project's install/build scripts: read-only token.
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         id: setup

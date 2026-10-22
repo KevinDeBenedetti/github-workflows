@@ -94,6 +94,9 @@ on:
         default: '"ubuntu-latest"'
 
 # A scheduled audit must not be cancelled by the next trigger.
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: perf-unlighthouse-${{ github.workflow }}-${{ github.ref }}-${{ inputs.site }}-${{ inputs.device }}
   cancel-in-progress: false

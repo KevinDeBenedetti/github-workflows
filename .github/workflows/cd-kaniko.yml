@@ -129,6 +129,9 @@ on:
 env:
   REGISTRY: ghcr.io
 
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
 concurrency:
   group: deploy-kaniko-${{ github.ref }}-${{ inputs.context }}-${{ inputs.target }}
   cancel-in-progress: false
