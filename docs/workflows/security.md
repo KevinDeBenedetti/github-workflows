@@ -24,6 +24,8 @@ jobs:
 | `run-python-audit`         | boolean | `false`                         | Run `pip-audit` on the locked dependencies (`uv export` → `uvx pip-audit`)  |
 | `python-working-directory` | string  | `'.'`                           | Path to the Python app                                                      |
 | `run-secret-scan`          | boolean | `true`                          | Run [Gitleaks](https://github.com/gitleaks/gitleaks) secret scanning        |
+| `secret-scan-fetch-depth`  | number  | `0`                             | Clone depth for the secret scan (`0` = full history)                        |
+| `secret-scan-ignore-inline-allow` | boolean | `false`                  | Ignore inline `gitleaks:allow` comments                                     |
 | `run-codeql`               | boolean | `true`                          | Run CodeQL SAST analysis                                                    |
 | `codeql-languages`         | string  | `'["javascript-typescript"]'` | JSON array of CodeQL languages — JS and TS are one language: `javascript-typescript` |
 | `runner`                   | string  | `'"ubuntu-latest"'`             | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
@@ -41,6 +43,9 @@ jobs:
 
 - Secret scanning uses `actions/checkout` with `fetch-depth: 0` (full history) by default — see `secret-scan-fetch-depth`.
 - Scanned range: on a pull request, every commit the PR brings (`base..head`); on a push, `before..HEAD` including commits brought in by a merge commit; otherwise (first push of a branch, manual run, range outside a shallow clone) all fetched history.
+- **Gitleaks config is read from the trusted side of the range**, never from the commits under scan: `.gitleaks.toml` and `.gitleaksignore` come from the PR base (or the commit before the push). A change can therefore not allowlist its own leak — config changes apply once merged, and the job warns when the scanned range modifies them. Without a trusted commit (first push, manual run) gitleaks' default rules apply.
+- Inline `gitleaks:allow` comments still silence their line (existing fixtures keep working); the job warns when a change adds one. Set `secret-scan-ignore-inline-allow: true` to disregard them.
+- A trusted `.gitleaks.toml` that `[extend]`s a path inside the repository reads that file from the checkout — keep extended configs outside the scanned tree, or inline them.
 - `audit-node` runs `pnpm audit`, `npm audit` or `bun audit` depending on the detected package manager.
 - CodeQL analyses interpreted languages with `build-mode: none`; compiled ones (`go`, `c-cpp`, `swift`) use `autobuild`.
 - Gitleaks SARIF results are uploaded to the Security tab on failure.

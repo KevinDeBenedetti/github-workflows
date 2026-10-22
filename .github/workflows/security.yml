@@ -41,6 +41,15 @@ on:
         type: number
         required: false
         default: 0
+      secret-scan-ignore-inline-allow:
+        description: >
+          Ignore inline `gitleaks:allow` comments (gitleaks --ignore-gitleaks-allow).
+          Off by default so existing allow comments on test fixtures keep
+          working — but such a comment lets a change silence the finding on its
+          own line. Turn on for repositories that do not rely on them.
+        type: boolean
+        required: false
+        default: false
       run-codeql:
         description: Run CodeQL SAST analysis
         type: boolean
@@ -88,6 +97,10 @@ on:
         description: Clone depth for the secret scan (0 = full history)
         type: number
         default: 0
+      secret-scan-ignore-inline-allow:
+        description: Ignore inline `gitleaks:allow` comments (gitleaks --ignore-gitleaks-allow)
+        type: boolean
+        default: false
       run-codeql:
         description: Run CodeQL SAST analysis
         type: boolean
@@ -203,6 +216,7 @@ jobs:
           BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          IGNORE_INLINE_ALLOW: ${{ inputs.secret-scan-ignore-inline-allow }}
         run: |
           has_commit() { [ -n "$1" ] && git cat-file -e "$1^{commit}" 2>/dev/null; }
 
@@ -211,22 +225,78 @@ jobs:
           # branch, and on a push to main after a merge commit the feature
           # commits only sit behind the second parent — following first parents
           # would skip exactly the commits that need scanning.
+          #
+          # TRUSTED is the commit the scanned range starts from: the gitleaks
+          # config and ignore list are read from THERE, never from the commits
+          # under scan. Gitleaks otherwise auto-loads .gitleaks.toml and
+          # .gitleaksignore from the checkout, so a PR (or a push) could add an
+          # allowlist matching everything and silence its own leaks.
           if [[ "$EVENT" == pull_request* ]] && has_commit "$PR_BASE_SHA" && has_commit "$PR_HEAD_SHA"; then
             # Every commit the PR brings, whatever the event action.
             RANGE="${PR_BASE_SHA}..${PR_HEAD_SHA}"
+            TRUSTED="$PR_BASE_SHA"
           elif [ "$EVENT" = "push" ] \
             && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
             && has_commit "$BEFORE"; then
             RANGE="${BEFORE}..HEAD"
+            TRUSTED="$BEFORE"
           else
             # First push of a branch, manual run, or the range fell outside a
-            # shallow clone: scan everything that was fetched.
+            # shallow clone: scan everything that was fetched. No commit
+            # predates the range, so the scan falls back to the default rules.
             RANGE=""
+            TRUSTED=""
           fi
-          echo "Scanning: ${RANGE:-all fetched history}"
+
+          # Fail closed: without a trusted copy, use gitleaks' default rules
+          # (an explicit --config also stops the auto-load from the checkout)
+          # and an empty ignore list.
+          CFG_DIR="$RUNNER_TEMP/gitleaks-config"
+          mkdir -p "$CFG_DIR"
+          printf '[extend]\nuseDefault = true\n' > "$CFG_DIR/gitleaks.toml"
+          : > "$CFG_DIR/.gitleaksignore"
+          if [ -n "$TRUSTED" ]; then
+            git show "${TRUSTED}:.gitleaks.toml" > "$CFG_DIR/gitleaks.toml" 2>/dev/null \
+              || printf '[extend]\nuseDefault = true\n' > "$CFG_DIR/gitleaks.toml"
+            git show "${TRUSTED}:.gitleaksignore" > "$CFG_DIR/.gitleaksignore" 2>/dev/null \
+              || : > "$CFG_DIR/.gitleaksignore"
+            # Config changes in the scanned range take effect once merged —
+            # flag them so the reviewer looks at what they would silence.
+            CHANGED=$(git diff --name-only "$RANGE" -- .gitleaks.toml .gitleaksignore 2>/dev/null || true)
+            if [ -n "$CHANGED" ]; then
+              echo "::warning::This change modifies $(echo "$CHANGED" | tr '\n' ' ')— not applied to this scan (the config of ${TRUSTED:0:7} is used). Review what it allowlists before merging."
+            fi
+            # Inline `gitleaks:allow` comments silence the finding on their line.
+            ALLOWS=$(git diff --unified=0 "$RANGE" 2>/dev/null | grep -c '^+.*gitleaks:allow' || true)
+            if [ "${ALLOWS:-0}" -gt 0 ]; then
+              echo "::warning::This change adds ${ALLOWS} \`gitleaks:allow\` comment(s), each silencing a finding — check them before merging (or set secret-scan-ignore-inline-allow)."
+            fi
+          fi
+
+          # gitleaks ALWAYS reads .gitleaksignore from the scanned working tree,
+          # on top of --gitleaks-ignore-path: overwrite the checked-out copy with
+          # the trusted one (or empty it). Only the working tree changes — the
+          # history under scan is read from git objects.
+          if [ -e .gitleaksignore ]; then
+            cp "$CFG_DIR/.gitleaksignore" .gitleaksignore
+          fi
+
+          INLINE_FLAG=()
+          if [ "$IGNORE_INLINE_ALLOW" = "true" ]; then
+            INLINE_FLAG=(--ignore-gitleaks-allow)
+          fi
+
+          # No trailing space when RANGE is empty: gitleaks splits --log-opts on
+          # spaces, and the resulting empty argument makes `git log` yield
+          # nothing — the scan then "passes" having read 0 bytes.
+          LOG_OPTS="--no-merges${RANGE:+ $RANGE}"
+          echo "Scanning: ${RANGE:-all fetched history} (config from ${TRUSTED:-gitleaks defaults})"
           gitleaks git --redact -v --exit-code=1 \
+            --config "$CFG_DIR/gitleaks.toml" \
+            --gitleaks-ignore-path "$CFG_DIR/.gitleaksignore" \
+            "${INLINE_FLAG[@]}" \
             --report-format=sarif --report-path=results.sarif \
-            --log-opts="--no-merges ${RANGE}"
+            --log-opts="$LOG_OPTS"
 
       - name: Upload SARIF report
         if: failure() && hashFiles('results.sarif') != ''
