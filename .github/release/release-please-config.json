@@ -39,6 +39,54 @@
         {
           "type": "generic",
           "path": ".github/workflows/security.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/ci-cd-pages.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/ci-cd-vercel.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/dependabot.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/fastapi.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/monorepo.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/next.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/nuxt.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/perf-sitespeed.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/perf-unlighthouse.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/seo-crawl.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/vitepress.yml"
+        },
+        {
+          "type": "generic",
+          "path": "examples/vue-react.yml"
         }
       ]
     }

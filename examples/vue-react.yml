@@ -14,24 +14,24 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.27.0 # x-release-please-version
     with:
       node-version: '24'
       framework: vite
-    secrets: inherit
 
   deploy-pages:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@v0.27.0 # x-release-please-version
     with:
       output-directory: dist
       # build-command: bun run build-storybook  # si Storybook
       # output-directory: storybook-static      # si Storybook
-    secrets: inherit
 
   release:
     needs: deploy-pages
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
-    secrets: inherit
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.27.0 # x-release-please-version
+    # Only the secrets this workflow declares — never `secrets: inherit`.
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}

@@ -8,23 +8,23 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.27.0 # x-release-please-version
     with:
       node-version: '24'
-    secrets: inherit
 
   # Storybook published on GitHub Pages
   deploy-storybook:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@v0.27.0 # x-release-please-version
     with:
       build-command: pnpm build-storybook
       output-directory: storybook-static
-    secrets: inherit
 
   release:
     needs: deploy-storybook
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
-    secrets: inherit
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.27.0 # x-release-please-version
+    # Only the secrets this workflow declares — never `secrets: inherit`.
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}

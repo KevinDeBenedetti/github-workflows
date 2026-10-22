@@ -8,29 +8,38 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.27.0 # x-release-please-version
     with:
       node-version: '24'
-    secrets: inherit
 
   deploy-preview:
     needs: ci
     if: github.event_name == 'pull_request'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.27.0 # x-release-please-version
     with:
       environment: preview
-    secrets: inherit
+    # Only the secrets this workflow declares — never `secrets: inherit`.
+    secrets:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
   deploy-production:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.27.0 # x-release-please-version
     with:
       environment: production
-    secrets: inherit
+    # Only the secrets this workflow declares — never `secrets: inherit`.
+    secrets:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
   release:
     needs: deploy-production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
-    secrets: inherit
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.27.0 # x-release-please-version
+    # Only the secrets this workflow declares — never `secrets: inherit`.
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}

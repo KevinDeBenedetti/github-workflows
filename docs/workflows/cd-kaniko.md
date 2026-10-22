@@ -47,6 +47,7 @@ jobs:
 
 ## Notes
 
+- ⚠️ **Upstream Kaniko is archived** (GoogleContainerTools/kaniko, no longer maintained — no security fixes). The image is pinned by digest, but plan a move to a maintained builder (e.g. the Chainguard Kaniko fork or rootless BuildKit). Also note that Dockerfile `RUN` steps execute inside the same container as the executor, where `/kaniko/.docker/config.json` holds the job's `packages: write` token — treat build-time code (Dockerfile and the dependencies it installs) as able to reach that token.
 - The job runs **inside** the official Kaniko executor image (`gcr.io/kaniko-project/executor:*-debug`), so the ARC runner scale set must be deployed with `containerMode: kubernetes` — Kaniko needs root in a disposable container to unpack base-image layers.
 - The debug image is busybox-only (no glibc), so it **cannot** run JS actions like `actions/checkout` or `docker/metadata-action`. Kaniko fetches the source itself via its git build context, and tags are computed in `sh`.
 - GHCR auth uses the job's `GITHUB_TOKEN` (`permissions: packages: write`) — no registry secret is needed. The same token clones the source (`GIT_USERNAME`/`GIT_PASSWORD`).

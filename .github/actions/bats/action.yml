@@ -21,7 +21,7 @@ runs:
     # npm needed, so it also works on minimal self-hosted runner images.
     - name: Install Bats
       shell: bash
-      run: |
+      run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
         # renovate: datasource=github-tags depName=bats-core/bats-core
         BATS_VERSION="v1.11.0"
         git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$BATS_VERSION" \
