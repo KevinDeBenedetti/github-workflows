@@ -30,7 +30,7 @@ runs:
   steps:
     - name: Install kubeconform
       shell: bash
-      run: |
+      run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
         # renovate: datasource=github-releases depName=yannh/kubeconform
         KUBECONFORM_VERSION="0.7.0"
         case "$(uname -m)" in

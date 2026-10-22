@@ -12,10 +12,9 @@ on:
 jobs:
   deploy-docs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@v0.27.0 # x-release-please-version
     with:
       node-version: '24'
       build-command: 'pnpm docs:build'
       # VitePress outputs to docs/.vitepress/dist by default
       output-directory: docs/.vitepress/dist
-    secrets: inherit

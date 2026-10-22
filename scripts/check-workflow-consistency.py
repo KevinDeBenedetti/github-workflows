@@ -6,11 +6,13 @@
    definition, so the two blocks are maintained by hand and drift silently.
    Descriptions and `required` may differ.
 
-2. Every reference to one of this repo's composite actions from a workflow
+2. Every reference to one of this repo's composite actions from a workflow,
+   and every reference to this repo's workflows or actions from an example,
    must be pinned to the current release (`@v<manifest version>`), carry the
    `# x-release-please-version` marker, and live in a file listed in the
    release-please `extra-files` — otherwise release-please stops bumping it
-   and callers pinned to a release silently run another version of the action.
+   and callers pinned to a release silently run another version of the action
+   (or copy an example that tracks the mutable `main`).
 
 Usage: check-workflow-consistency.py [files...]   (no args → all workflows)
 Run from the repository root.
@@ -25,10 +27,15 @@ from pathlib import Path
 import yaml
 
 WORKFLOWS = Path(".github/workflows")
+EXAMPLES = Path("examples")
 RELEASE_CONFIG = Path(".github/release/release-please-config.json")
 MANIFEST = Path(".github/release/.release-please-manifest.json")
 ACTION_REF = re.compile(
     r"uses:\s*KevinDeBenedetti/github-workflows/\.github/actions/[\w-]+@(?P<ref>\S+)(?P<rest>.*)$"
+)
+# Examples are copied into other repos: their workflow refs are pinned too.
+EXAMPLE_REF = re.compile(
+    r"uses:\s*KevinDeBenedetti/github-workflows/\.github/(?:actions|workflows)/[\w.-]+@(?P<ref>\S+)(?P<rest>.*)$"
 )
 
 
@@ -72,15 +79,17 @@ def check_inputs(path: Path, doc: dict) -> list[str]:
     return errors
 
 
-def check_action_refs(path: Path, version: str, extra_files: set[str]) -> list[str]:
+def check_action_refs(
+    path: Path, version: str, extra_files: set[str], pattern: re.Pattern = ACTION_REF
+) -> list[str]:
     errors = []
     for lineno, line in enumerate(path.read_text().splitlines(), 1):
-        m = ACTION_REF.search(line)
+        m = pattern.search(line)
         if not m:
             continue
         where = f"{path}:{lineno}"
         if m.group("ref") != f"v{version}":
-            errors.append(f"{where}: internal action pinned to @{m.group('ref')}, expected @v{version}")
+            errors.append(f"{where}: internal reference pinned to @{m.group('ref')}, expected @v{version}")
         if "x-release-please-version" not in m.group("rest"):
             errors.append(f"{where}: missing '# x-release-please-version' marker")
         if path.as_posix() not in extra_files:
@@ -91,6 +100,9 @@ def check_action_refs(path: Path, version: str, extra_files: set[str]) -> list[s
 def main(argv: list[str]) -> int:
     files = [Path(a) for a in argv] if argv else sorted(WORKFLOWS.glob("*.y*ml"))
     files = [f for f in files if f.parent == WORKFLOWS and f.suffix in (".yml", ".yaml")]
+    examples = sorted(EXAMPLES.glob("*.y*ml")) if not argv else [
+        Path(a) for a in argv if Path(a).parent == EXAMPLES and Path(a).suffix in (".yml", ".yaml")
+    ]
 
     version = json.loads(MANIFEST.read_text())["."]
     config = json.loads(RELEASE_CONFIG.read_text())
@@ -104,13 +116,15 @@ def main(argv: list[str]) -> int:
         doc = yaml.safe_load(path.read_text()) or {}
         errors += check_inputs(path, doc)
         errors += check_action_refs(path, version, extra_files)
+    for path in examples:
+        errors += check_action_refs(path, version, extra_files, EXAMPLE_REF)
 
     for e in errors:
         print(f"ERROR: {e}")
     if errors:
         print(f"\n{len(errors)} problem(s) found.")
         return 1
-    print(f"✔ {len(files)} workflow(s) consistent.")
+    print(f"✔ {len(files)} workflow(s) and {len(examples)} example(s) consistent.")
     return 0
 
 

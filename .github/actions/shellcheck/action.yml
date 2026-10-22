@@ -23,7 +23,7 @@ runs:
   steps:
     - name: Install ShellCheck
       shell: bash
-      run: |
+      run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
         # renovate: datasource=github-releases depName=koalaman/shellcheck
         SHELLCHECK_VERSION="0.11.0"
         case "$(uname -m)" in

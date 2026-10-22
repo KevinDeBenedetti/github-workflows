@@ -12,24 +12,24 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@v0.27.0 # x-release-please-version
     with:
       python-version: '3.12'
-    secrets: inherit
 
   deploy-production:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.27.0 # x-release-please-version
     with:
       context: .
       platforms: linux/amd64,linux/arm64
-    secrets: inherit
 
   release:
     needs: deploy-production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.27.0 # x-release-please-version
     with:
       release-type: python
-    secrets: inherit
+    # Only the secrets this workflow declares — never `secrets: inherit`.
+    secrets:
+      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}

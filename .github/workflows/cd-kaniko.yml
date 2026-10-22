@@ -143,7 +143,10 @@ jobs:
     # Kaniko must run as root in its own disposable container (it extracts
     # image layers onto /). Requires ARC containerMode: kubernetes.
     container:
-      image: gcr.io/kaniko-project/executor:v1.23.2-debug
+      # Pinned by digest: the tag is mutable, and this container holds a
+      # packages: write token. NOTE: upstream Kaniko (GoogleContainerTools) is
+      # archived and gets no security fixes — see docs/workflows/cd-kaniko.md.
+      image: gcr.io/kaniko-project/executor:v1.23.2-debug@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
     defaults:
       run:
         # The debug image only ships busybox sh — no bash.
