@@ -16,4 +16,4 @@ runs:
       shell: bash
       env:
         DOCS_DIR: ${{ inputs.docs-directory }}
-      run: bash "${{ github.action_path }}/check-docs-links.sh"
+      run: bash "$GITHUB_ACTION_PATH/check-docs-links.sh"

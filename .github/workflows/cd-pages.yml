@@ -84,8 +84,8 @@ jobs:
       name: github-pages
       url: ${{ steps.pages.outputs.page_url }}
     permissions:
-      pages: write
-      id-token: write
+      pages: write     # publish the Pages deployment
+      id-token: write  # OIDC token deploy-pages uses to authenticate
     outputs:
       page-url: ${{ steps.pages.outputs.page_url }}
 

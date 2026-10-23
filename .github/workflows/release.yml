@@ -125,9 +125,9 @@ jobs:
     name: Release Please
     runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: write        # release-please pushes the release branch and tags
+      issues: write          # release-please labels the release PR (issues API)
+      pull-requests: write   # open/update the release PR
     outputs:
       released: ${{ steps.rp.outputs.release_created }}
       tag: ${{ steps.rp.outputs.tag_name }}
@@ -317,16 +317,17 @@ jobs:
     if: needs.release.outputs.released == 'true'
     runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
-      contents: write
+      contents: write  # move the major/minor alias tags
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: true # git push of the alias tag below uses these credentials
+          # Not left in .git/config: the push below gets the token for its own
+          # step only (GIT_CONFIG_* env), so no later step can read it from disk.
+          persist-credentials: false
 
       - name: Move major version tag
-        # e.g. v1.2.3 → also updates tag v1
         # e.g. v1.2.3 → also updates tag v1
         #
         # Before 1.0 (inputs.pre-major-alias): semver gives no stability promise
@@ -353,8 +354,17 @@ jobs:
           GIT_USER_EMAIL: ${{ inputs.git-user-email || vars.GIT_USER_EMAIL || 'github-actions[bot]@users.noreply.github.com' }}
           TAG: ${{ needs.release.outputs.tag }}
           PRE_MAJOR_ALIAS: ${{ inputs.pre-major-alias }}
+          PUSH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
+          # Same auth header actions/checkout would have persisted, scoped to
+          # this step's git processes through the environment.
+          AUTH="$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 -w0)"
+          echo "::add-mask::${AUTH}"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.${GITHUB_SERVER_URL}/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${AUTH}"
 
           MAJOR="${TAG%%.*}"  # v1.2.3 → v1
 
