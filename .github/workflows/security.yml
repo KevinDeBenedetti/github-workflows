@@ -55,6 +55,19 @@ on:
         type: boolean
         required: false
         default: false
+      run-dependency-review:
+        description: >
+          On pull requests, fail when the change adds a dependency with a known
+          vulnerability (actions/dependency-review-action). Needs the dependency
+          graph — private repositories also need GitHub Advanced Security.
+        type: boolean
+        required: false
+        default: false
+      dependency-review-fail-on-severity:
+        description: Lowest advisory severity that fails the review (low, moderate, high, critical)
+        type: string
+        required: false
+        default: moderate
       run-codeql:
         description: Run CodeQL SAST analysis
         type: boolean
@@ -106,6 +119,14 @@ on:
         description: Ignore inline `gitleaks:allow` comments (gitleaks --ignore-gitleaks-allow)
         type: boolean
         default: false
+      run-dependency-review:
+        description: On pull requests, fail when the change adds a vulnerable dependency
+        type: boolean
+        default: false
+      dependency-review-fail-on-severity:
+        description: Lowest advisory severity that fails the review (low, moderate, high, critical)
+        type: string
+        default: moderate
       run-codeql:
         description: Run CodeQL SAST analysis
         type: boolean
@@ -350,6 +371,23 @@ jobs:
         with:
           sarif_file: results.sarif
           category: gitleaks
+
+  # ── Dependency review (pull requests) ───────────────────────────────────────
+  # Catches a vulnerable dependency BEFORE it is merged — the audits above only
+  # see what the lockfile already contains. Reads the PR diff through the
+  # dependency graph API: no checkout, no code from the PR is run.
+  dependency-review:
+    name: Dependency review
+    if: inputs.run-dependency-review && startsWith(github.event_name, 'pull_request')
+    runs-on: ${{ fromJson(inputs.runner) }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Dependency review
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: ${{ inputs.dependency-review-fail-on-severity }}
 
   # ── CodeQL SAST ─────────────────────────────────────────────────────────────
   codeql:

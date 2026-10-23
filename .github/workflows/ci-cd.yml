@@ -76,6 +76,15 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Audit mode: records every outbound connection of the job (visible in
+      # the run's StepSecurity insights) without blocking anything yet. Once
+      # the baseline is known, switch to `egress-policy: block` with an
+      # allowed-endpoints list. Note: audit mode reports to the StepSecurity API.
+      - name: Harden runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -113,6 +122,15 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Audit mode: records every outbound connection of the job (visible in
+      # the run's StepSecurity insights) without blocking anything yet. Once
+      # the baseline is known, switch to `egress-policy: block` with an
+      # allowed-endpoints list. Note: audit mode reports to the StepSecurity API.
+      - name: Harden runner
+        uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -154,6 +172,9 @@ jobs:
       run-python-audit: false
       run-secret-scan: true
       run-codeql: false
+      # The dependency graph covers GitHub Actions: a PR pinning an action
+      # with a known advisory fails here.
+      run-dependency-review: true
     permissions:
       security-events: write  # upload SARIF results to code scanning
       actions: read           # code scanning reads the workflow run metadata

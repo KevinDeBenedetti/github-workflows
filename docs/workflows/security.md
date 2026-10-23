@@ -26,6 +26,8 @@ jobs:
 | `run-secret-scan`          | boolean | `true`                          | Run [Gitleaks](https://github.com/gitleaks/gitleaks) secret scanning        |
 | `secret-scan-fetch-depth`  | number  | `0`                             | Clone depth for the secret scan (`0` = full history)                        |
 | `secret-scan-ignore-inline-allow` | boolean | `false`                  | Ignore inline `gitleaks:allow` comments                                     |
+| `run-dependency-review`    | boolean | `false`                         | On PRs, fail when a vulnerable dependency is added (needs the dependency graph; GHAS on private repos) |
+| `dependency-review-fail-on-severity` | string | `moderate`              | Lowest advisory severity that fails the review                              |
 | `run-codeql`               | boolean | `true`                          | Run CodeQL SAST analysis                                                    |
 | `codeql-languages`         | string  | `'["javascript-typescript"]'` | JSON array of CodeQL languages — JS and TS are one language: `javascript-typescript` |
 | `runner`                   | string  | `'"ubuntu-latest"'`             | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
