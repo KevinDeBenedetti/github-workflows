@@ -50,6 +50,10 @@ These live outside the code and must be set in the repository settings:
 - [ ] **Tag ruleset on `v*.*.*`**: block updates and deletion — callers and
       the internal action pins rely on release tags never moving. Leave the
       moving aliases (`v1`, `v0.N`) out of it: the release job updates them.
+- [ ] **Callers of `security.yml`**: make the secret scan a *required* check
+      on pull requests. On a push to a feature branch the Gitleaks config is
+      read from the previous commit of that same branch, which its author
+      controls; only the PR scan (config from the base branch) is a real gate.
 - [ ] **Immutable releases** enabled.
 - [ ] **Private vulnerability reporting** enabled.
 - [ ] Actions → **Require approval for all outside collaborators** on fork PRs.

@@ -43,9 +43,10 @@ jobs:
 
 - Secret scanning uses `actions/checkout` with `fetch-depth: 0` (full history) by default — see `secret-scan-fetch-depth`.
 - Scanned range: on a pull request, every commit the PR brings (`base..head`); on a push, `before..HEAD` including commits brought in by a merge commit; otherwise (first push of a branch, manual run, range outside a shallow clone) all fetched history.
-- **Gitleaks config is read from the trusted side of the range**, never from the commits under scan: `.gitleaks.toml` and `.gitleaksignore` come from the PR base (or the commit before the push). A change can therefore not allowlist its own leak — config changes apply once merged, and the job warns when the scanned range modifies them. Without a trusted commit (first push, manual run) gitleaks' default rules apply.
+- **Gitleaks config is read from the trusted side of the range**, never from the commits under scan: `.gitleaks.toml` and `.gitleaksignore` come from the PR base (or the commit before the push). A change can therefore not allowlist its own leak — config changes apply once merged, and the job warns when the scanned range modifies them. Without a trusted commit (first push, manual run) gitleaks' default rules apply and the repository's allowlist is ignored — expect false positives there that a PR scan would not report.
+- Only the PR scan is a real gate: on a push to a feature branch, the trusted commit is the branch's previous tip, which its author controls. Make the secret scan a required check on pull requests.
 - Inline `gitleaks:allow` comments still silence their line (existing fixtures keep working); the job warns when a change adds one. Set `secret-scan-ignore-inline-allow: true` to disregard them.
-- A trusted `.gitleaks.toml` that `[extend]`s a path inside the repository reads that file from the checkout — keep extended configs outside the scanned tree, or inline them.
+- A trusted `.gitleaks.toml` that `[extend]`s a `path` inside the repository: that file is restored from the trusted commit too (and its changes are flagged like the config's). Paths outside the repository (absolute, or with `..`) fail the job.
 - `audit-node` runs `pnpm audit`, `npm audit` or `bun audit` depending on the detected package manager.
 - CodeQL analyses interpreted languages with `build-mode: none`; compiled ones (`go`, `c-cpp`, `swift`) use `autobuild`.
 - Gitleaks SARIF results are uploaded to the Security tab on failure.

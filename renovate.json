@@ -18,7 +18,7 @@
       "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, gitleaks, actionlint, kubeconform, shellcheck, bats, vercel). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^\\.github/actions/.+\\.ya?ml$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+default: (?<currentValue>v?[\\d][^\\s]*)",
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+(?:default|version): (?<currentValue>v?[\\d][^\\s]*)",
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+[A-Z_]+=\"(?<currentValue>v?[\\d][^\"]*)\""
       ]
     },
