@@ -28,7 +28,7 @@ jobs:
 | `target`     | string  | `''`                                             | Build target stage (e.g. `dev`, `prod`)                                  |
 | `tag-latest` | boolean | `false`                                          | Also tag as `:latest` on the default branch                              |
 | `version`    | string  | `''`                                             | Explicit version tag (e.g. `v1.2.3`); a `major.minor` tag is added when semver |
-| `build-args` | string  | `''`                                             | Build args, one per line, `KEY=VALUE`                                    |
+| `build-args` | string  | `''`                                             | Build args, one per line, `KEY=VALUE`. **Never secrets**: they stay in the image history |
 | `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'`       | Runner labels as JSON — `'"k3s-portfolio"'` (ARC scale set) or a label array |
 
 ## Outputs

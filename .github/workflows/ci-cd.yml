@@ -125,7 +125,10 @@ jobs:
         with:
           # renovate: datasource=pypi depName=zizmor
           version: 1.31.1
-          min-severity: medium
+          # Strictest persona: the repo is clean at this level, so any new
+          # finding (even code-quality ones) fails the job. Exceptions are
+          # justified in .github/zizmor.yml or inline.
+          persona: pedantic
           # Annotations instead of a SARIF upload: no security-events: write.
           advanced-security: false
           annotations: true
@@ -152,10 +155,10 @@ jobs:
       run-secret-scan: true
       run-codeql: false
     permissions:
-      security-events: write
-      actions: read
+      security-events: write  # upload SARIF results to code scanning
+      actions: read           # code scanning reads the workflow run metadata
       contents: read
-      pull-requests: read
+      pull-requests: read     # list the commits of the pull request
 
   # ── Release (release-please) ─────────────────────────────────────────────────
   # CD half: push-to-main only (the CI jobs above also run on PRs). Gated on the
@@ -181,9 +184,9 @@ jobs:
     # so release still works if the repo's default token turns read-only.
     # (contents: write also covers the tag-workflows job's alias push.)
     permissions:
-      contents: write
-      issues: write
-      pull-requests: write
+      contents: write        # release-please pushes the release branch and tags
+      issues: write          # release-please labels the release PR (issues API)
+      pull-requests: write   # open/update the release PR
     with:
       app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
       # The release PR bumps the x-release-please-version pins in .github/workflows/.

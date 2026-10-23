@@ -1,5 +1,10 @@
 name: Security
 
+# No concurrency group, on purpose (zizmor: concurrency-limits): even with
+# cancel-in-progress: false, GitHub cancels older *pending* runs of a group,
+# and each push scans only its own BEFORE..HEAD range — a skipped run would
+# leave those commits unscanned for good.
+
 on:
   workflow_call:
     inputs:
@@ -193,8 +198,8 @@ jobs:
     if: inputs.run-secret-scan
     runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
-      security-events: write
-      actions: read
+      security-events: write  # upload SARIF results to code scanning
+      actions: read           # code scanning reads the workflow run metadata
       contents: read
 
     steps:
@@ -352,8 +357,8 @@ jobs:
     if: inputs.run-codeql
     runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
-      security-events: write
-      actions: read
+      security-events: write  # upload SARIF results to code scanning
+      actions: read           # code scanning reads the workflow run metadata
       contents: read
     strategy:
       fail-fast: false

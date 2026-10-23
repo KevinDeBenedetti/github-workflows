@@ -11,3 +11,11 @@ rules:
         "KevinDeBenedetti/github-workflows/*": ref-pin
         # Everything else: full commit SHA (Renovate keeps them current).
         "*": hash-pin
+  concurrency-limits:
+    ignore:
+      # Deliberately ungrouped — see the top of security.yml.
+      - security.yml
+  self-repository:
+    # `uses: $/...` is recent GitHub syntax, unknown to actionlint 1.7.11 (held
+    # back, see .github/actions/actionlint): revisit once actionlint is bumped.
+    disable: true

@@ -99,6 +99,13 @@ jobs:
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
       needs.detect.outputs.changed-api == 'true'
+    # A reusable workflow gets at most what its caller grants.
+    permissions:
+      contents: read
+      packages: write      # push the image to GHCR
+      deployments: write   # production/preview environment record
+      id-token: write      # sign the image attestation (Sigstore)
+      attestations: write  # store the attestation
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.27.0 # x-release-please-version
     with:
       context: apps/api

@@ -202,7 +202,7 @@ jobs:
     if: ${{ !cancelled() && inputs.history-branch != '' }}
     runs-on: ${{ fromJson(inputs.runner) }}
     permissions:
-      contents: write
+      contents: write  # commit the measurement history to the history branch
     concurrency:
       group: perf-history-${{ github.repository }}-${{ inputs.history-branch }}
       cancel-in-progress: false

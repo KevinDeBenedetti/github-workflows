@@ -71,7 +71,7 @@ jobs:
       - name: Install Vercel CLI
         env:
           VERCEL_VERSION: ${{ inputs.vercel-version }}
-        run: npm install -g "vercel@${VERCEL_VERSION}"
+        run: npm install -g "vercel@${VERCEL_VERSION}" # zizmor: ignore[adhoc-packages] -- exact version, Renovate-bumped input default
 
       - name: Pull Vercel environment
         working-directory: ${{ inputs.working-directory }}
@@ -87,9 +87,10 @@ jobs:
       - name: Build
         working-directory: ${{ inputs.working-directory }}
         run: |
-          vercel build \
-            ${{ inputs.environment == 'production' && '--prod' || '' }}
+          # shellcheck disable=SC2086 # PROD_FLAG is empty or a single flag
+          vercel build $PROD_FLAG
         env:
+          PROD_FLAG: ${{ inputs.environment == 'production' && '--prod' || '' }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
@@ -98,11 +99,12 @@ jobs:
         id: deploy
         working-directory: ${{ inputs.working-directory }}
         run: |
-          URL=$(vercel deploy --prebuilt \
-            ${{ inputs.environment == 'production' && '--prod' || '' }})
+          # shellcheck disable=SC2086 # PROD_FLAG is empty or a single flag
+          URL=$(vercel deploy --prebuilt $PROD_FLAG)
           echo "url=$URL" >> "$GITHUB_OUTPUT"
           echo "🚀 Deployed to: $URL"
         env:
+          PROD_FLAG: ${{ inputs.environment == 'production' && '--prod' || '' }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
