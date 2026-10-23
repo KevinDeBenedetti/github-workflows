@@ -95,10 +95,10 @@ on:
         required: false
         default: '"ubuntu-latest"'
 
-# A scheduled measurement must not be cancelled by the next trigger.
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
 
+# A scheduled measurement must not be cancelled by the next trigger.
 concurrency:
   group: perf-sitespeed-${{ github.workflow }}-${{ github.ref }}-${{ inputs.urls-file }}
   cancel-in-progress: false

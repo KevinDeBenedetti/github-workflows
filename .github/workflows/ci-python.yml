@@ -138,7 +138,8 @@ jobs:
         if: inputs.run-test && !inputs.run-coverage
         env:
           TEST_COMMAND: ${{ inputs.test-command }}
-        run: bash -c "$TEST_COMMAND"
+        # -eo pipefail: keeps the step's fail-fast semantics for multi-line commands.
+        run: bash -eo pipefail -c "$TEST_COMMAND"
 
       - name: Test with coverage (pytest-cov)
         if: inputs.run-test && inputs.run-coverage

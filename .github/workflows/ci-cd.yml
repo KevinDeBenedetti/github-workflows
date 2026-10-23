@@ -118,13 +118,17 @@ jobs:
         with:
           persist-credentials: false
 
+      # The official action installs zizmor from a hash-locked wheel
+      # (pip --require-hashes) — unlike `pipx run`, nothing unverified runs.
       - name: zizmor
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
+        uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
           # renovate: datasource=pypi depName=zizmor
-          ZIZMOR_VERSION="1.31.1"
-          pipx run "zizmor==${ZIZMOR_VERSION}" --format=github --min-severity=medium .
+          version: 1.31.1
+          min-severity: medium
+          # Annotations instead of a SARIF upload: no security-events: write.
+          advanced-security: false
+          annotations: true
 
   # ── CI — prek hooks ──────────────────────────────────────────────────────────
   # Self-test of ci-prek.yml, and the server-side gate for this repo's own hooks

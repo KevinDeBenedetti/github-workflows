@@ -272,6 +272,7 @@ jobs:
           # Fail closed: without a trusted copy, use gitleaks' default rules
           # (an explicit --config also stops the auto-load from the checkout)
           # and an empty ignore list.
+          EXTEND_WATCH=()
           CFG_DIR="$RUNNER_TEMP/gitleaks-config"
           mkdir -p "$CFG_DIR"
           printf '[extend]\nuseDefault = true\n' > "$CFG_DIR/gitleaks.toml"
@@ -281,9 +282,27 @@ jobs:
               || printf '[extend]\nuseDefault = true\n' > "$CFG_DIR/gitleaks.toml"
             git show "${TRUSTED}:.gitleaksignore" > "$CFG_DIR/.gitleaksignore" 2>/dev/null \
               || : > "$CFG_DIR/.gitleaksignore"
+            # `[extend] path = "..."` is resolved against the working directory,
+            # i.e. the checkout under scan: restore that file from TRUSTED too, or
+            # the change could rewrite the extended config. Fail closed if absent.
+            EXTEND_PATH=$(awk '
+              /^[[:space:]]*\[/ { in_extend = ($0 ~ /^[[:space:]]*\[extend\]/) ; next }
+              in_extend && /^[[:space:]]*path[[:space:]]*=/ {
+                sub(/^[^=]*=[[:space:]]*["\047]/, ""); sub(/["\047].*$/, ""); print; exit
+              }' "$CFG_DIR/gitleaks.toml")
+            if [ -n "$EXTEND_PATH" ]; then
+              EXTEND_REL="${EXTEND_PATH#./}"
+              case "$EXTEND_REL" in
+                /*|*..*) echo "::error::.gitleaks.toml extends '${EXTEND_PATH}' outside the repository — not supported by this workflow"; exit 1 ;;
+              esac
+              mkdir -p "$(dirname "$EXTEND_REL")"
+              git show "${TRUSTED}:${EXTEND_REL}" > "$EXTEND_REL" 2>/dev/null \
+                || { echo "::error::extended config '${EXTEND_REL}' not found at ${TRUSTED:0:7}"; exit 1; }
+              EXTEND_WATCH=("$EXTEND_REL")
+            fi
             # Config changes in the scanned range take effect once merged —
             # flag them so the reviewer looks at what they would silence.
-            CHANGED=$(git diff --name-only "$RANGE" -- .gitleaks.toml .gitleaksignore 2>/dev/null || true)
+            CHANGED=$(git diff --name-only "$RANGE" -- .gitleaks.toml .gitleaksignore "${EXTEND_WATCH[@]}" 2>/dev/null || true)
             if [ -n "$CHANGED" ]; then
               echo "::warning::This change modifies $(echo "$CHANGED" | tr '\n' ' ')— not applied to this scan (the config of ${TRUSTED:0:7} is used). Review what it allowlists before merging."
             fi
