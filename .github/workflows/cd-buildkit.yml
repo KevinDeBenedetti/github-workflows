@@ -1,0 +1,359 @@
+name: Deploy — BuildKit rootless (self-hosted)
+
+# Successor of cd-kaniko.yml (upstream Kaniko is archived): same inputs and
+# tags, built by rootless BuildKit on the k3s cluster. Status: EXPERIMENTAL
+# until validated on the cluster — see docs/workflows/cd-buildkit.md.
+#
+# The job runs INSIDE the moby/buildkit rootless image (job container, ARC
+# `containerMode: kubernetes`) as an unprivileged user; buildctl-daemonless.sh
+# starts a throw-away buildkitd for the single build. Rootless BuildKit creates
+# its own user namespace, which the default seccomp/AppArmor profiles forbid:
+# the workflow pod needs the dedicated setup described in the docs (seccomp +
+# AppArmor Unconfined, runAsUser 1000) — a cluster-side change.
+#
+# Like the Kaniko image, this one has no glibc Node.js: NO JavaScript actions.
+# BuildKit fetches the source itself (git context) and tags are computed in sh.
+#
+# Differences vs. cd-kaniko.yml:
+#   - Builder process runs as non-root (rootless), not as root
+#   - `digest` output (from the build metadata)
+#   - BUILD_SECRETS secret (BuildKit secret mounts), provenance + SBOM inputs
+#   - Layer cache in GHCR (<image>-cache:buildcache, mode=max)
+#
+# Migration: change `uses: .../cd-kaniko.yml` → `uses: .../cd-buildkit.yml`.
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Image name (e.g. my-api). Defaults to repo name.
+        type: string
+        required: false
+        default: ''
+      context:
+        description: Docker build context path (relative to repo root)
+        type: string
+        required: false
+        default: '.'
+      dockerfile:
+        description: Dockerfile path relative to context
+        type: string
+        required: false
+        default: Dockerfile
+      push:
+        description: Push image to registry
+        type: boolean
+        required: false
+        default: true
+      target:
+        description: Build target stage (e.g. dev, prod)
+        type: string
+        required: false
+        default: ''
+      tag-latest:
+        description: Also tag as :latest on default branch
+        type: boolean
+        required: false
+        default: false
+      version:
+        description: Explicit version tag (e.g. v1.2.3 from release job output)
+        type: string
+        required: false
+        default: ''
+      build-args:
+        description: Build args (one per line, KEY=VALUE). Never secrets — use BUILD_SECRETS
+        type: string
+        required: false
+        default: ''
+      provenance:
+        description: SLSA provenance attached to the image ('mode=max', 'mode=min' or 'false'). mode=max records the build-args.
+        type: string
+        required: false
+        default: mode=max
+      sbom:
+        description: Attach an SBOM attestation to the image
+        type: boolean
+        required: false
+        default: true
+      runner:
+        description: Runner labels as JSON — use '"k3s-portfolio"' (ARC scale set) or a label array
+        type: string
+        required: false
+        default: '["self-hosted","linux","k3s","kaniko"]'
+    secrets:
+      BUILD_SECRETS:
+        description: >
+          BuildKit secrets, one `id=value` per line, read in the Dockerfile with
+          `RUN --mount=type=secret,id=<id>`. Never stored in a layer or in the
+          provenance, unlike build-args.
+        required: false
+    outputs:
+      image:
+        description: Image name (without tag)
+        value: ${{ jobs.buildkit.outputs.image }}
+      digest:
+        description: Image digest
+        value: ${{ jobs.buildkit.outputs.digest }}
+
+  workflow_dispatch:
+    inputs:
+      image-name:
+        description: Image name
+        type: string
+        default: ''
+      context:
+        description: Docker build context path
+        type: string
+        default: '.'
+      dockerfile:
+        description: Dockerfile path relative to context
+        type: string
+        default: Dockerfile
+      push:
+        description: Push image to registry
+        type: boolean
+        default: true
+      target:
+        description: Build target stage
+        type: string
+        default: ''
+      tag-latest:
+        description: Also tag as :latest
+        type: boolean
+        default: false
+      version:
+        description: Explicit version tag
+        type: string
+        default: ''
+      build-args:
+        description: Build args (one per line, KEY=VALUE). Never secrets — use BUILD_SECRETS
+        type: string
+        default: ''
+      provenance:
+        description: SLSA provenance ('mode=max', 'mode=min' or 'false')
+        type: string
+        default: mode=max
+      sbom:
+        description: Attach an SBOM attestation to the image
+        type: boolean
+        default: true
+      runner:
+        description: Runner labels as JSON
+        type: string
+        default: '["self-hosted","linux","k3s","kaniko"]'
+
+env:
+  REGISTRY: ghcr.io
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+concurrency:
+  group: deploy-buildkit-${{ github.ref }}-${{ inputs.context }}-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  buildkit:
+    name: BuildKit build & push (${{ inputs.context }})
+    runs-on: ${{ fromJson(inputs.runner) }}
+    container:
+      # Pinned by digest: the tag is mutable, and this container holds a
+      # packages: write token.
+      image: moby/buildkit:v0.34.1-rootless@sha256:f68752a5a94acfcdad2d07867b7075601a421638e17fc5f28efc1c814d0c4f89
+      env:
+        # Kubernetes has no equivalent of `--security-opt systempaths=unconfined`:
+        # BuildKit's own Kubernetes examples run the worker without a process
+        # sandbox (no separate PID namespace / fresh /proc for RUN steps).
+        BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    defaults:
+      run:
+        # Alpine-based image: busybox sh, no bash.
+        shell: sh
+    permissions:
+      contents: read   # BuildKit clones the source (git context) with the job token
+      packages: write  # push the image and the layer cache to GHCR
+
+    outputs:
+      image: ${{ steps.image.outputs.full }}
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Set image name
+        id: image
+        # Inputs go through env, never interpolated into the script body.
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          NAME="${IMAGE_NAME:-$REPO_NAME}"
+          # OCI repositories must be lowercase.
+          FULL=$(printf '%s/%s/%s' "$REGISTRY" "$OWNER" "$NAME" | tr '[:upper:]' '[:lower:]')
+          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute tags
+        id: tags
+        env:
+          SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          VERSION: ${{ inputs.version }}
+          TAG_LATEST: ${{ inputs.tag-latest }}
+        run: |
+          # Same tag set as cd-kaniko.yml (subset of docker/metadata-action).
+          TAGS=""
+          add_tag() { TAGS="${TAGS:+$TAGS }$1"; }
+
+          SHORT_SHA=$(printf '%s' "$SHA" | cut -c1-7)
+          add_tag "sha-${SHORT_SHA}"
+
+          if [ "$EVENT" = "push" ] && [ "$REF_TYPE" = "branch" ]; then
+            BRANCH_TAG=$(printf '%s' "$REF_NAME" | tr -c 'A-Za-z0-9_.-' '-' | sed 's/^[.-]*//' | cut -c1-128)
+            [ -n "$BRANCH_TAG" ] && add_tag "$BRANCH_TAG"
+          fi
+
+          if [ "$EVENT" = "pull_request" ] && [ -n "$PR_NUMBER" ]; then
+            add_tag "pr-${PR_NUMBER}"
+          fi
+
+          if [ -n "$VERSION" ]; then
+            add_tag "$VERSION"
+            SEMVER="${VERSION#v}"
+            case "$SEMVER" in
+              [0-9]*.[0-9]*.[0-9]*) add_tag "$(printf '%s' "$SEMVER" | cut -d. -f1-2)" ;;
+            esac
+          fi
+
+          if [ "$TAG_LATEST" = "true" ] && [ "$REF_NAME" = "$DEFAULT_BRANCH" ]; then
+            add_tag "latest"
+          fi
+
+          echo "Computed tags: $TAGS"
+          echo "list=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push with BuildKit
+        id: build
+        env:
+          TAGS: ${{ steps.tags.outputs.list }}
+          BUILD_ARGS: ${{ inputs.build-args }}
+          BUILD_SECRETS: ${{ secrets.BUILD_SECRETS }}
+          TARGET: ${{ inputs.target }}
+          PUSH: ${{ inputs.push }}
+          PROVENANCE: ${{ inputs.provenance }}
+          SBOM: ${{ inputs.sbom }}
+          IMAGE_BASE: ${{ steps.image.outputs.full }}
+          CONTEXT: ${{ inputs.context }}
+          DOCKERFILE: ${{ inputs.dockerfile }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          SERVER_URL: ${{ github.server_url }}
+          GH_ACTOR: ${{ github.actor }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Credentials and secrets live in a private, job-scoped directory.
+          umask 077
+          WORK=$(mktemp -d)
+          trap 'rm -rf "$WORK"' EXIT
+
+          # Registry auth (push + cache), read by buildctl from DOCKER_CONFIG.
+          export DOCKER_CONFIG="$WORK/docker"
+          mkdir -p "$DOCKER_CONFIG"
+          AUTH=$(printf '%s' "${GH_ACTOR}:${GH_TOKEN}" | base64 | tr -d '\n')
+          printf '{"auths":{"%s":{"auth":"%s"}}}' "$REGISTRY" "$AUTH" > "$DOCKER_CONFIG/config.json"
+
+          # Positional parameters hold the variable part of the command line,
+          # so every value stays ONE argument (busybox sh has no arrays).
+          set -f
+          set --
+
+          # The git context is fetched by BuildKit with GIT_AUTH_TOKEN (the
+          # job token, contents: read) — passed as a secret, never as an opt.
+          printf '%s' "$GH_TOKEN" > "$WORK/git-token"
+          set -- "$@" --secret "id=GIT_AUTH_TOKEN,src=$WORK/git-token"
+
+          OLD_IFS="$IFS"
+          IFS='
+          '
+          # BUILD_SECRETS: one id=value per line → one secret file each.
+          for line in $BUILD_SECRETS; do
+            [ -n "$line" ] || continue
+            id="${line%%=*}"
+            case "$id" in
+              ''|*[!A-Za-z0-9_.-]*) echo "::error::invalid BUILD_SECRETS id (expected id=value lines)"; exit 1 ;;
+            esac
+            printf '%s' "${line#*=}" > "$WORK/secret-$id"
+            set -- "$@" --secret "id=$id,src=$WORK/secret-$id"
+          done
+          # build-args: one KEY=VALUE per line.
+          for arg in $BUILD_ARGS; do
+            if [ -n "$arg" ]; then
+              set -- "$@" --opt "build-arg:$arg"
+            fi
+          done
+          IFS="$OLD_IFS"
+
+          if [ -n "$TARGET" ]; then
+            set -- "$@" --opt "target=$TARGET"
+          fi
+          if [ "$PROVENANCE" != "false" ]; then
+            set -- "$@" --opt "attest:provenance=$PROVENANCE"
+          fi
+          if [ "$SBOM" = "true" ]; then
+            set -- "$@" --opt "attest:sbom="
+          fi
+
+          NAMES=""
+          for tag in $TAGS; do
+            NAMES="${NAMES:+$NAMES,}${IMAGE_BASE}:${tag}"
+          done
+          CACHE="${IMAGE_BASE}-cache:buildcache"
+
+          # Context = this repository at this exact commit, narrowed to the
+          # context directory (`#<ref>:<subdir>`); the Dockerfile path is
+          # relative to it.
+          SUBDIR="${CONTEXT#./}"
+          if [ "$SUBDIR" = "." ]; then SUBDIR=""; fi
+          GIT_CONTEXT="${SERVER_URL}/${REPO}.git#${SHA}${SUBDIR:+:$SUBDIR}"
+
+          buildctl-daemonless.sh build \
+            --progress plain \
+            --frontend dockerfile.v0 \
+            --opt "context=${GIT_CONTEXT}" \
+            --opt "filename=${DOCKERFILE}" \
+            --opt "label:org.opencontainers.image.revision=${SHA}" \
+            --opt "label:org.opencontainers.image.source=${SERVER_URL}/${REPO}" \
+            --import-cache "type=registry,ref=${CACHE}" \
+            --export-cache "type=registry,ref=${CACHE},mode=max,ignore-error=true" \
+            --output "type=image,\"name=${NAMES}\",push=${PUSH}" \
+            --metadata-file "$WORK/metadata.json" \
+            "$@"
+
+          DIGEST=$(sed -n 's/.*"containerimage\.digest": *"\(sha256:[0-9a-f]*\)".*/\1/p' "$WORK/metadata.json" | head -n 1)
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Job summary
+        if: always()
+        env:
+          IMAGE: ${{ steps.image.outputs.full }}
+          TAGS: ${{ steps.tags.outputs.list }}
+          CONTEXT: ${{ inputs.context }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "### BuildKit Build"
+            echo ""
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Image | \`${IMAGE}\` |"
+            echo "| Digest | \`${DIGEST}\` |"
+            echo "| Context | \`${CONTEXT}\` |"
+            echo "| SHA | \`${GITHUB_SHA}\` |"
+            echo ""
+            echo "**Tags:**"
+            for tag in $TAGS; do
+              echo "- \`${IMAGE}:${tag}\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
