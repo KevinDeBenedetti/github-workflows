@@ -61,7 +61,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Node.js
-        uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/setup-node
         with:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}

@@ -4,3 +4,14 @@ self-hosted-runner:
     - kaniko
     - k3s-infra
     - k3s-portfolio
+
+# `uses: $/…` (GitHub's self-repository syntax, 2026-07) is unknown to
+# actionlint (1.7.12 and main, checked 2026-10-24): it reports both forms as
+# malformed. Ignore exactly those two messages, nothing else — the referenced
+# actions and workflows are then not input-checked here; ci-cd.yml still runs
+# them through `./` refs, which actionlint does check. Drop once supported.
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      - '"\$/[^"]*" in invalid format because ref is missing'
+      - 'reusable workflow call "\$/'

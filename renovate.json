@@ -42,7 +42,7 @@
   ],
   "packageRules": [
     {
-      "description": "Self-references (`KevinDeBenedetti/github-workflows/...`) are this very repo — the internal composite-action refs are bumped by release-please (x-release-please-version), never by Renovate.",
+      "description": "Self-references (`KevinDeBenedetti/github-workflows/...`) are this very repo — the workflows reach their own actions with `uses: $/…` (no ref), and the examples' pins are bumped by release-please (x-release-please-version), never by Renovate.",
       "matchPackageNames": ["KevinDeBenedetti/github-workflows"],
       "enabled": false
     },

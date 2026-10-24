@@ -213,7 +213,7 @@ jobs:
           persist-credentials: false
 
       - name: ShellCheck
-        uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/shellcheck
         with:
           severity: ${{ inputs.shellcheck-severity }}
           exclude-paths: ${{ inputs.shellcheck-exclude-paths }}
@@ -231,7 +231,7 @@ jobs:
           persist-credentials: false
 
       - name: actionlint
-        uses: KevinDeBenedetti/github-workflows/.github/actions/actionlint@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/actionlint
         with:
           paths: ${{ inputs.actionlint-paths }}
           flags: ${{ inputs.actionlint-flags }}
@@ -255,13 +255,13 @@ jobs:
       # makes the runner warn "Unexpected input(s) 'recursive'".
       - name: Bats
         if: ${{ !inputs.bats-recursive }}
-        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/bats
         with:
           tests-dir: ${{ inputs.bats-tests-dir }}
 
       - name: Bats (recursive)
         if: ${{ inputs.bats-recursive }}
-        uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/bats
         with:
           tests-dir: ${{ inputs.bats-tests-dir }}
           recursive: true
@@ -326,7 +326,7 @@ jobs:
           persist-credentials: false
 
       - name: Check docs links
-        uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/check-docs-links
         with:
           docs-directory: ${{ inputs.docs-directory }}
 
@@ -343,6 +343,6 @@ jobs:
           persist-credentials: false
 
       - name: Check VitePress markdown
-        uses: KevinDeBenedetti/github-workflows/.github/actions/check-vitepress-md@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/check-vitepress-md
         with:
           docs-directory: ${{ inputs.docs-directory }}

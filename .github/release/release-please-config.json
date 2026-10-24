@@ -10,38 +10,6 @@
       "extra-files": [
         {
           "type": "generic",
-          "path": ".github/workflows/cd-docs.yml"
-        },
-        {
-          "type": "generic",
-          "path": ".github/workflows/cd-pages.yml"
-        },
-        {
-          "type": "generic",
-          "path": ".github/workflows/cd-vercel.yml"
-        },
-        {
-          "type": "generic",
-          "path": ".github/workflows/ci-kubernetes.yml"
-        },
-        {
-          "type": "generic",
-          "path": ".github/workflows/ci-node.yml"
-        },
-        {
-          "type": "generic",
-          "path": ".github/workflows/ci-python.yml"
-        },
-        {
-          "type": "generic",
-          "path": ".github/workflows/ci-shell.yml"
-        },
-        {
-          "type": "generic",
-          "path": ".github/workflows/security.yml"
-        },
-        {
-          "type": "generic",
           "path": "examples/ci-cd-pages.yml"
         },
         {

@@ -29,32 +29,32 @@ jobs:
 
 ## Inputs
 
-| Input        | Type    | Default                                    | Description |
-| ------------ | ------- | ------------------------------------------ | ----------- |
-| `image-name` | string  | `''`                                       | Image name (e.g. `my-api`). Defaults to the repository name. |
-| `context`    | string  | `'.'`                                      | Docker build context path (relative to repo root) |
-| `dockerfile` | string  | `Dockerfile`                               | Dockerfile path relative to `context` |
-| `push`       | boolean | `true`                                     | Push the image to the registry |
-| `target`     | string  | `''`                                       | Build target stage (e.g. `dev`, `prod`) |
-| `tag-latest` | boolean | `false`                                    | Also tag as `:latest` on the default branch |
-| `version`    | string  | `''`                                       | Explicit version tag (e.g. `v1.2.3`); a `major.minor` tag is added when semver |
-| `build-args` | string  | `''`                                       | Build args, one per line, `KEY=VALUE`. **Never secrets** — use `BUILD_SECRETS` |
+| Input        | Type    | Default                                    | Description                                                                          |
+| ------------ | ------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| `image-name` | string  | `''`                                       | Image name (e.g. `my-api`). Defaults to the repository name.                         |
+| `context`    | string  | `'.'`                                      | Docker build context path (relative to repo root)                                    |
+| `dockerfile` | string  | `Dockerfile`                               | Dockerfile path relative to `context`                                                |
+| `push`       | boolean | `true`                                     | Push the image to the registry                                                       |
+| `target`     | string  | `''`                                       | Build target stage (e.g. `dev`, `prod`)                                              |
+| `tag-latest` | boolean | `false`                                    | Also tag as `:latest` on the default branch                                          |
+| `version`    | string  | `''`                                       | Explicit version tag (e.g. `v1.2.3`); a `major.minor` tag is added when semver       |
+| `build-args` | string  | `''`                                       | Build args, one per line, `KEY=VALUE`. **Never secrets** — use `BUILD_SECRETS`       |
 | `provenance` | string  | `mode=max`                                 | SLSA provenance (`mode=max`, `mode=min`, `false`). `mode=max` records the build-args |
-| `sbom`       | boolean | `true`                                     | Attach an SBOM attestation |
-| `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'` | Runner labels as JSON — `'"k3s-portfolio"'` (ARC scale set) or a label array |
+| `sbom`       | boolean | `true`                                     | Attach an SBOM attestation                                                           |
+| `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'` | Runner labels as JSON — `'"k3s-portfolio"'` (ARC scale set) or a label array         |
 
 ## Secrets
 
-| Secret          | Required | Description |
-| --------------- | -------- | ----------- |
+| Secret          | Required | Description                                                                            |
+| --------------- | -------- | -------------------------------------------------------------------------------------- |
 | `BUILD_SECRETS` | No       | One `id=value` per line, read in the Dockerfile with `RUN --mount=type=secret,id=<id>` |
 
 ## Outputs
 
-| Output   | Description |
-| -------- | ----------- |
+| Output   | Description              |
+| -------- | ------------------------ |
 | `image`  | Image name (without tag) |
-| `digest` | Image digest |
+| `digest` | Image digest             |
 
 ## Cluster prerequisites
 
@@ -169,15 +169,25 @@ spec:
             - name: work
               mountPath: /work
               readOnly: true
-            # As in BuildKit's Kubernetes example: the image's own VOLUME can
-            # be mounted nosuid/nodev, which rootless BuildKit cannot use.
+            # One emptyDir (world-writable, exists from the start) per directory
+            # rootless BuildKit writes to: the image's own copies were not
+            # writable by UID 1000 in the pod, and rootlesskit does not create
+            # its TMPDIR. A single emptyDir on ~/.local would hide these.
+            - name: user-tmp
+              mountPath: /home/user/.local/tmp          # TMPDIR (rootlesskit state)
             - name: buildkit-state
               mountPath: /home/user/.local/share/buildkit
+            - name: user-runtime
+              mountPath: /run/user/1000                 # XDG_RUNTIME_DIR
       volumes:
         - name: work
           configMap:
             name: buildkit-smoke
+        - name: user-tmp
+          emptyDir: {}
         - name: buildkit-state
+          emptyDir: {}
+        - name: user-runtime
           emptyDir: {}
 ```
 
@@ -188,12 +198,15 @@ kubectl -n buildkit-smoke logs job/buildkit-smoke | tail -n 30
 kubectl delete namespace buildkit-smoke
 ```
 
-| Outcome | Meaning |
-| ------- | ------- |
-| Job completes, logs show `owner of /data: 4242:4242` | Rootless BuildKit works on these nodes with this securityContext |
-| Pod rejected: `violates PodSecurity` | The namespace label did not apply, or an admission policy refuses the pod |
-| `newuidmap: write to uid_map failed` / `failed to setup UID/GID map` | Privilege escalation or `CAP_SETUID` is blocked — check `allowPrivilegeEscalation` and capability policies |
-| `mount … permission denied` / `operation not permitted` | seccomp or AppArmor still confines the pod — check the node's AppArmor and that the profile fields are honoured |
+| Outcome                                                                      | Meaning                                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Job completes, logs show `owner of /data: 4242:4242`                         | Rootless BuildKit works on these nodes with this securityContext                                                                                                                                                                         |
+| Pod rejected: `violates PodSecurity`                                         | The namespace label did not apply, or an admission policy refuses the pod                                                                                                                                                                |
+| `newuidmap: write to uid_map failed` / `failed to setup UID/GID map`         | Privilege escalation or `CAP_SETUID` is blocked — check `allowPrivilegeEscalation` and capability policies                                                                                                                               |
+| `rootlesskit … creating a state directory: … permission denied` or `mkdir /run: file exists`, while a shell in the same pod can write there | The **node** loads an AppArmor profile attached to the path `/usr/bin/rootlesskit` (AppArmor 4 ships one, e.g. on Debian 13): exec-ing that path switches even an `unconfined` pod to it. Check with `sudo aa-status \| grep rootlesskit` on the node — a copy of the binary under another path runs fine. Fix it on the node: adjust or disable that profile |
+| `rootlesskit … creating a state directory: … permission denied`, and the shell cannot write there either | A directory BuildKit writes to is not writable by UID 1000 — mount one `emptyDir` on each of `/home/user/.local/tmp`, `/home/user/.local/share/buildkit` and `/run/user/1000` (the hook template must add them for the workflow pod too) |
+| `rootlesskit … creating a state directory: stat … no such file or directory` | An `emptyDir` on a parent (e.g. `~/.local`) hides the directories the image created — mount on each directory instead                                                                                                                    |
+| `mount … permission denied` / `operation not permitted`                      | seccomp or AppArmor still confines the pod — check the node's AppArmor and that the profile fields are honoured                                                                                                                          |
 
 **Not covered by the smoke test — ARC integration.** In `containerMode: kubernetes` the steps run in the workflow pod (UID 1000 here) while the runner (UID 1001 in `actions-runner`) creates the files of the shared work volume, such as `$GITHUB_OUTPUT`. Check on a first `workflow_dispatch` run that the build step can write them; if it cannot, give both pods a common `fsGroup` through the hook template and the runner pod spec.
 

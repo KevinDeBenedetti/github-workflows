@@ -14,8 +14,10 @@ jobs:
       manifest-file: .release-please-manifest.json
       git-user-name: ${{ secrets.GITHUB_USERNAME }}
       git-user-email: ${{ secrets.GITHUB_EMAIL }}
-    secrets:
-      RELEASE_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
 ```
 
 ## Inputs
@@ -32,15 +34,15 @@ jobs:
 | `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to notify when a release PR is opened. Each user is requested as a reviewer **and** @mentioned in a PR comment, so a notification reliably reaches them. Each PR is notified at most once. Leave empty to disable. |
 | `release-pending-label` | string | `'autorelease: pending'` | Label used to find the open release PR on runs where release-please didn't create/update it (the fallback path for `notify-reviewers`). Override only if you customized `pull-request-label` in your release-please config. |
 | `pre-major-alias` | string | `both`             | Alias tag(s) moved while at 0.x: `both` (`v0` + `v0.<minor>`), `minor` (`v0.<minor>` only) or `major` (`v0` only). Ignored from 1.0. |
-| `app-client-id`   | string | `''`               | Client ID (or App ID) of a GitHub App with contents/pull-requests/issues write. When set, a short-lived App token is used instead of `GITHUB_TOKEN`, so the release PR is attributed to the App (avoids the workflow-approval gate and lets CI run on the release PR). If `extra-files` include files under `.github/workflows/`, the App also needs **Workflows: write** and `app-workflows-permission: true`, or release-please fails with `Error adding to tree` (`GITHUB_TOKEN` can never update workflow files). The token is scoped to contents/pull-requests/issues write (plus workflows when enabled), not to every permission of the installation. |
-| `app-workflows-permission` | boolean | `false` | Also request `workflows: write` on the App token — required when the release PR edits `.github/workflows/` files. |
+| `app-client-id`   | string | `''`               | **Deprecated, ignored** (a warning is printed): the release runs on `GITHUB_TOKEN`. Still declared so existing callers don't fail. |
+| `app-workflows-permission` | boolean | `false` | **Deprecated, ignored.** |
 
 ## Secrets
 
 | Secret            | Required | Description                                                                          |
 | ----------------- | -------- | ------------------------------------------------------------------------------------ |
-| `RELEASE_TOKEN`   | no       | PAT with `contents: write` and `pull-requests: write`. Falls back to `GITHUB_TOKEN`. |
-| `APP_PRIVATE_KEY` | no       | Private key of the GitHub App referenced by `app-client-id`. Required when `app-client-id` is set. |
+| `RELEASE_TOKEN`   | no       | **Deprecated, ignored** (a warning is printed): the release runs on `GITHUB_TOKEN`. |
+| `APP_PRIVATE_KEY` | no       | **Deprecated, ignored.** |
 
 ## Outputs
 
@@ -64,30 +66,16 @@ jobs:
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
 - With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker. Both the review request and the comment are gated on this marker, so once a PR is notified, later runs (on any push while the PR stays open) skip it entirely — reviewers are never re-requested or re-pinged.
 - Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.
-- A review request alone can be missed (it depends on each user's notification settings), which is why an @mention comment is also posted — mentions notify reliably. This matters when the release PR is opened by a GitHub App (`app-client-id`) rather than by you.
+- A review request alone can be missed (it depends on each user's notification settings), which is why an @mention comment is also posted — mentions notify reliably. This matters when the release PR is opened by a bot or another account rather than by you.
 
-## Why release commits show `…[bot]` as the author
+## Token: `GITHUB_TOKEN` only
 
-When `app-client-id` is set, the workflow mints a short-lived **GitHub App
-token** (`Generate App token` → `Release Please` steps) and release-please uses
-it to author the `chore(main): release X` commit (version bump + CHANGELOG).
-GitHub attributes any commit made with an App token to `<app-name>[bot]`, so
-that commit's **author** is the App (e.g. `release-please-global[bot]`) — while
-the **committer** stays whoever merged the release PR. This is why the App shows
-up in the repo's contributor list.
+The release runs on the job's `GITHUB_TOKEN` — no PAT or GitHub App to create, store or rotate. The calling job grants it `contents`, `issues` and `pull-requests: write` (see Usage). What that implies:
 
-This is expected and intended, not a bug. Using the App identity (instead of the
-default `GITHUB_TOKEN` / `github-actions[bot]`) is what lets CI run on the
-release PR and bypasses the manual workflow-approval gate. Recommendations:
+- **Repository setting**: enable *Settings → Actions → General → Allow GitHub Actions to create and approve pull requests*, or release-please cannot open the release PR. An approval by `github-actions[bot]` does not count as a Code Owner review.
+- **CI on the release PR waits for approval**: a PR opened by `GITHUB_TOKEN` creates its `pull_request` runs in an *approval-required* state — a user with write access starts them with **Approve workflows to run** on the PR. Other events created by `GITHUB_TOKEN` start no workflow at all.
+- **No workflow files in `extra-files`**: `GITHUB_TOKEN` can never update `.github/workflows/` (release-please fails with `Error adding to tree`). This repository does not need it: its workflows reach their own actions with `uses: $/…`, resolved to the commit they run from, so nothing there carries a version to bump.
+- **No workflows triggered by the release itself**: tags and releases created with `GITHUB_TOKEN` don't fire `on: release` / `on: push: tags` workflows.
+- Release commits are authored by `github-actions[bot]`: if you run `check-bot-commits` on release PRs, allow that login.
 
-- **Keep it as-is (recommended).** A bot author on release-bump commits is the
-  standard release-please setup and keeps your own contributions cleanly
-  separated from the automated version bumps. GitHub already excludes bots from
-  the repo's *contributions graph*; they only appear on the Contributors list.
-- **Want the commit attributed to a human instead?** Drop `app-client-id` and
-  pass a user **PAT** as `RELEASE_TOKEN` — release commits are then authored by
-  that user. Trade-offs: a PAT is broader-scoped and harder to rotate than a
-  per-repo App, and you lose the App's least-privilege model.
-- **Don't try to block this bot via `check-bot-commits`.** If you run that guard
-  on release PRs, add `release-please-global[bot]` (or your App's login) to its
-  `allowed-bots` list — otherwise it will fail the release PR.
+`app-client-id`, `app-workflows-permission`, `APP_PRIVATE_KEY` and `RELEASE_TOKEN` were supported until this change. They are still accepted and ignored with a warning: drop them from the caller, then delete the matching repository variables and secrets.
