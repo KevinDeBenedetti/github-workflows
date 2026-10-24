@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.28.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.27.0...v0.28.0) (2026-10-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **supply-chain:** ci-terraform installs a pinned Terraform instead of the latest one, and ci-ansible pins ansible 14 (Python >= 3.12; set ansible-version on older interpreters).
+* **workflows:** release.yml callers whose release PR edits .github/workflows/ files must set app-workflows-permission: true (the App token no longer carries every installation permission).
+
+### Features
+
+* **workflows:** add rootless BuildKit deploy and scorecard scanning ([088703d](https://github.com/KevinDeBenedetti/github-workflows/commit/088703d8a61fa1ed8bda4c1098281ed744343acb))
+
+
+### Bug Fixes
+
+* **ci:** close fork skip bypass and add single CI gate check ([52f9b69](https://github.com/KevinDeBenedetti/github-workflows/commit/52f9b6946dd111f8ad1f36b6dea492ecc68ac287))
+* **security:** stop changes from silencing their own Gitleaks findings ([be7e1fc](https://github.com/KevinDeBenedetti/github-workflows/commit/be7e1fc113790198d03366bd6171dc8b647787f7))
+* **supply-chain:** pin third-party actions by SHA, examples by release ([a74deb7](https://github.com/KevinDeBenedetti/github-workflows/commit/a74deb7ad85ce835679a673d1e67a87b9fa11c9f))
+* **supply-chain:** verify downloaded tools, pin tool versions ([44f7bd0](https://github.com/KevinDeBenedetti/github-workflows/commit/44f7bd024f4e16ac8cdc7a5498b8496abe34ea5c))
+* update workflows to use self-repository syntax and remove deprecated token inputs ([4387736](https://github.com/KevinDeBenedetti/github-workflows/commit/4387736fb6678ee887101482b9a2084cff0c00f2))
+* **workflows:** attest images, scope tokens and harden build inputs ([9b9e897](https://github.com/KevinDeBenedetti/github-workflows/commit/9b9e89796fab37076cff4d1853e0f1ea14b66f07))
+* **workflows:** harden security scanning and tool-install supply chain ([eb9acb1](https://github.com/KevinDeBenedetti/github-workflows/commit/eb9acb10b80a9a790476bb783b8d3be71777a6db))
+* **workflows:** least-privilege tokens, no template injection, no persisted credentials ([e7af922](https://github.com/KevinDeBenedetti/github-workflows/commit/e7af922d7443c929b0dec1a7b77457925acb5208))
+
 ## [0.27.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.26.0...v0.27.0) (2026-10-20)
 
 

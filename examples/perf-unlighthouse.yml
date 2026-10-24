@@ -9,7 +9,7 @@ on:
 jobs:
   unlighthouse:
     # Pin to a release tag or commit SHA for reproducible runs.
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/perf-unlighthouse.yml@v0.27.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/perf-unlighthouse.yml@v0.28.0 # x-release-please-version
     permissions:
       contents: read
     with:
