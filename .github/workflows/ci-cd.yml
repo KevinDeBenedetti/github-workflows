@@ -17,7 +17,7 @@
 #   ci-zizmor    — GitHub Actions security lint (zizmor)                [push + PR]
 #   ci-actions   — same checks through the local composite actions            [push + PR]
 #   ci-commits   — Conventional Commits on every new commit             [push + PR]
-#   security     — Gitleaks secret scanning (security.yml)               [push + PR]
+#   security     — Gitleaks + dependency review + CodeQL (security.yml)  [push + PR]
 #   ci-gate      — single required check: all CI jobs above passed      [push + PR]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
 # =============================================================================
@@ -42,15 +42,13 @@ concurrency:
 jobs:
 
   # ── CI — Shell ───────────────────────────────────────────────────────────────
-  # Skipped on the release-please PR (head_ref guard) and on the
-  # `chore(main): release X` commit (head_commit guard) — that commit only bumps
-  # version/CHANGELOG, so re-linting it is pointless. release still runs via its
-  # always() gate (skipped ≠ failure). The head_ref guard also checks the PR
-  # comes from THIS repository: a fork can name its branch
-  # release-please--branches--main, and must not skip CI that way.
+  # Every CI job also runs on the release-please PR and the release commit: the
+  # workflows reach their own actions with `uses: $/…`, so nothing in a release
+  # PR points at a tag that does not exist yet. (A PR opened by GITHUB_TOKEN
+  # waits for "Approve workflows to run".) A tested and SAST-checked release PR
+  # is also what Scorecard's CI-Tests and SAST checks count.
   ci-shell:
     name: CI — Shell
-    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     uses: ./.github/workflows/ci-shell.yml
     with:
       run-shellcheck: true
@@ -76,7 +74,6 @@ jobs:
   # uses), so a PR that changes an action tests its own version of it.
   ci-actions:
     name: CI — Local actions
-    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -115,6 +112,28 @@ jobs:
       - name: VitePress markdown check (local action)
         uses: ./.github/actions/check-vitepress-md
 
+      # The hash-locked ansible tools: a Renovate PR that regenerates a lock
+      # must prove it still installs, every hash matching, and the tools run.
+      - name: Setup Python 3.12
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: setup-ansible, ansible-lint (local action)
+        uses: ./.github/actions/setup-ansible
+        with:
+          tool: ansible-lint
+
+      - name: setup-ansible, ansible (local action)
+        uses: ./.github/actions/setup-ansible
+        with:
+          tool: ansible
+
+      - name: Locked tools run
+        run: |
+          ansible-lint --version
+          ansible-playbook --version
+
   # ── CI — zizmor (GitHub Actions security lint) ───────────────────────────────
   # Template injection, over-broad permissions, unpinned uses, credential
   # persistence… across every workflow and composite action of this repo.
@@ -122,7 +141,6 @@ jobs:
   # pins, known-vulnerable action versions) use the read-only job token.
   ci-zizmor:
     name: CI — zizmor
-    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -162,21 +180,22 @@ jobs:
   # renovate-config-validator that nothing else runs.
   ci-prek:
     name: CI — prek hooks
-    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     uses: ./.github/workflows/ci-prek.yml
     permissions:
       contents: read
 
-  # ── Security — Secret scan ───────────────────────────────────────────────────
+  # ── Security ─────────────────────────────────────────────────────────────────
   security:
-    name: Security — Secret scan
-    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    name: Security
     uses: ./.github/workflows/security.yml
     with:
       run-node-audit: false
       run-python-audit: false
       run-secret-scan: true
-      run-codeql: false
+      # SAST on every PR and push: CodeQL for the workflows and composite
+      # actions themselves (`actions`) and the helper scripts (`python`).
+      run-codeql: true
+      codeql-languages: '["actions","python"]'
       # The dependency graph covers GitHub Actions: a PR pinning an action
       # with a known advisory fails here.
       run-dependency-review: true
@@ -186,19 +205,12 @@ jobs:
       contents: read
       pull-requests: read     # list the commits of the pull request
 
-  # ── CI — Gate ────────────────────────────────────────────────────────────────
-  # The main branch ruleset's single required check. Requiring the reusable
-  # workflows' checks directly cannot work: when a caller job is skipped (the
-  # release PR), GitHub creates one check under the caller's name ("CI — Shell")
-  # and never the inner ones ("CI — Shell / ShellCheck"), so a PR requiring them
-  # would wait forever. Here a skipped job passes only on the release PR/commit.
   # ── CI — Commit messages ─────────────────────────────────────────────────────
   # Conventional Commits on every new commit (the same script as the prek
   # commit-msg hook): PR → base..head, push → before..after. A push that
   # creates a branch has no `before` and is left to the PR check.
   ci-commits:
     name: CI — Commit messages
-    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -232,6 +244,10 @@ jobs:
         with:
           range: ${{ steps.range.outputs.range }}
 
+  # ── CI — Gate ────────────────────────────────────────────────────────────────
+  # The main branch ruleset's single required check: one stable name, so adding
+  # or renaming a CI job never touches the ruleset (reusable-workflow checks
+  # are named "Caller / Callee job"). Passes only when every job succeeded.
   ci-gate:
     name: CI — Gate
     needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-commits, security]
@@ -242,40 +258,22 @@ jobs:
       - name: Check CI results
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
-          RELEASE: "${{ (github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) || startsWith(github.event.head_commit.message, 'chore(main): release') }}"
         run: |
-          echo "CI results: ${RESULTS} (release PR/commit: ${RELEASE})"
+          echo "CI results: ${RESULTS}"
           for result in $RESULTS; do
-            case "$result" in
-              success) ;;
-              skipped)
-                if [ "$RELEASE" != "true" ]; then
-                  echo "::error::a CI job was skipped outside the release PR/commit"
-                  exit 1
-                fi
-                ;;
-              *)
-                echo "::error::a CI job ended with '${result}'"
-                exit 1
-                ;;
-            esac
+            if [ "$result" != "success" ]; then
+              echo "::error::a CI job ended with '${result}'"
+              exit 1
+            fi
           done
 
   # ── Release (release-please) ─────────────────────────────────────────────────
   # CD half: push-to-main only (the CI jobs above also run on PRs). Gated on the
-  # CI jobs so release-please only acts once main is green.
-  #
-  # `always()` + the result check lets this run even when the CI jobs are
-  # SKIPPED (which they are on the `chore(main): release X` commit — see above).
-  # It still blocks if any CI job actually FAILED or was CANCELLED.
+  # CI gate, so release-please only acts once main is green.
   release:
     name: Release
-    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, security]
-    if: >-
-      ${{ always()
-      && github.event_name == 'push' && github.ref == 'refs/heads/main'
-      && !contains(needs.*.result, 'failure')
-      && !contains(needs.*.result, 'cancelled') }}
+    needs: [ci-gate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     # Local ref: this job only runs on push to main, so it is the same file as
     # @main — but GitHub validates `with:` against the referenced workflow at
     # parse time on every event, and a remote @main ref rejects any input this

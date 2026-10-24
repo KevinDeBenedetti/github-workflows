@@ -11,11 +11,19 @@
   "configMigration": true,
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
-  "enabledManagers": ["github-actions", "custom.regex"],
+  "enabledManagers": ["github-actions", "custom.regex", "pip-compile"],
+  "pip-compile": {
+    "description": "Hash-locked Python tools of ci-ansible.yml (.github/actions/setup-ansible): Renovate bumps the pin in the .in file and re-runs the `uv pip compile` command recorded in the .txt header, hashes included.",
+    "managerFilePatterns": ["/^\\.github/actions/setup-ansible/[^/]+\\.txt$/"]
+  },
+  "lockFileMaintenance": {
+    "description": "Refresh the transitive dependencies (and their hashes) of the locked ansible tools above, so security fixes land without waiting for a direct-dependency release.",
+    "enabled": true
+  },
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, gitleaks, actionlint, kubeconform, shellcheck, bats, vercel). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
+      "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, gitleaks, actionlint, kubeconform, shellcheck, bats, terraform). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^\\.github/actions/.+\\.ya?ml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+(?:default|version): (?<currentValue>v?[\\d][^\\s]*)",

@@ -19,7 +19,7 @@ jobs:
     secrets: inherit
 ```
 
-> **Production tip:** Pin to a release tag (`@vX.Y.Z`) or the minor alias (`@v0.<minor>`) instead of `@main`. The workflows call their composite actions at the last released version, so on `@main` a feature that needs both a workflow change and an action change only works once it has been released.
+> **Production tip:** Pin to a release tag (`@vX.Y.Z`) or the minor alias (`@v0.<minor>`) instead of `@main`. The workflows call their composite actions with `uses: $/…`, resolved to the workflow's own commit, so a pin covers the actions too.
 
 > **Important:** All workflow files must live at the flat root of `.github/workflows/`.
 > GitHub Actions does not support reusable workflows in subdirectories.
@@ -204,23 +204,6 @@ jobs:
 
 ---
 
-### Vercel
-
-Requires three secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
-
-```yaml
-jobs:
-  deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@main
-    with:
-      environment: preview
-    secrets: inherit
-```
-
-→ [Full reference](workflows/cd-vercel.md)
-
----
-
 ### Docs sync
 
 Verify this repo's docs before the centralized docs site picks them up. The site polls
@@ -281,7 +264,6 @@ Combines Gitleaks secret scanning, CodeQL SAST, and optional dependency audits.
 | `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners (upstream archived — see `cd-buildkit.yml`) | [→](workflows/cd-kaniko.md) |
 | `cd-buildkit.yml` | Build & push image with rootless BuildKit on self-hosted runners (experimental) | [→](workflows/cd-buildkit.md) |
 | `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](workflows/cd-pages.md) |
-| `cd-vercel.yml` | Deploy preview or production to Vercel | [→](workflows/cd-vercel.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](workflows/release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](workflows/security.md) |
@@ -310,6 +292,7 @@ steps:
 | [`actionlint`](actions/actionlint.md) | Validate GitHub Actions workflow files |
 | [`kubeconform`](actions/kubeconform.md) | Validate Kubernetes manifests |
 | [`check-commit-msg`](actions/check-commit-msg.md) | Conventional Commits on commit messages (CI + commit-msg hook) |
+| [`setup-ansible`](actions/setup-ansible.md) | Install ansible-lint or ansible from a hash-locked requirements file |
 | [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
@@ -323,7 +306,6 @@ Complete ready-to-use caller files live in [`examples/`](https://github.com/Kevi
 | File | Stack |
 |---|---|
 | `ci-cd-pages.yml` | Node.js CI → GitHub Pages → release-please |
-| `ci-cd-vercel.yml` | Node.js CI → Vercel → release-please |
 | `next.yml` | Next.js |
 | `nuxt.yml` | Nuxt |
 | `vue-react.yml` | Vue / React (Vite) |

@@ -1,0 +1,31 @@
+name: Setup Ansible tools
+description: >
+  Install ansible-lint or ansible from a hash-locked requirements file
+  (pip --require-hashes): every package, direct and transitive, is checked
+  against the SHA-256 recorded in this action. Renovate keeps the locks current.
+
+inputs:
+  tool:
+    description: "Locked tool set to install: 'ansible-lint' or 'ansible'"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The locks are compiled with `uv pip compile --universal --python-version
+    # 3.12 --generate-hashes` (header of each .txt), so they need Python >= 3.12.
+    - name: Install ${{ inputs.tool }} (hash-locked)
+      shell: bash
+      env:
+        TOOL: ${{ inputs.tool }}
+      run: |
+        case "$TOOL" in
+          ansible-lint|ansible) ;;
+          *) echo "::error::setup-ansible: unknown tool '${TOOL}' (expected ansible-lint or ansible)"; exit 1 ;;
+        esac
+        if ! python -c 'import sys; sys.exit(sys.version_info < (3, 12))'; then
+          echo "::error::setup-ansible needs Python >= 3.12 — its hash-locked requirements are resolved for it"
+          exit 1
+        fi
+        python -m pip install --quiet --disable-pip-version-check \
+          --require-hashes -r "${GITHUB_ACTION_PATH}/${TOOL}.txt"

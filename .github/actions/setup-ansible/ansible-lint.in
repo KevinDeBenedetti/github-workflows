@@ -1,0 +1,3 @@
+# Direct dependency of the ansible-lint job (ci-ansible.yml). Renovate bumps
+# this pin and regenerates ansible-lint.txt (pip-compile manager, uv).
+ansible-lint==26.10.1

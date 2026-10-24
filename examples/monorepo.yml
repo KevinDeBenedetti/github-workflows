@@ -59,39 +59,6 @@ jobs:
     with:
       working-directory: apps/client
 
-  # ── Deploy preview — web (PR uniquement) ──────────────────────────────────
-  deploy-web-preview:
-    needs: [detect, ci-web]
-    if: |
-      github.event_name == 'pull_request' &&
-      needs.detect.outputs.changed-web == 'true'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.29.0 # x-release-please-version
-    with:
-      environment: preview
-      working-directory: apps/web
-    # Only the secrets this workflow declares — never `secrets: inherit`.
-    secrets:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-  # ── Deploy production — web ───────────────────────────────────────────────
-  deploy-web-prod:
-    needs: [detect, ci-web]
-    if: |
-      github.ref == 'refs/heads/main' &&
-      github.event_name == 'push' &&
-      needs.detect.outputs.changed-web == 'true'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.29.0 # x-release-please-version
-    with:
-      environment: production
-      working-directory: apps/web
-    # Only the secrets this workflow declares — never `secrets: inherit`.
-    secrets:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
   # ── Deploy production — api ───────────────────────────────────────────────
   deploy-api-prod:
     needs: [detect, ci-api]
