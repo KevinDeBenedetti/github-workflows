@@ -18,6 +18,7 @@
 
 - A GitHub repository
 - Appropriate secrets configured in your repo or organization (see each workflow's docs)
+- Self-hosted runners on **2.336.0 or newer**: the workflows reach their own composite actions with GitHub's self-repository syntax (`uses: $/…`); GitHub-hosted runners already qualify
 
 ## Usage
 

@@ -6,10 +6,11 @@
 # workflow, not the published @main one). The release job is the CD half: it
 # gates on the CI jobs so release-please only opens/tags once main is green.
 #
-# The reusable workflows pin their composite actions to the last release
-# (`…/.github/actions/x@vX.Y.Z`), so ci-shell below exercises the workflow
-# wiring with the RELEASED actions. ci-actions runs the PR's own copies
-# (`./.github/actions/x`) so an action change is tested before it ships.
+# The reusable workflows reach their composite actions with `uses: $/…`,
+# which GitHub resolves to the commit the workflow runs from: ci-shell below
+# exercises them at this PR's commit, as callers will at a release tag.
+# ci-actions also runs them through `./` refs, which actionlint can check
+# (it does not know `$/` yet — see .github/actionlint.yaml).
 #
 # Jobs:
 #   ci-shell     — shellcheck + actionlint + bats + docs checks (ci-shell.yml) [push + PR]
@@ -247,12 +248,7 @@ jobs:
       issues: write          # release-please labels the release PR (issues API)
       pull-requests: write   # open/update the release PR
     with:
-      app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-      # The release PR bumps the x-release-please-version pins in .github/workflows/.
-      app-workflows-permission: true
       notify-reviewers: KevinDeBenedetti
       # Move only v0.<minor>: breaking changes ship as minor bumps before 1.0,
       # so this repo's callers must never be carried across one by an alias.
       pre-major-alias: minor
-    secrets:
-      APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}

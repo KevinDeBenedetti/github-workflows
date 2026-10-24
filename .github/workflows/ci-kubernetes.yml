@@ -126,7 +126,7 @@ jobs:
           persist-credentials: false
 
       - name: kubeconform
-        uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@v0.27.0 # x-release-please-version
+        uses: $/.github/actions/kubeconform
         with:
           paths: ${{ inputs.kubeconform-paths }}
           exclude: ${{ inputs.kubeconform-exclude }}

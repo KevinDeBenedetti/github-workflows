@@ -4,10 +4,11 @@ rules:
   unpinned-uses:
     config:
       policies:
-        # This repo's own composite actions are pinned to the release they ship
-        # with (@vX.Y.Z), bumped by release-please (x-release-please-version):
-        # a SHA cannot be known before the release commit exists. Release tags
-        # must be protected by a tag ruleset (see SECURITY.md).
+        # Workflows reach this repo's own actions through `uses: $/…` (same
+        # commit, no ref at all). This policy covers remote self-references
+        # (the examples, copied into other repos, pin @vX.Y.Z — a SHA cannot be
+        # known before the release commit exists). Release tags must be
+        # protected by a tag ruleset (see SECURITY.md).
         "KevinDeBenedetti/github-workflows/*": ref-pin
         # Everything else: full commit SHA (Renovate keeps them current).
         "*": hash-pin
