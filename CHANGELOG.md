@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.28.0...v0.29.0) (2026-10-24)
+
+
+### Features
+
+* **check-commit-msg:** add action to validate commit messages against Conventional Commits ([4890444](https://github.com/KevinDeBenedetti/github-workflows/commit/4890444cc0b3074c88f538eae1fc0bc4c38d60ba))
+
 ## [0.28.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.27.0...v0.28.0) (2026-10-24)
 
 
