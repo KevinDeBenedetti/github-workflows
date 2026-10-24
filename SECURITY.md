@@ -45,8 +45,12 @@ values (`scripts/update-tool-checksums.py`); caller inputs never reach a
 
 These live outside the code and must be set in the repository settings:
 
-- [ ] **Branch ruleset on `main`**: require a pull request and the CI checks;
-      block force pushes and deletion.
+- [ ] **Branch ruleset on `main`**: require a pull request with *Code Owner*
+      review, and the single `CI — Gate` check (it aggregates every CI job and
+      stays meaningful on release PRs, where the CI jobs are skipped); linear
+      history; block force pushes and deletion. Bypass: *Repository admin*, in
+      *pull request* mode only — a code owner cannot approve their own PR, so
+      the maintainer's own PRs merge through it; direct pushes stay blocked.
 - [ ] **Tag ruleset on `v*.*.*`**: block updates and deletion — callers and
       the internal action pins rely on release tags never moving. Leave the
       moving aliases (`v1`, `v0.N`) out of it: the release job updates them.

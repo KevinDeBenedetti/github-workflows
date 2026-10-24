@@ -68,16 +68,134 @@ spec:
       securityContext:
         runAsUser: 1000
         runAsGroup: 1000
+        # newuidmap (subuid mapping) is setuid: no_new_privs breaks it.
+        allowPrivilegeEscalation: true
         seccompProfile:
           type: Unconfined
         appArmorProfile:
           type: Unconfined
 ```
 
-- **Pod Security**: `seccompProfile: Unconfined` and AppArmor `Unconfined` are refused by the **`baseline`** level. A namespace enforcing `baseline` (the k3s `ci` namespace does) rejects the pod — run the build scale set in a dedicated namespace whose level allows it, rather than relaxing the namespace shared by every runner.
+- **Pod Security**: `seccompProfile: Unconfined` and AppArmor `Unconfined` are refused by the **`baseline`** level, so the namespace running the build pods must enforce **`privileged`**. User namespaces (`hostUsers: false`) do not avoid it: without the unconfined profiles, BuildKit would need `CAP_SYS_ADMIN`, which `baseline` refuses too. Run the build scale set in a dedicated namespace rather than relaxing the one shared by every runner.
+- **Policy engines** (Kyverno, Gatekeeper…) that enforce `allowPrivilegeEscalation: false` or `capabilities.drop: [ALL]` reject the pod as well — dropping ALL removes the `CAP_SETUID` that `newuidmap` needs.
 - Use a **dedicated hook template** referenced only by the scale set(s) that build images, so the other `container:` jobs keep the default profiles.
 - The trade-off: Kaniko ran as **root** under the default profiles; rootless BuildKit runs as an **unprivileged user** in its own user namespace, without the default seccomp/AppArmor filters.
 - The workflow sets `BUILDKITD_FLAGS=--oci-worker-no-process-sandbox` (Kubernetes has no `systempaths=unconfined`): `RUN` steps share the builder's PID namespace, as in BuildKit's own Kubernetes examples.
+
+### Validate the cluster first
+
+Before changing any namespace or scale set, run this throwaway Job. It builds a Dockerfile that installs a package and `chown`s to another UID — the subuid mapping real builds rely on — with exactly the settings above:
+
+```yaml
+# BuildKit rootless smoke test — checks that the cluster's nodes can run
+# rootless BuildKit with the securityContext cd-buildkit.yml needs, BEFORE any
+# change to the ci namespace or the ARC scale sets. Throwaway: delete the
+# namespace afterwards (kubectl delete namespace buildkit-smoke).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: buildkit-smoke
+  labels:
+    # baseline refuses seccomp/AppArmor Unconfined — the very thing under test.
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: baseline
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: buildkit-smoke
+  namespace: buildkit-smoke
+data:
+  # What real image builds rely on: a package install (network, root-owned
+  # files) and a chown to another UID — that needs the subuid range, i.e.
+  # newuidmap, the step that breaks without allowPrivilegeEscalation.
+  Dockerfile: |
+    FROM alpine:3.22
+    RUN apk add --no-cache git \
+     && adduser -D -u 4242 app \
+     && install -d -o app -g app /data \
+     && stat -c 'owner of /data: %u:%g' /data
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: buildkit-smoke
+  namespace: buildkit-smoke
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 600
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: buildkit
+          image: moby/buildkit:v0.34.1-rootless@sha256:f68752a5a94acfcdad2d07867b7075601a421638e17fc5f28efc1c814d0c4f89
+          command: ["buildctl-daemonless.sh"]
+          args:
+            - build
+            - --progress
+            - plain
+            - --frontend
+            - dockerfile.v0
+            - --local
+            - context=/work
+            - --local
+            - dockerfile=/work
+            - --output
+            - type=image,name=buildkit-smoke:test,push=false
+          env:
+            # Same flag as cd-buildkit.yml (no systempaths=unconfined on k8s).
+            - name: BUILDKITD_FLAGS
+              value: --oci-worker-no-process-sandbox
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000
+            runAsNonRoot: true
+            # newuidmap is setuid: no_new_privs would break the UID mapping.
+            allowPrivilegeEscalation: true
+            seccompProfile:
+              type: Unconfined
+            appArmorProfile:
+              type: Unconfined
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          volumeMounts:
+            - name: work
+              mountPath: /work
+              readOnly: true
+            # As in BuildKit's Kubernetes example: the image's own VOLUME can
+            # be mounted nosuid/nodev, which rootless BuildKit cannot use.
+            - name: buildkit-state
+              mountPath: /home/user/.local/share/buildkit
+      volumes:
+        - name: work
+          configMap:
+            name: buildkit-smoke
+        - name: buildkit-state
+          emptyDir: {}
+```
+
+```bash
+kubectl apply -f buildkit-smoke-test.yaml
+kubectl -n buildkit-smoke wait --for=condition=complete job/buildkit-smoke --timeout=10m
+kubectl -n buildkit-smoke logs job/buildkit-smoke | tail -n 30
+kubectl delete namespace buildkit-smoke
+```
+
+| Outcome | Meaning |
+| ------- | ------- |
+| Job completes, logs show `owner of /data: 4242:4242` | Rootless BuildKit works on these nodes with this securityContext |
+| Pod rejected: `violates PodSecurity` | The namespace label did not apply, or an admission policy refuses the pod |
+| `newuidmap: write to uid_map failed` / `failed to setup UID/GID map` | Privilege escalation or `CAP_SETUID` is blocked — check `allowPrivilegeEscalation` and capability policies |
+| `mount … permission denied` / `operation not permitted` | seccomp or AppArmor still confines the pod — check the node's AppArmor and that the profile fields are honoured |
+
+**Not covered by the smoke test — ARC integration.** In `containerMode: kubernetes` the steps run in the workflow pod (UID 1000 here) while the runner (UID 1001 in `actions-runner`) creates the files of the shared work volume, such as `$GITHUB_OUTPUT`. Check on a first `workflow_dispatch` run that the build step can write them; if it cannot, give both pods a common `fsGroup` through the hook template and the runner pod spec.
 
 ## Notes
 
