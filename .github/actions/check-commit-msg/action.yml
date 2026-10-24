@@ -1,0 +1,19 @@
+name: Check commit messages
+description: >
+  Validate that every non-merge commit in a range follows Conventional Commits
+  (type from the release-please set, no 'refactor', header ≤ 100 characters).
+  Needs a checkout with enough history to contain the range (fetch-depth: 0).
+
+inputs:
+  range:
+    description: Git revision range to check, e.g. "<base-sha>..<head-sha>"
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Check commit messages
+      shell: bash
+      env:
+        COMMIT_RANGE: ${{ inputs.range }}
+      run: bash "$GITHUB_ACTION_PATH/check-commit-msg.sh"

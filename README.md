@@ -1,6 +1,6 @@
 # github-workflows
 
-[![CI](https://img.shields.io/github/actions/workflow/status/KevinDeBenedetti/github-workflows/ci-cd.yml?style=for-the-badge&label=CI)](https://github.com/KevinDeBenedetti/github-workflows/actions/workflows/ci-cd.yml) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/KevinDeBenedetti/github-workflows?style=for-the-badge&label=Scorecard)](https://scorecard.dev/viewer/?uri=github.com/KevinDeBenedetti/github-workflows)
+[![CI](https://img.shields.io/github/actions/workflow/status/KevinDeBenedetti/github-workflows/ci-cd.yml?style=for-the-badge&label=CI)](https://github.com/KevinDeBenedetti/github-workflows/actions/workflows/ci-cd.yml) [![Release](https://img.shields.io/github/v/release/KevinDeBenedetti/github-workflows?style=for-the-badge)](https://github.com/KevinDeBenedetti/github-workflows/releases) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/KevinDeBenedetti/github-workflows?style=for-the-badge&label=Scorecard)](https://scorecard.dev/viewer/?uri=github.com/KevinDeBenedetti/github-workflows) [![License](https://img.shields.io/github/license/KevinDeBenedetti/github-workflows?style=for-the-badge)](LICENSE)
 
 > Reusable GitHub Actions workflows and composite actions for Node.js, Python, shell, Helm, Terraform, and Ansible projects.
 
@@ -86,3 +86,11 @@ Full documentation is available at **https://kevindebenedetti.github.io/github-w
 It is generated from the `docs/` directory and published automatically on push.
 
 See [`examples/`](examples/) for ready-to-copy caller workflows.
+
+## Security
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## License
+
+MIT — see [LICENSE](LICENSE).

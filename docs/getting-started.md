@@ -309,6 +309,7 @@ steps:
 | [`detect-changes`](actions/detect-changes.md) | Output a JSON matrix of changed apps in a monorepo |
 | [`actionlint`](actions/actionlint.md) | Validate GitHub Actions workflow files |
 | [`kubeconform`](actions/kubeconform.md) | Validate Kubernetes manifests |
+| [`check-commit-msg`](actions/check-commit-msg.md) | Conventional Commits on commit messages (CI + commit-msg hook) |
 | [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
