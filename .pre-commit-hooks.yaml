@@ -18,3 +18,13 @@
   entry: .github/actions/check-vitepress-md/check-vitepress-md.sh
   files: ^docs/.*\.md$
   pass_filenames: true
+
+- id: check-commit-msg
+  name: Conventional Commits message
+  description: >
+    Ensures the commit message follows Conventional Commits with the
+    release-please type set (no 'refactor'), header at most 100 characters.
+    Needs the commit-msg hook type installed (default_install_hook_types).
+  language: script
+  entry: .github/actions/check-commit-msg/check-commit-msg.sh
+  stages: [commit-msg]

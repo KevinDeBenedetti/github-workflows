@@ -4,7 +4,7 @@
 
 minimum_prek_version = "0.3.0"
 fail_fast = false
-default_install_hook_types = ["pre-commit"]
+default_install_hook_types = ["pre-commit", "commit-msg"]
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
@@ -63,3 +63,10 @@ entry = "python scripts/check-workflow-consistency.py"
 additional_dependencies = ["pyyaml"]
 files = "^(\\.github/workflows/.*\\.ya?ml|examples/.*\\.ya?ml|\\.github/release/.*\\.json)$"
 pass_filenames = false
+
+[[repos.hooks]]
+id = "check-commit-msg"
+name = "Conventional Commits message"
+language = "script"
+entry = ".github/actions/check-commit-msg/check-commit-msg.sh"
+stages = ["commit-msg"]
