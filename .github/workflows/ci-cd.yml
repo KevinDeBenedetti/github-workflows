@@ -16,6 +16,7 @@
 #   ci-zizmor    — GitHub Actions security lint (zizmor)                [push + PR]
 #   ci-actions   — same checks through the local composite actions            [push + PR]
 #   security     — Gitleaks secret scanning (security.yml)               [push + PR]
+#   ci-gate      — single required check: all CI jobs above passed      [push + PR]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
 # =============================================================================
 name: CI / CD
@@ -42,10 +43,12 @@ jobs:
   # Skipped on the release-please PR (head_ref guard) and on the
   # `chore(main): release X` commit (head_commit guard) — that commit only bumps
   # version/CHANGELOG, so re-linting it is pointless. release still runs via its
-  # always() gate (skipped ≠ failure).
+  # always() gate (skipped ≠ failure). The head_ref guard also checks the PR
+  # comes from THIS repository: a fork can name its branch
+  # release-please--branches--main, and must not skip CI that way.
   ci-shell:
     name: CI — Shell
-    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     uses: ./.github/workflows/ci-shell.yml
     with:
       run-shellcheck: true
@@ -71,7 +74,7 @@ jobs:
   # uses), so a PR that changes an action tests its own version of it.
   ci-actions:
     name: CI — Local actions
-    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -117,7 +120,7 @@ jobs:
   # pins, known-vulnerable action versions) use the read-only job token.
   ci-zizmor:
     name: CI — zizmor
-    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -157,7 +160,7 @@ jobs:
   # renovate-config-validator that nothing else runs.
   ci-prek:
     name: CI — prek hooks
-    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     uses: ./.github/workflows/ci-prek.yml
     permissions:
       contents: read
@@ -165,7 +168,7 @@ jobs:
   # ── Security — Secret scan ───────────────────────────────────────────────────
   security:
     name: Security — Secret scan
-    if: "${{ github.head_ref != 'release-please--branches--main' && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+    if: "${{ !(github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) && !startsWith(github.event.head_commit.message, 'chore(main): release') }}"
     uses: ./.github/workflows/security.yml
     with:
       run-node-audit: false
@@ -180,6 +183,41 @@ jobs:
       actions: read           # code scanning reads the workflow run metadata
       contents: read
       pull-requests: read     # list the commits of the pull request
+
+  # ── CI — Gate ────────────────────────────────────────────────────────────────
+  # The main branch ruleset's single required check. Requiring the reusable
+  # workflows' checks directly cannot work: when a caller job is skipped (the
+  # release PR), GitHub creates one check under the caller's name ("CI — Shell")
+  # and never the inner ones ("CI — Shell / ShellCheck"), so a PR requiring them
+  # would wait forever. Here a skipped job passes only on the release PR/commit.
+  ci-gate:
+    name: CI — Gate
+    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, security]
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Check CI results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+          RELEASE: "${{ (github.head_ref == 'release-please--branches--main' && github.event.pull_request.head.repo.full_name == github.repository) || startsWith(github.event.head_commit.message, 'chore(main): release') }}"
+        run: |
+          echo "CI results: ${RESULTS} (release PR/commit: ${RELEASE})"
+          for result in $RESULTS; do
+            case "$result" in
+              success) ;;
+              skipped)
+                if [ "$RELEASE" != "true" ]; then
+                  echo "::error::a CI job was skipped outside the release PR/commit"
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "::error::a CI job ended with '${result}'"
+                exit 1
+                ;;
+            esac
+          done
 
   # ── Release (release-please) ─────────────────────────────────────────────────
   # CD half: push-to-main only (the CI jobs above also run on PRs). Gated on the
