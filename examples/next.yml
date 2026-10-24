@@ -18,32 +18,8 @@ jobs:
       node-version: '24'
       # package-manager: bun  # décommente pour forcer bun
 
-  deploy-preview:
-    needs: ci
-    if: github.event_name == 'pull_request'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.29.0 # x-release-please-version
-    with:
-      environment: preview
-    # Only the secrets this workflow declares — never `secrets: inherit`.
-    secrets:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
-  deploy-production:
-    needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.29.0 # x-release-please-version
-    with:
-      environment: production
-    # Only the secrets this workflow declares — never `secrets: inherit`.
-    secrets:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-
   release:
-    needs: deploy-production
+    needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.29.0 # x-release-please-version
     # No token secret: release-please runs on GITHUB_TOKEN (enable "Allow

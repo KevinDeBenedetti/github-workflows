@@ -8,8 +8,8 @@
 
 - CI pipelines for Node.js (lint → typecheck → test → build), Python (lint → format → test), and shell (ShellCheck → actionlint → Bats)
 - CI pipelines for **Helm** (lint + template dry-run), **Kubernetes** (kubeconform validation), **Terraform** (validate + fmt check), and **Ansible** (lint + syntax check)
-- CD workflows for Docker/GHCR, Kaniko (self-hosted), GitHub Pages, Vercel, and centralized docs sync
-- Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, and monorepo change detection
+- CD workflows for Docker/GHCR, Kaniko and BuildKit (self-hosted), GitHub Pages, and centralized docs sync
+- Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, and hash-locked ansible installs
 - Automated releases via release-please
 - Security scanning: dependency audit, CodeQL, and secret detection
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
@@ -35,9 +35,7 @@ Reference any workflow from your caller workflow file.
 
 > The README and docs always reflect `@main`. When releasing, consumers should pin to a tag for reproducible builds.
 >
-> The composite actions used *inside* the workflows (`setup-node`, `shellcheck`, …) are pinned to the release they ship with (`@vX.Y.Z`, bumped by release-please), so pinning a workflow to a tag pins the actions it runs too.
->
-> **`@main` caveat:** between releases, a workflow on `@main` still calls the actions of the *last* release. A change that spans a workflow and an action (e.g. a new `package-manager: npm` value handled by `ci-node.yml` but implemented in `setup-node`) only works end-to-end once it is tagged. Use a tag or the minor alias for anything that must not break.
+> The workflows reach the composite actions they use (`setup-node`, `shellcheck`, …) with `uses: $/…`, which GitHub resolves to the workflow's own commit: pinning a workflow to a tag or SHA pins the actions it runs too, and `@main` runs `@main`'s actions.
 >
 > Before 1.0, breaking changes are released as minor bumps: this repo moves only the `v0.<minor>` alias, not `v0` (`release.yml`'s `pre-major-alias: minor`).
 
@@ -70,15 +68,10 @@ jobs:
 | `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners (upstream archived — see `cd-buildkit.yml`) | [→](docs/workflows/cd-kaniko.md) |
 | `cd-buildkit.yml` | Build & push image with rootless BuildKit on self-hosted runners (experimental) | [→](docs/workflows/cd-buildkit.md) |
 | `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](docs/workflows/cd-pages.md) |
-| `cd-vercel.yml` | Deploy preview or production to Vercel | [→](docs/workflows/cd-vercel.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
-
-## Security
-
-These workflows run with the tokens and secrets of the repositories that call them. See [SECURITY.md](SECURITY.md) to report a vulnerability and for safe-usage guidelines (pin a release, pass secrets explicitly, least-privilege permissions).
 
 ## Documentation
 
@@ -87,9 +80,13 @@ It is generated from the `docs/` directory and published automatically on push.
 
 See [`examples/`](examples/) for ready-to-copy caller workflows.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Security
 
-To report a vulnerability, see [SECURITY.md](SECURITY.md).
+These workflows run with the tokens and secrets of the repositories that call them. See [SECURITY.md](SECURITY.md) to report a vulnerability and for safe-usage guidelines (pin a release, pass secrets explicitly, least-privilege permissions).
 
 ## License
 

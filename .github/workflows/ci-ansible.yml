@@ -11,20 +11,20 @@ on:
         default: ansible/
       ansible-lint-version:
         description: >
-          ansible-lint version to install (pip specifier, e.g. '>=25.0,<26').
-          Empty → the version pinned in this workflow.
+          DEPRECATED, ignored (a warning is printed): ansible-lint is installed
+          from the hash-locked requirements of .github/actions/setup-ansible.
         type: string
         required: false
         default: ''
       ansible-version:
         description: >
-          ansible version for the syntax check (pip specifier, e.g. '<12' on
-          Python < 3.12). Empty → the version pinned in this workflow.
+          DEPRECATED, ignored (a warning is printed): ansible is installed from
+          the hash-locked requirements of .github/actions/setup-ansible.
         type: string
         required: false
         default: ''
       python-version:
-        description: Python version to use
+        description: Python version to use (>= 3.12, required by the hash-locked tools)
         type: string
         required: false
         default: '3.12'
@@ -61,15 +61,15 @@ on:
         type: string
         default: ansible/
       ansible-lint-version:
-        description: ansible-lint version to install (pip specifier). Empty → pinned version
+        description: DEPRECATED, ignored (hash-locked in .github/actions/setup-ansible)
         type: string
         default: ''
       ansible-version:
-        description: ansible version for the syntax check (pip specifier). Empty → pinned version
+        description: DEPRECATED, ignored (hash-locked in .github/actions/setup-ansible)
         type: string
         default: ''
       python-version:
-        description: Python version to use
+        description: Python version to use (>= 3.12)
         type: string
         default: '3.12'
       fail-on-error:
@@ -120,15 +120,20 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
 
-      # Inputs go through env, never interpolated into the script body.
-      - name: Install ansible-lint
+      - name: Warn about deprecated version inputs
         env:
           ANSIBLE_LINT_VERSION: ${{ inputs.ansible-lint-version }}
+          ANSIBLE_VERSION: ${{ inputs.ansible-version }}
         run: |
-          # Pinned default instead of whatever PyPI serves today.
-          # renovate: datasource=pypi depName=ansible-lint
-          PINNED="26.10.1"
-          pip install --quiet "ansible-lint${ANSIBLE_LINT_VERSION:-==$PINNED}"
+          if [ -n "$ANSIBLE_LINT_VERSION" ] || [ -n "$ANSIBLE_VERSION" ]; then
+            echo "::warning::ansible-lint-version / ansible-version are deprecated and ignored: the tools come from the hash-locked requirements of .github/actions/setup-ansible. Drop these inputs."
+          fi
+
+      # Hash-locked (pip --require-hashes), Renovate keeps the lock current.
+      - name: Install ansible-lint
+        uses: $/.github/actions/setup-ansible
+        with:
+          tool: ansible-lint
 
       - name: Run ansible-lint
         env:
@@ -160,15 +165,11 @@ jobs:
         with:
           python-version: ${{ inputs.python-version }}
 
+      # Hash-locked (pip --require-hashes), Renovate keeps the lock current.
       - name: Install ansible
-        env:
-          ANSIBLE_VERSION: ${{ inputs.ansible-version }}
-        run: |
-          # Pinned default (needs Python >= 3.12 — older interpreters: set
-          # ansible-version, e.g. '<12').
-          # renovate: datasource=pypi depName=ansible
-          PINNED="14.5.0"
-          pip install --quiet "ansible${ANSIBLE_VERSION:-==$PINNED}"
+        uses: $/.github/actions/setup-ansible
+        with:
+          tool: ansible
 
       - name: Syntax check all playbooks
         env:

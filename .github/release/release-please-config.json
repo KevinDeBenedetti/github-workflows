@@ -14,10 +14,6 @@
         },
         {
           "type": "generic",
-          "path": "examples/ci-cd-vercel.yml"
-        },
-        {
-          "type": "generic",
           "path": "examples/dependabot.yml"
         },
         {
