@@ -14,7 +14,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.28.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.29.0 # x-release-please-version
     with:
       node-version: '24'
       framework: nuxt
@@ -23,7 +23,7 @@ jobs:
   deploy-preview:
     needs: ci
     if: github.event_name == 'pull_request'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.28.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.29.0 # x-release-please-version
     with:
       environment: preview
     # Only the secrets this workflow declares — never `secrets: inherit`.
@@ -35,7 +35,7 @@ jobs:
   deploy-production:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.28.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-vercel.yml@v0.29.0 # x-release-please-version
     with:
       environment: production
     # Only the secrets this workflow declares — never `secrets: inherit`.
@@ -47,7 +47,7 @@ jobs:
   release:
     needs: deploy-production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.28.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.29.0 # x-release-please-version
     # No token secret: release-please runs on GITHUB_TOKEN (enable "Allow
     # GitHub Actions to create and approve pull requests" in the repo settings).
     permissions:
