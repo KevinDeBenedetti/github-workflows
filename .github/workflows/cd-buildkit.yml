@@ -1,24 +1,33 @@
-name: Deploy — BuildKit rootless (self-hosted)
+name: Deploy — BuildKit (rootless on self-hosted, Buildx on GitHub-hosted)
 
 # Successor of cd-kaniko.yml (upstream Kaniko is archived): same inputs and
-# tags, built by rootless BuildKit on the k3s cluster. Status: EXPERIMENTAL
-# until validated on the cluster — see docs/workflows/cd-buildkit.md.
+# tags, built by BuildKit on whichever runner the `runner` input selects, so a
+# caller switching runners changes nothing else — both paths compute the same
+# tags, attach the same provenance and SBOM, and share one registry cache.
 #
-# The job runs INSIDE the moby/buildkit rootless image (job container, ARC
-# `containerMode: kubernetes`) as an unprivileged user; buildctl-daemonless.sh
-# starts a throw-away buildkitd for the single build. Rootless BuildKit creates
-# its own user namespace, which the default seccomp/AppArmor profiles forbid:
-# the workflow pod needs the dedicated setup described in the docs (seccomp +
-# AppArmor Unconfined, runAsUser 1000) — a cluster-side change.
-#
-# Like the Kaniko image, this one has no glibc Node.js: NO JavaScript actions.
-# BuildKit fetches the source itself (git context) and tags are computed in sh.
+#   - Self-hosted runner (default; ARC `containerMode: kubernetes`): the
+#     `buildkit` job runs INSIDE the moby/buildkit rootless image as an
+#     unprivileged user; buildctl-daemonless.sh starts a throw-away buildkitd
+#     for the single build. Rootless BuildKit creates its own user namespace,
+#     which the default seccomp/AppArmor profiles forbid: the workflow pod
+#     needs the dedicated setup described in the docs (seccomp + AppArmor
+#     Unconfined, runAsUser 1000) — a cluster-side change. Status: EXPERIMENTAL
+#     until validated on the cluster — see docs/workflows/cd-buildkit.md.
+#     Like the Kaniko image, this one has no glibc Node.js: NO JavaScript
+#     actions; BuildKit fetches the source itself (git context) and tags are
+#     computed in sh.
+#   - GitHub-hosted runner (a label starting with `ubuntu-`): the `buildx` job
+#     runs the same build through Docker Buildx, which drives BuildKit with the
+#     runner's Docker daemon, from a checkout of the same commit.
+# Both build for the runner's native platform: pick an x86_64 runner for an
+# x86_64 cluster.
 #
 # Differences vs. cd-kaniko.yml:
-#   - Builder process runs as non-root (rootless), not as root
+#   - On the cluster, the builder process runs as non-root (rootless)
 #   - `digest` output (from the build metadata)
 #   - BUILD_SECRETS secret (BuildKit secret mounts), provenance + SBOM inputs
 #   - Layer cache in GHCR (<image>-cache:buildcache, mode=max)
+#   - A GitHub-hosted path (Docker Buildx), picked by the runner label
 #
 # Migration: change `uses: .../cd-kaniko.yml` → `uses: .../cd-buildkit.yml`.
 
@@ -76,7 +85,7 @@ on:
         required: false
         default: true
       runner:
-        description: Runner labels as JSON — use '"k3s-portfolio"' (ARC scale set) or a label array
+        description: Runner labels as JSON — a self-hosted label (e.g. '"k3s-portfolio"') runs rootless BuildKit, a GitHub-hosted ubuntu-… label (e.g. '"ubuntu-latest"') runs Docker Buildx
         type: string
         required: false
         default: '["self-hosted","linux","k3s","kaniko"]'
@@ -90,10 +99,10 @@ on:
     outputs:
       image:
         description: Image name (without tag)
-        value: ${{ jobs.buildkit.outputs.image }}
+        value: ${{ jobs.buildkit.outputs.image || jobs.buildx.outputs.image }}
       digest:
         description: Image digest
-        value: ${{ jobs.buildkit.outputs.digest }}
+        value: ${{ jobs.buildkit.outputs.digest || jobs.buildx.outputs.digest }}
 
   workflow_dispatch:
     inputs:
@@ -153,8 +162,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Self-hosted runners (ARC): rootless BuildKit inside the job container.
   buildkit:
     name: BuildKit build & push (${{ inputs.context }})
+    if: ${{ !contains(inputs.runner, '"ubuntu-') }}
     runs-on: ${{ fromJson(inputs.runner) }}
     container:
       # Pinned by digest: the tag is mutable, and this container holds a
@@ -333,6 +344,157 @@ jobs:
 
           DIGEST=$(sed -n 's/.*"containerimage\.digest": *"\(sha256:[0-9a-f]*\)".*/\1/p' "$WORK/metadata.json" | head -n 1)
           echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Job summary
+        if: always()
+        env:
+          IMAGE: ${{ steps.image.outputs.full }}
+          TAGS: ${{ steps.tags.outputs.list }}
+          CONTEXT: ${{ inputs.context }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          {
+            echo "### BuildKit Build"
+            echo ""
+            echo "| Key | Value |"
+            echo "|-----|-------|"
+            echo "| Image | \`${IMAGE}\` |"
+            echo "| Digest | \`${DIGEST}\` |"
+            echo "| Context | \`${CONTEXT}\` |"
+            echo "| SHA | \`${GITHUB_SHA}\` |"
+            echo ""
+            echo "**Tags:**"
+            for tag in $TAGS; do
+              echo "- \`${IMAGE}:${tag}\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # GitHub-hosted runners (a label starting with ubuntu-): no ARC pod to relax,
+  # but a Docker daemon. The same build runs through Docker Buildx, which drives
+  # BuildKit, from a checkout of the same commit. Image name, tags and summary
+  # come from steps identical to the buildkit job's: change them in both jobs.
+  buildx:
+    name: Buildx build & push (${{ inputs.context }})
+    if: ${{ contains(inputs.runner, '"ubuntu-') }}
+    runs-on: ${{ fromJson(inputs.runner) }}
+    defaults:
+      run:
+        # Same shell as the buildkit job, for the steps the two jobs share.
+        shell: sh
+    permissions:
+      contents: read   # check out the source
+      packages: write  # push the image and the layer cache to GHCR
+
+    outputs:
+      image: ${{ steps.image.outputs.full }}
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set image name
+        id: image
+        # Inputs go through env, never interpolated into the script body.
+        env:
+          IMAGE_NAME: ${{ inputs.image-name }}
+          REPO_NAME: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          NAME="${IMAGE_NAME:-$REPO_NAME}"
+          # OCI repositories must be lowercase.
+          FULL=$(printf '%s/%s/%s' "$REGISTRY" "$OWNER" "$NAME" | tr '[:upper:]' '[:lower:]')
+          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
+
+      - name: Compute tags
+        id: tags
+        env:
+          SHA: ${{ github.sha }}
+          REF_NAME: ${{ github.ref_name }}
+          REF_TYPE: ${{ github.ref_type }}
+          EVENT: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          VERSION: ${{ inputs.version }}
+          TAG_LATEST: ${{ inputs.tag-latest }}
+        run: |
+          # Same tag set as cd-kaniko.yml (subset of docker/metadata-action).
+          TAGS=""
+          add_tag() { TAGS="${TAGS:+$TAGS }$1"; }
+
+          SHORT_SHA=$(printf '%s' "$SHA" | cut -c1-7)
+          add_tag "sha-${SHORT_SHA}"
+
+          if [ "$EVENT" = "push" ] && [ "$REF_TYPE" = "branch" ]; then
+            BRANCH_TAG=$(printf '%s' "$REF_NAME" | tr -c 'A-Za-z0-9_.-' '-' | sed 's/^[.-]*//' | cut -c1-128)
+            [ -n "$BRANCH_TAG" ] && add_tag "$BRANCH_TAG"
+          fi
+
+          if [ "$EVENT" = "pull_request" ] && [ -n "$PR_NUMBER" ]; then
+            add_tag "pr-${PR_NUMBER}"
+          fi
+
+          if [ -n "$VERSION" ]; then
+            add_tag "$VERSION"
+            SEMVER="${VERSION#v}"
+            case "$SEMVER" in
+              [0-9]*.[0-9]*.[0-9]*) add_tag "$(printf '%s' "$SEMVER" | cut -d. -f1-2)" ;;
+            esac
+          fi
+
+          if [ "$TAG_LATEST" = "true" ] && [ "$REF_NAME" = "$DEFAULT_BRANCH" ]; then
+            add_tag "latest"
+          fi
+
+          echo "Computed tags: $TAGS"
+          echo "list=$TAGS" >> "$GITHUB_OUTPUT"
+
+      - name: Image references
+        id: refs
+        env:
+          TAGS: ${{ steps.tags.outputs.list }}
+          IMAGE_BASE: ${{ steps.image.outputs.full }}
+        run: |
+          # The same names and cache reference as the buildkit job's build step.
+          NAMES=""
+          for tag in $TAGS; do
+            NAMES="${NAMES:+$NAMES,}${IMAGE_BASE}:${tag}"
+          done
+          echo "names=${NAMES}" >> "$GITHUB_OUTPUT"
+          echo "cache=${IMAGE_BASE}-cache:buildcache" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Always, like the buildkit job: the layer cache lives in GHCR even when
+      # nothing is pushed.
+      - name: Login to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push with Buildx
+        id: build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+          push: ${{ inputs.push }}
+          tags: ${{ steps.refs.outputs.names }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          target: ${{ inputs.target }}
+          build-args: ${{ inputs.build-args }}
+          secrets: ${{ secrets.BUILD_SECRETS }}
+          provenance: ${{ inputs.provenance }}
+          sbom: ${{ inputs.sbom }}
+          cache-from: type=registry,ref=${{ steps.refs.outputs.cache }}
+          cache-to: type=registry,ref=${{ steps.refs.outputs.cache }},mode=max,ignore-error=true
 
       - name: Job summary
         if: always()

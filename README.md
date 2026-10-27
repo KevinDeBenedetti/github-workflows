@@ -67,7 +67,7 @@ jobs:
 | `ci-prek.yml` | prek / pre-commit hooks run server-side (`prek run --all-files`) | [→](docs/workflows/ci-prek.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |
 | `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners (upstream archived — see `cd-buildkit.yml`) | [→](docs/workflows/cd-kaniko.md) |
-| `cd-buildkit.yml` | Build & push image with rootless BuildKit on self-hosted runners (experimental) | [→](docs/workflows/cd-buildkit.md) |
+| `cd-buildkit.yml` | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones | [→](docs/workflows/cd-buildkit.md) |
 | `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](docs/workflows/cd-pages.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
