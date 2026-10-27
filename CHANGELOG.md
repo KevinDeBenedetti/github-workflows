@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.30.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.29.0...v0.30.0) (2026-10-27)
+
+
+### Features
+
+* **check-docs-external-links:** add action to check external links in Markdown files ([006ec9c](https://github.com/KevinDeBenedetti/github-workflows/commit/006ec9cbb57f71a5f11973eb356f1d500323f106))
+* **pr-description:** add Claude Code integration for PR descriptions ([3fd57dc](https://github.com/KevinDeBenedetti/github-workflows/commit/3fd57dc34860aa312bd4aa61c9d138cdfb8c7244))
+* **pr-description:** update language descriptions and enhance pull request template guidance ([b92ad7f](https://github.com/KevinDeBenedetti/github-workflows/commit/b92ad7fe2ba825962add39320d8afa51c22e51d4))
+
 ## [0.29.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.28.0...v0.29.0) (2026-10-24)
 
 

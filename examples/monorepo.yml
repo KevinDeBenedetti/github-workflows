@@ -29,7 +29,7 @@ jobs:
         with:
           fetch-depth: 0
       - id: detect
-        uses: KevinDeBenedetti/github-workflows/.github/actions/detect-changes@v0.29.0 # x-release-please-version
+        uses: KevinDeBenedetti/github-workflows/.github/actions/detect-changes@v0.30.0 # x-release-please-version
         with:
           apps-directory: apps
 
@@ -37,7 +37,7 @@ jobs:
   ci-api:
     needs: detect
     if: needs.detect.outputs.changed-api == 'true'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@v0.29.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@v0.30.0 # x-release-please-version
     with:
       working-directory: apps/api
 
@@ -45,7 +45,7 @@ jobs:
   ci-web:
     needs: detect
     if: needs.detect.outputs.changed-web == 'true'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.29.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.30.0 # x-release-please-version
     with:
       working-directory: apps/web
       # package-manager: bun  # décommente pour forcer
@@ -55,7 +55,7 @@ jobs:
   ci-client:
     needs: detect
     if: needs.detect.outputs.changed-client == 'true'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.29.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.30.0 # x-release-please-version
     with:
       working-directory: apps/client
 
@@ -73,7 +73,7 @@ jobs:
       deployments: write   # production/preview environment record
       id-token: write      # sign the image attestation (Sigstore)
       attestations: write  # store the attestation
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.29.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.30.0 # x-release-please-version
     with:
       context: apps/api
       image-name: ${{ github.event.repository.name }}-api
@@ -82,7 +82,7 @@ jobs:
   security:
     needs: detect
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@v0.29.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@v0.30.0 # x-release-please-version
     with:
       run-node-audit: true
       run-python-audit: true
