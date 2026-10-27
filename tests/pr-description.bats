@@ -144,6 +144,22 @@ update() {
   [ "$(tail -1 new.md)" = "- [x] Done" ]
 }
 
+@test "merge: an optional section that only says None is dropped" {
+  merge '' '## Summary\n\nAdds b.\n\n## Changes\n\n- **App**: Add b\n\n## Breaking changes\n\nNone.\n\n## Notes for reviewers\n\n- Run the migration first'
+  [ "$status" -eq 0 ]
+  [ "$(grep -c 'Breaking changes' new.md)" -eq 0 ]
+  [ "$(grep -c 'None' new.md)" -eq 0 ]
+  grep -qx '## Notes for reviewers' new.md
+  grep -qxF -- '- Run the migration first' new.md
+}
+
+@test "merge: an optional section with real content starting with None is kept" {
+  merge '' '## Summary\n\nAdds b.\n\n## Breaking changes\n\n- None of the old inputs work any more'
+  [ "$status" -eq 0 ]
+  grep -qx '## Breaking changes' new.md
+  grep -qxF -- '- None of the old inputs work any more' new.md
+}
+
 @test "merge: the same description twice gives the same body" {
   merge 'Closes #12' 'Adds b.'
   cp new.md current.md

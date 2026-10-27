@@ -322,6 +322,7 @@ steps:
 | [`setup-claude-code`](actions/setup-claude-code.md) | Install the Claude Code CLI, pinned and checked against a SHA-256 |
 | [`pr-description`](actions/pr-description.md) | Write the PR description with Claude Code into a managed block of the PR body |
 | [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
+| [`check-docs-external-links`](actions/check-docs-external-links.md) | Check the `http(s)` links of changed docs pages with lychee |
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
 

@@ -58,9 +58,11 @@ jobs:
       run-bats: true
       bats-tests-dir: tests/
       bats-submodules: false
-      # Verify this repo's own docs/ stay VitePress-safe and self-contained:
+      # Verify this repo's own docs/ stay VitePress-safe and self-contained,
+      # and that the external links of the pages a change touches answer:
       # the central docs site polls this repo and rebuilds from these files.
       run-docs-link-check: true
+      run-docs-external-link-check: true
       run-vitepress-check: true
       # actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3
       # and falsely flags the `client-id` input / a "missing app-id". Ignore those
@@ -109,6 +111,9 @@ jobs:
 
       - name: Docs link check (local action)
         uses: ./.github/actions/check-docs-links
+
+      - name: Docs external link check (local action)
+        uses: ./.github/actions/check-docs-external-links
 
       - name: VitePress markdown check (local action)
         uses: ./.github/actions/check-vitepress-md

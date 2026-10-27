@@ -45,10 +45,8 @@ jobs:
   checks out the calling repository, so one implementation backs both CI and the
   caller's local pre-commit hooks — nothing to keep in sync twice.
 - promtool expects a raw rules file (`groups:` at the top level), not a
-  Kubernetes CRD. Unwrapping each `PrometheusRule` to its `.spec` is the
-  caller's script's job; see `scripts/promtool-check.sh` in
-  [`KevinDeBenedetti/infra`](https://github.com/KevinDeBenedetti/infra) for a
-  reference implementation.
+  Kubernetes CRD. Unwrapping each `PrometheusRule` to its `.spec` (with the
+  `yq` installed alongside promtool) is the caller's script's job.
 - `check-script` missing is a **failure** (the workflow was asked to check
   something that is not there); `test-script` missing is a **notice**, since a
   repo may legitimately ship rules before it has a test suite.

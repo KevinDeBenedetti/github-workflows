@@ -27,6 +27,14 @@ BLOCK = re.compile(r"<!--\s*pr-description:start\b.*?-->.*?<!--\s*pr-description
 MARKER = re.compile(r"<!--\s*pr-description:(?:start|end)\b.*?-->", re.S)
 # A model sometimes wraps its whole answer in a code fence.
 FENCE = re.compile(r"\A```[\w-]*[ \t]*\r?\n(?P<inner>.*?)\r?\n```\s*\Z", re.S)
+# An optional section that only says "None" breaks the uniform layout: these
+# sections appear only when they apply. Dropped when nothing else follows it.
+EMPTY_OPTIONAL = re.compile(
+    r"^## (?:Breaking changes|Notes for reviewers)[ \t]*\r?\n"
+    r"\s*(?:[-*][ \t]+)?(?:none|n/a|nothing to (?:note|report))\.?[ \t]*(?:\r?\n|\Z)"
+    r"\s*(?=^## |\Z)",
+    re.I | re.M,
+)
 MAX_DESCRIPTION = 20_000  # characters: nobody reads a longer description
 BODY_LIMIT = 65_536  # GitHub rejects a longer pull request body
 
@@ -49,6 +57,7 @@ def clean(text: str) -> str:
         text = fenced.group("inner").strip()
     # The description must not open or close the block by itself.
     text = MARKER.sub("", text).strip()
+    text = EMPTY_OPTIONAL.sub("", text).strip()
     if len(text) > MAX_DESCRIPTION:
         cut = text.rfind("\n", 0, MAX_DESCRIPTION)
         text = text[: cut if cut > 0 else MAX_DESCRIPTION].rstrip() + "\n\n_(description truncated)_"

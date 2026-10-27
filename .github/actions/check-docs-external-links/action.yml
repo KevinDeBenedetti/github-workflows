@@ -1,0 +1,63 @@
+name: Check docs external links
+description: >
+  Check the http(s) links of the docs Markdown files with lychee. By default
+  only the files changed by the push or pull request are checked, so a page
+  that rotted elsewhere in the docs never fails an unrelated change.
+
+inputs:
+  docs-directory:
+    description: Path to the docs folder to check
+    required: false
+    default: docs
+  changed-only:
+    description: >
+      Check only the Markdown files changed by the push or pull request
+      ("false" checks every file of docs-directory)
+    required: false
+    default: 'true'
+  github-token:
+    description: >
+      Token lychee uses for github.com links, which are rate-limited without
+      one. Read access is enough.
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install lychee
+      shell: bash
+      run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
+        # renovate: datasource=github-releases depName=lycheeverse/lychee
+        LYCHEE_VERSION="0.24.2"
+        # SHA-256 of the release asset per architecture, for the version above.
+        # Refresh after a version bump: scripts/update-tool-checksums.py
+        LYCHEE_SHA256_amd64="1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a"
+        LYCHEE_SHA256_arm64="91a7bd65685da41b90ccb9bc867a3d649a7818042dae04ff405e55a25bddee4c"
+        case "$(uname -m)" in
+          x86_64)        ARCH=x86_64;  KEY=amd64 ;;
+          aarch64|arm64) ARCH=aarch64; KEY=arm64 ;;
+          *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
+        esac
+        INSTALL_DIR="$RUNNER_TEMP/lychee"
+        mkdir -p "$INSTALL_DIR"
+        curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
+          -o "$RUNNER_TEMP/lychee.tar.gz" \
+          "https://github.com/lycheeverse/lychee/releases/download/lychee-v${LYCHEE_VERSION}/lychee-${ARCH}-unknown-linux-gnu.tar.gz"
+        if [ "$KEY" = amd64 ]; then WANT="$LYCHEE_SHA256_amd64"; else WANT="$LYCHEE_SHA256_arm64"; fi
+        echo "$WANT  $RUNNER_TEMP/lychee.tar.gz" | sha256sum --check --strict --quiet - \
+          || { echo "::error::lychee ${LYCHEE_VERSION} ($(uname -m)) does not match its pinned SHA-256 — after a version bump, run scripts/update-tool-checksums.py"; exit 1; }
+        tar xz -C "$INSTALL_DIR" --strip-components=1 "lychee-${ARCH}-unknown-linux-gnu/lychee" < "$RUNNER_TEMP/lychee.tar.gz"
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+
+    - name: Check external links
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        DOCS_DIR: ${{ inputs.docs-directory }}
+        CHANGED_ONLY: ${{ inputs.changed-only }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        EVENT: ${{ github.event_name }}
+        PR_BASE: ${{ github.event.pull_request.base.sha }}
+        BEFORE: ${{ github.event.before }}
+      run: bash "$GITHUB_ACTION_PATH/check-docs-external-links.sh"

@@ -8,6 +8,14 @@ on:
         type: string
         required: false
         default: 'docs'
+      check-external-links:
+        description: >
+          Also check the http(s) links of the Markdown files the push changed,
+          with lychee (github.com through the job token; loopback addresses
+          and medium.com skipped)
+        type: boolean
+        required: false
+        default: true
       target-repo:
         description: 'Centralized docs repository (owner/repo)'
         type: string
@@ -47,7 +55,7 @@ permissions: {}
 
 jobs:
   # Verify the docs BEFORE dispatching, so a broken doc never triggers a failing
-  # rebuild on the central site. If either check fails, `dispatch` is skipped.
+  # rebuild on the central site. If any check fails, `dispatch` is skipped.
   verify:
     name: Verify docs
     runs-on: ubuntu-latest
@@ -67,6 +75,14 @@ jobs:
 
       - name: Check VitePress markdown
         uses: $/.github/actions/check-vitepress-md
+        with:
+          docs-directory: ${{ inputs.docs-directory }}
+
+      # Only the files this push changed: a page that rotted elsewhere is
+      # reported by the central site's weekly crawl, not by an unrelated push.
+      - name: Check external links
+        if: inputs.check-external-links
+        uses: $/.github/actions/check-docs-external-links
         with:
           docs-directory: ${{ inputs.docs-directory }}
 

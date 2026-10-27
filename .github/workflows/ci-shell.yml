@@ -90,8 +90,13 @@ on:
         type: boolean
         required: false
         default: false
+      run-docs-external-link-check:
+        description: Check the http(s) links of the docs/ markdown files changed by the push or pull request (lychee)
+        type: boolean
+        required: false
+        default: false
       docs-directory:
-        description: Path to the docs folder checked by docs-link-check and vitepress-check
+        description: Path to the docs folder checked by docs-link-check, docs-external-link-check and vitepress-check
         type: string
         required: false
         default: docs
@@ -178,8 +183,12 @@ on:
         description: Check docs/ markdown for unescaped Vue interpolations that break the VitePress SSR build
         type: boolean
         default: false
+      run-docs-external-link-check:
+        description: Check the http(s) links of the docs/ markdown files changed by the push or pull request (lychee)
+        type: boolean
+        default: false
       docs-directory:
-        description: Path to the docs folder checked by docs-link-check and vitepress-check
+        description: Path to the docs folder checked by docs-link-check, docs-external-link-check and vitepress-check
         type: string
         default: docs
 
@@ -327,6 +336,25 @@ jobs:
 
       - name: Check docs links
         uses: $/.github/actions/check-docs-links
+        with:
+          docs-directory: ${{ inputs.docs-directory }}
+
+  # ── Docs external-link check ─────────────────────────────────────────────────
+  # Only the files the push or pull request changed: a page that rotted
+  # elsewhere is reported by the central site's weekly crawl instead.
+  docs-external-link-check:
+    name: Docs external link check
+    if: inputs.run-docs-external-link-check
+    runs-on: ${{ fromJson(inputs.runner) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check docs external links
+        uses: $/.github/actions/check-docs-external-links
         with:
           docs-directory: ${{ inputs.docs-directory }}
 

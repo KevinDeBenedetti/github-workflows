@@ -22,6 +22,7 @@ jobs:
 | Input              | Type   | Default                                         | Description                                                                        |
 | ------------------ | ------ | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `docs-directory`   | string | `docs`                                          | Docs folder in the calling repo, verified by the `verify` job                       |
+| `check-external-links` | boolean | `true`                                    | Also check the `http(s)` links of the Markdown files the push changed (lychee)      |
 | `client-id`        | string | `''`                                            | **Deprecated, leave empty.** When set, the legacy `docs-updated` dispatch is also sent (see below) |
 | `target-repo`      | string | `KevinDeBenedetti/kevindebenedetti.github.io`   | Legacy dispatch only: repository that receives the event                            |
 | `target-directory` | string | _(calling repo name)_                           | Legacy dispatch only: logical name sent in the payload                              |
@@ -44,7 +45,11 @@ jobs:
    [`check-docs-links`](../actions/check-docs-links.md) and
    [`check-vitepress-md`](../actions/check-vitepress-md.md) against `docs-directory`
    (default `docs`), so a broken doc fails the caller's CI instead of the central build.
-2. The central site's scheduled poll notices the new `docs/` tree SHA and rebuilds.
+2. With `check-external-links` (default), it also runs
+   [`check-docs-external-links`](../actions/check-docs-external-links.md) on the Markdown
+   files the push changed: a link that is already dead when written fails right after the
+   push. Links that rot later are reported by the central site's weekly crawl.
+3. The central site's scheduled poll notices the new `docs/` tree SHA and rebuilds.
 
 ## Migrating from the dispatch
 

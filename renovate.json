@@ -23,7 +23,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, gitleaks, actionlint, kubeconform, shellcheck, bats, terraform, claude-code). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
+      "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, gitleaks, actionlint, kubeconform, shellcheck, lychee, bats, terraform, claude-code). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots.",
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^\\.github/actions/.+\\.ya?ml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+(?:default|version): (?<currentValue>v?[\\d][^\\s]*)",
@@ -61,8 +61,13 @@
       "extractVersion": "^v(?<version>.+)$"
     },
     {
+      "description": "lychee tags its releases `lychee-vX.Y.Z` (other crates of the repo have their own prefixes); the version is stored bare and the download URL adds the prefix back.",
+      "matchPackageNames": ["lycheeverse/lychee"],
+      "extractVersion": "^lychee-v(?<version>.+)$"
+    },
+    {
       "description": "These tools are downloaded and verified against a SHA-256 (or commit) pinned next to the version: Renovate bumps the version only, so the job fails closed until the pins are refreshed.",
-      "matchPackageNames": ["rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "gitleaks/gitleaks", "bats-core/bats-core", "@anthropic-ai/claude-code"],
+      "matchPackageNames": ["rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "lycheeverse/lychee", "gitleaks/gitleaks", "bats-core/bats-core", "@anthropic-ai/claude-code"],
       "prBodyNotes": ["⚠️ Pinned checksums: run `scripts/update-tool-checksums.py` on this branch and commit the result — CI fails until then."]
     },
     {

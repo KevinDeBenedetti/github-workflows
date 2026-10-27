@@ -17,8 +17,9 @@ repository root:
     scripts/update-tool-checksums.py           # rewrite the pinned values
     scripts/update-tool-checksums.py --check   # verify only (exit 1 on drift)
 
-Where the project publishes a checksums file, the computed value is also
-cross-checked against it (Claude Code: the platforms.<platform>.checksum
+Where the project publishes checksums (one file per release, or one per asset
+for lychee), the computed value is also cross-checked against them (Claude
+Code: the platforms.<platform>.checksum
 values of the release's manifest.json). Review the diff before committing.
 """
 from __future__ import annotations
@@ -52,6 +53,13 @@ TOOLS = {
         "url": "https://github.com/koalaman/shellcheck/releases/download/v{v}/shellcheck-v{v}.linux.{a}.tar.xz",
         "arch": {"amd64": "x86_64", "arm64": "aarch64"},
         "sums": None,  # ShellCheck publishes no checksums file
+    },
+    "LYCHEE": {
+        "file": ".github/actions/check-docs-external-links/action.yml",
+        "url": "https://github.com/lycheeverse/lychee/releases/download/lychee-v{v}/lychee-{a}-unknown-linux-gnu.tar.gz",
+        "arch": {"amd64": "x86_64", "arm64": "aarch64"},
+        # One checksums file per asset ({a}), not one per release.
+        "sums": "https://github.com/lycheeverse/lychee/releases/download/lychee-v{v}/lychee-{a}-unknown-linux-gnu.tar.gz.sha256",
     },
     "GITLEAKS": {
         "file": ".github/workflows/security.yml",
@@ -123,10 +131,14 @@ def main() -> int:
         text = texts.setdefault(path, Path(path).read_text())
         v = version_of(text, prefix, path)
         bare = v.removeprefix("v")
-        upstream = fetch(tool["sums"].format(v=bare)).decode() if tool["sums"] else None
+        # One checksums file per release, or one per asset when its URL has {a}.
+        per_asset = "{a}" in (tool["sums"] or "")
+        upstream = fetch(tool["sums"].format(v=bare)).decode() if tool["sums"] and not per_asset else None
         manifest = json.loads(fetch(tool["manifest"].format(v=bare))) if tool.get("manifest") else None
         for key, arch in tool["arch"].items():
             url = tool["url"].format(v=bare, a=arch)
+            if per_asset:
+                upstream = fetch(tool["sums"].format(v=bare, a=arch)).decode()
             digest = sha256_of(url)
             asset = url.rsplit("/", 1)[1]
             if upstream is not None and not re.search(rf"^{digest}\s+\*?{re.escape(asset)}$", upstream, re.M):

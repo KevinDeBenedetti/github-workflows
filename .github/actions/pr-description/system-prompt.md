@@ -18,7 +18,8 @@ why, as far as the commits and the diff show it.
 - **Area**: One change per bullet, starting with a capitalized imperative verb
   ("Add", "Fix", "Remove"), without a final period
 
-After Changes, add these sections in this order, and only when they apply:
+After Changes, add these sections in this order, and only when they apply. When
+one does not apply, leave it out entirely: never write it with "None" or "N/A".
 
 ## Breaking changes
 
