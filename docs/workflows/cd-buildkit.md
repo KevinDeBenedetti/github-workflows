@@ -1,10 +1,10 @@
-# CD — BuildKit rootless
+# CD — BuildKit
 
-Builds and pushes a container image with **rootless BuildKit** on a self-hosted k3s runner, then pushes to **GHCR**.
-Successor of [`cd-kaniko.yml`](cd-kaniko.md) (upstream Kaniko is archived): same inputs and tags, but the builder runs as a non-root user, and the workflow adds a `digest` output, build secrets, provenance and SBOM.
+Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless inside the job container on a self-hosted k3s runner, or through **Docker Buildx** on a GitHub-hosted runner. The `runner` input picks the path, and the caller changes nothing else: tags, provenance, SBOM and the registry layer cache are the same on both.
+Successor of [`cd-kaniko.yml`](cd-kaniko.md) (upstream Kaniko is archived): same inputs and tags, but on the cluster the builder runs as a non-root user, and the workflow adds a `digest` output, build secrets, provenance and SBOM.
 
-::: warning Experimental
-Not yet validated on the cluster. It needs the cluster-side setup below; until then keep `cd-kaniko.yml`.
+::: warning Experimental on the cluster
+The self-hosted path is not yet validated on the cluster: it needs the cluster-side setup below, and until then keep `cd-kaniko.yml` there. The GitHub-hosted path needs no setup.
 :::
 
 ## Usage
@@ -27,6 +27,20 @@ jobs:
         npm_token=${{ secrets.NPM_TOKEN }}
 ```
 
+## Runners
+
+| `runner` input                                                         | Job        | Builder                                                                                             |
+| ---------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
+| A self-hosted label, e.g. `'"k3s-portfolio"'` or the default label array | `buildkit` | Rootless BuildKit in the job container: needs the [cluster prerequisites](#cluster-prerequisites) |
+| A GitHub-hosted label starting with `ubuntu-`, e.g. `'"ubuntu-latest"'`   | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
+
+Both paths build for the runner's native platform: use an x86_64 runner for an x86_64 cluster. One repository variable can then move every job, image builds included:
+
+```yaml
+    with:
+      runner: ${{ vars.CI_RUNNER || '"k3s-portfolio"' }}
+```
+
 ## Inputs
 
 | Input        | Type    | Default                                    | Description                                                                          |
@@ -41,7 +55,7 @@ jobs:
 | `build-args` | string  | `''`                                       | Build args, one per line, `KEY=VALUE`. **Never secrets** — use `BUILD_SECRETS`       |
 | `provenance` | string  | `mode=max`                                 | SLSA provenance (`mode=max`, `mode=min`, `false`). `mode=max` records the build-args |
 | `sbom`       | boolean | `true`                                     | Attach an SBOM attestation                                                           |
-| `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'` | Runner labels as JSON — `'"k3s-portfolio"'` (ARC scale set) or a label array         |
+| `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'` | Runner labels as JSON; picks the path (see [Runners](#runners))                      |
 
 ## Secrets
 
@@ -212,7 +226,8 @@ kubectl delete namespace buildkit-smoke
 
 ## Notes
 
-- Like the Kaniko image, the BuildKit image cannot run JavaScript actions: BuildKit fetches the source itself from a git context (`<repo>.git#<sha>:<context>`) with the job token, passed as the `GIT_AUTH_TOKEN` build secret.
-- Registry credentials and secrets are written to a `0700` temporary directory removed at the end of the step.
-- Layer cache: `<image>-cache:buildcache` on GHCR (`mode=max`; export failures don't fail the build).
-- Single architecture (native cluster arch).
+- Cluster path: like the Kaniko image, the BuildKit image cannot run JavaScript actions. BuildKit fetches the source itself from a git context (`<repo>.git#<sha>:<context>`) with the job token, passed as the `GIT_AUTH_TOKEN` build secret.
+- Cluster path: registry credentials and secrets are written to a `0700` temporary directory removed at the end of the step.
+- GitHub-hosted path: the source comes from `actions/checkout` of the same commit, and the job logs in to GHCR even when `push` is false, since the layer cache lives there.
+- Layer cache: `<image>-cache:buildcache` on GHCR, shared by both paths (`mode=max`; export failures don't fail the build).
+- Single architecture: the runner's native platform.
