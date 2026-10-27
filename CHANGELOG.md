@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.31.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.30.0...v0.31.0) (2026-10-27)
+
+
+### Features
+
+* **cd-buildkit:** build with Docker Buildx on GitHub-hosted runners ([44d0f71](https://github.com/KevinDeBenedetti/github-workflows/commit/44d0f715899e6ff59af5f9e245d5474031cd8e74))
+
 ## [0.30.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.29.0...v0.30.0) (2026-10-27)
 
 
