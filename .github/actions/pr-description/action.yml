@@ -20,7 +20,7 @@ inputs:
     required: false
     default: ''
   language:
-    description: Language the description is written in
+    description: Language of the description text. The section headings stay in English, to match the pull request template.
     required: false
     default: English
   max-diff-bytes:

@@ -27,7 +27,7 @@ on:
         required: false
         default: medium
       language:
-        description: Language the description is written in
+        description: Language of the description text. The section headings stay in English, to match the pull request template.
         type: string
         required: false
         default: English

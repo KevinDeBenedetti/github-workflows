@@ -132,6 +132,18 @@ update() {
   [ "$(tail -1 new.md)" = "Closes #12" ]
 }
 
+@test "merge: a pull request template's block is filled in place, its other sections kept" {
+  merge '<!-- pr-description:start -->\n<!--\n  Template instructions.\n-->\n## Summary\n\n<!-- hint -->\n\n## Changes\n\n-\n<!-- pr-description:end -->\n\n## Related issues\n\nCloses #12\n\n## Checklist\n\n- [x] Done' '## Summary\n\nAdds b.\n\n## Changes\n\n- **App**: Add b'
+  [ "$status" -eq 0 ]
+  [[ "$(head -1 new.md)" == "<!-- pr-description:start"* ]]
+  [ "$(grep -c '^## Summary' new.md)" -eq 1 ]
+  [ "$(grep -c '^## Changes' new.md)" -eq 1 ]
+  [ "$(grep -c 'Template instructions' new.md)" -eq 0 ]
+  grep -qxF -- '- **App**: Add b' new.md
+  grep -qx 'Closes #12' new.md
+  [ "$(tail -1 new.md)" = "- [x] Done" ]
+}
+
 @test "merge: the same description twice gives the same body" {
   merge 'Closes #12' 'Adds b.'
   cp new.md current.md

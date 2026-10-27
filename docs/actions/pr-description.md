@@ -38,7 +38,7 @@ steps:
 | `claude-code-oauth-token` | string | — (required)                  | Token from `claude setup-token`                             |
 | `model`                   | string | — (required)                  | Claude model: an alias (`opus`, `sonnet`, …) or a full name |
 | `effort`                  | string | `''`                          | Claude Code effort level; empty for Claude Code's default   |
-| `language`                | string | `English`                     | Language of the description                                 |
+| `language`                | string | `English`                     | Language of the text; the section headings stay in English  |
 | `max-diff-bytes`          | string | `100000`                      | Size cap of the diff sent to Claude, in bytes               |
 | `github-token`            | string | the job's `GITHUB_TOKEN`      | Token allowed to edit the pull request                      |
 | `pr-number`               | string | from the `pull_request` event | Pull request to update                                      |
@@ -62,10 +62,18 @@ steps:
 
 ```markdown
 <!-- pr-description:start (rewritten on every push: write your own notes outside this block) -->
-The generated description.
+## Summary
+
+What the pull request changes and why.
+
+## Changes
+
+- **Area**: Change
 <!-- pr-description:end -->
 ```
 
-Write your own notes, a pull request template or `Closes #12` outside the block:
-they are kept as they are. Delete the block to get a fresh one on top at the next
-push.
+Write your own notes or `Closes #12` outside the block: they are kept as they are.
+A pull request template that holds the block gets it filled in place (see
+[Pull request template](../workflows/pr-description.md#pull-request-template));
+otherwise the block goes on top of the body. Delete the block to get a fresh one
+on top at the next push.

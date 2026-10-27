@@ -86,13 +86,42 @@ caller on `@main` picks it up at once. A caller pinned to a tag or a commit SHA
 gets it only when the pin is bumped, by Renovate or by hand. Do not pin `@v0`:
 releases move only the `v0.<minor>` aliases, so `v0` no longer follows them.
 
+### Pull request template
+
+The generated block always has the same shape: `## Summary` and `## Changes`,
+then `## Breaking changes` and `## Notes for reviewers` when they apply. Put the
+block in your pull request template where those sections belong, with the parts a
+person writes below it: the workflow then fills the template instead of stacking
+a second description on top of it.
+
+```markdown
+<!-- pr-description:start -->
+## Summary
+
+## Changes
+
+-
+<!-- pr-description:end -->
+
+## Related issues
+
+## How to test
+
+## Checklist
+```
+
+A pull request template in the `.github` repository of an account or an
+organization applies to every repository that has none of its own. The section
+headings stay in English whatever `language` says, so they always match the
+template.
+
 ## Inputs
 
 | Input            | Type   | Default                     | Description                                                                     |
 | ---------------- | ------ | --------------------------- | ------------------------------------------------------------------------------- |
 | `model`          | string | set in `pr-description.yml` | Claude model that writes the description                                        |
 | `effort`         | string | `medium`                    | Claude Code effort level (`low` to `max`); empty for Claude Code's default      |
-| `language`       | string | `English`                   | Language of the description                                                     |
+| `language`       | string | `English`                   | Language of the text; the section headings stay in English                      |
 | `max-diff-bytes` | number | `100000`                    | Size cap of the diff sent to Claude; the commit list and diffstat stay complete |
 | `runner`         | string | `'"ubuntu-latest"'`         | Runner labels as JSON: Linux x64 or arm64 with glibc, curl, git, jq, python3    |
 
@@ -114,9 +143,10 @@ releases move only the `v0.<minor>` aliases, so `v0` no longer follows them.
    [`setup-claude-code`](../actions/setup-claude-code.md) and runs it headless,
    with no tool, from empty working and configuration directories: nothing in the
    checked-out repository (hooks, MCP servers, `CLAUDE.md`, settings) loads.
-4. Writes the result between two HTML comments at the top of the description,
-   with the [`pr-description` action](../actions/pr-description.md). Text outside
-   the block is kept; edits inside it are overwritten on the next push.
+4. Writes the result into the managed block with the
+   [`pr-description` action](../actions/pr-description.md): in place when the body
+   has the block, as a pull request template can, or on top of the body otherwise.
+   Text outside the block is kept; edits inside it are overwritten on the next push.
 
 ## Notes
 
