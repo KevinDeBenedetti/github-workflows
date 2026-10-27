@@ -249,6 +249,31 @@ Combines Gitleaks secret scanning, CodeQL SAST, and optional dependency audits.
 
 ---
 
+### PR descriptions (Claude Code)
+
+Rewrites a managed block at the top of each pull request description on every push,
+from the commits and the diff. Runs on your Claude subscription: store a token from
+`claude setup-token` as the `CLAUDE_CODE_OAUTH_TOKEN` secret.
+
+```yaml
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  describe:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+```
+
+→ [Full reference](workflows/pr-description.md)
+
+---
+
 ## All available workflows
 
 | Workflow | Description | Doc |
@@ -268,6 +293,7 @@ Combines Gitleaks secret scanning, CodeQL SAST, and optional dependency audits.
 | `release.yml` | Automated releases via release-please | [→](workflows/release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](workflows/check-bot-commits.md) |
+| `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](workflows/pr-description.md) |
 
 ---
 
@@ -293,6 +319,8 @@ steps:
 | [`kubeconform`](actions/kubeconform.md) | Validate Kubernetes manifests |
 | [`check-commit-msg`](actions/check-commit-msg.md) | Conventional Commits on commit messages (CI + commit-msg hook) |
 | [`setup-ansible`](actions/setup-ansible.md) | Install ansible-lint or ansible from a hash-locked requirements file |
+| [`setup-claude-code`](actions/setup-claude-code.md) | Install the Claude Code CLI, pinned and checked against a SHA-256 |
+| [`pr-description`](actions/pr-description.md) | Write the PR description with Claude Code into a managed block of the PR body |
 | [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
@@ -312,3 +340,4 @@ Complete ready-to-use caller files live in [`examples/`](https://github.com/Kevi
 | `fastapi.yml` | FastAPI (Python) |
 | `monorepo.yml` | Monorepo with change detection |
 | `vitepress.yml` | VitePress docs site |
+| `pr-description.yml` | PR descriptions written by Claude Code |

@@ -42,6 +42,10 @@
         },
         {
           "type": "generic",
+          "path": "examples/pr-description.yml"
+        },
+        {
+          "type": "generic",
           "path": "examples/seo-crawl.yml"
         },
         {

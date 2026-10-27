@@ -1,0 +1,89 @@
+name: PR description
+description: >
+  Write the description of a pull request with Claude Code, from its commits
+  and diff, and keep it in a managed block at the top of the pull request body.
+  Needs a checkout with the history of both commits (fetch-depth: 0) and the
+  claude CLI on PATH (setup-claude-code). Runs on any Linux runner with curl,
+  git, jq and python3: no GitHub CLI needed.
+
+inputs:
+  claude-code-oauth-token:
+    description: Long-lived token from `claude setup-token` (Claude Pro, Max, Team or Enterprise plan)
+    required: true
+  model:
+    description: >
+      Claude model: an alias (opus, sonnet, haiku, fable) or a full model name.
+      No default here: pr-description.yml chooses it, in one place.
+    required: true
+  effort:
+    description: Claude Code effort level (low, medium, high, xhigh, max). Empty uses Claude Code's default.
+    required: false
+    default: ''
+  language:
+    description: Language the description is written in
+    required: false
+    default: English
+  max-diff-bytes:
+    description: >
+      Size cap of the diff sent to Claude, in bytes. Beyond it the diff is cut
+      and Claude is told; the commit list and the diffstat stay complete.
+    required: false
+    default: '100000'
+  github-token:
+    description: Token allowed to edit the pull request (pull-requests write)
+    required: false
+    default: ${{ github.token }}
+  pr-number:
+    description: Pull request number (default the event's pull request)
+    required: false
+    default: ${{ github.event.pull_request.number }}
+  base-sha:
+    description: Base commit of the diff (default the event's base)
+    required: false
+    default: ${{ github.event.pull_request.base.sha }}
+  head-sha:
+    description: Head commit of the diff (default the event's head)
+    required: false
+    default: ${{ github.event.pull_request.head.sha }}
+  title:
+    description: Pull request title (default the event's title)
+    required: false
+    default: ${{ github.event.pull_request.title }}
+
+runs:
+  using: composite
+  steps:
+    # No token in this step: it only reads the checkout.
+    - name: Collect the pull request context
+      shell: bash
+      env:
+        BASE_SHA: ${{ inputs.base-sha }}
+        HEAD_SHA: ${{ inputs.head-sha }}
+        PR_TITLE: ${{ inputs.title }}
+        DESCRIPTION_LANGUAGE: ${{ inputs.language }}
+        MAX_DIFF_BYTES: ${{ inputs.max-diff-bytes }}
+        CONTEXT_FILE: ${{ runner.temp }}/pr-description/context.md
+      run: |
+        mkdir -p "$(dirname "$CONTEXT_FILE")"
+        bash "$GITHUB_ACTION_PATH/collect-context.sh" > "$CONTEXT_FILE"
+
+    # The Claude token only: this step cannot touch the pull request.
+    - name: Write the description with Claude Code
+      shell: bash
+      env:
+        CLAUDE_CODE_OAUTH_TOKEN: ${{ inputs.claude-code-oauth-token }}
+        MODEL: ${{ inputs.model }}
+        EFFORT: ${{ inputs.effort }}
+        CONTEXT_FILE: ${{ runner.temp }}/pr-description/context.md
+        DESCRIPTION_FILE: ${{ runner.temp }}/pr-description/description.md
+      run: bash "$GITHUB_ACTION_PATH/write-description.sh"
+
+    # The GitHub token only: this step never runs Claude.
+    - name: Update the pull request body
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        PR_NUMBER: ${{ inputs.pr-number }}
+        DESCRIPTION_FILE: ${{ runner.temp }}/pr-description/description.md
+      run: bash "$GITHUB_ACTION_PATH/update-body.sh"

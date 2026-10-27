@@ -19,6 +19,7 @@
 #   ci-commits   — Conventional Commits on every new commit             [push + PR]
 #   security     — Gitleaks + dependency review + CodeQL (security.yml)  [push + PR]
 #   ci-gate      — single required check: all CI jobs above passed      [push + PR]
+#   pr-description — PR body written by Claude Code (pr-description.yml) [PR, outside the gate]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
 # =============================================================================
 name: CI / CD
@@ -134,6 +135,16 @@ jobs:
           ansible-lint --version
           ansible-playbook --version
 
+      # The pinned Claude Code binary: a Renovate PR that bumps its version
+      # must prove that the pinned SHA-256 values were refreshed with it.
+      - name: setup-claude-code (local action)
+        uses: ./.github/actions/setup-claude-code
+
+      - name: Claude Code runs
+        env:
+          DISABLE_AUTOUPDATER: '1'
+        run: claude --version
+
   # ── CI — zizmor (GitHub Actions security lint) ───────────────────────────────
   # Template injection, over-broad permissions, unpinned uses, credential
   # persistence… across every workflow and composite action of this repo.
@@ -243,6 +254,21 @@ jobs:
         uses: ./.github/actions/check-commit-msg
         with:
           range: ${{ steps.range.outputs.range }}
+
+  # ── PR description (Claude Code) ─────────────────────────────────────────────
+  # Self-test of pr-description.yml, and the descriptions of this repo's own
+  # pull requests. Outside the CI gate on purpose: a missing token or a model
+  # error must never block a merge. The called workflow skips bot and fork
+  # pull requests by itself.
+  pr-description:
+    name: PR description
+    if: github.event_name == 'pull_request'
+    uses: ./.github/workflows/pr-description.yml
+    permissions:
+      contents: read          # check out the pull request history
+      pull-requests: write    # rewrite the managed block of the PR body
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
   # ── CI — Gate ────────────────────────────────────────────────────────────────
   # The main branch ruleset's single required check: one stable name, so adding

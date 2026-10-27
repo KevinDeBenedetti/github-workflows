@@ -1,0 +1,39 @@
+name: Setup Claude Code
+description: >
+  Install the Claude Code CLI (`claude`) on a Linux runner, pinned to one
+  version and verified against the SHA-256 recorded here for each architecture.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Claude Code
+      shell: bash
+      run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
+        set -euo pipefail
+        # renovate: datasource=npm depName=@anthropic-ai/claude-code
+        CLAUDE_CODE_VERSION="2.1.308"
+        # SHA-256 of the linux binary per architecture, for the version above, as
+        # listed in that release's signed manifest.json.
+        # Refresh after a version bump: scripts/update-tool-checksums.py
+        CLAUDE_CODE_SHA256_amd64="356733f185fa988e6bf3aa9a555269fdd167982a2e2a80d3c8a78037bb92ad58"
+        CLAUDE_CODE_SHA256_arm64="fdd22e6cbb734d580f5664c48df4294eeec850218ff07f186f9af30426396ee1"
+        if [ "$(uname -s)" != Linux ]; then
+          echo "::error::setup-claude-code supports Linux runners only"; exit 1
+        fi
+        if ldd /bin/ls 2>&1 | grep -q musl; then
+          echo "::error::setup-claude-code supports glibc runners only (no musl build is pinned)"; exit 1
+        fi
+        case "$(uname -m)" in
+          x86_64)        PLATFORM=linux-x64;   WANT="$CLAUDE_CODE_SHA256_amd64" ;;
+          aarch64|arm64) PLATFORM=linux-arm64; WANT="$CLAUDE_CODE_SHA256_arm64" ;;
+          *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
+        esac
+        INSTALL_DIR="$RUNNER_TEMP/claude-code"
+        mkdir -p "$INSTALL_DIR"
+        curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
+          -o "$INSTALL_DIR/claude" \
+          "https://downloads.claude.ai/claude-code-releases/${CLAUDE_CODE_VERSION}/${PLATFORM}/claude"
+        echo "$WANT  $INSTALL_DIR/claude" | sha256sum --check --strict --quiet - \
+          || { echo "::error::Claude Code ${CLAUDE_CODE_VERSION} ($(uname -m)) does not match its pinned SHA-256 — after a version bump, run scripts/update-tool-checksums.py"; exit 1; }
+        chmod +x "$INSTALL_DIR/claude"
+        echo "$INSTALL_DIR" >> "$GITHUB_PATH"

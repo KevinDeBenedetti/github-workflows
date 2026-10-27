@@ -18,12 +18,14 @@ repository root:
     scripts/update-tool-checksums.py --check   # verify only (exit 1 on drift)
 
 Where the project publishes a checksums file, the computed value is also
-cross-checked against it. Review the diff before committing.
+cross-checked against it (Claude Code: the platforms.<platform>.checksum
+values of the release's manifest.json). Review the diff before committing.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -57,6 +59,14 @@ TOOLS = {
         "arch": {"amd64": "x64", "arm64": "arm64"},
         "sums": "https://github.com/gitleaks/gitleaks/releases/download/v{v}/gitleaks_{v}_checksums.txt",
     },
+    "CLAUDE_CODE": {
+        "file": ".github/actions/setup-claude-code/action.yml",
+        "url": "https://downloads.claude.ai/claude-code-releases/{v}/linux-{a}/claude",
+        "arch": {"amd64": "x64", "arm64": "arm64"},
+        "sums": None,
+        # JSON instead of a checksums file: platforms["linux-<arch>"].checksum
+        "manifest": "https://downloads.claude.ai/claude-code-releases/{v}/manifest.json",
+    },
 }
 # prefix → file, git repository: the pinned <PREFIX>_COMMIT must be the tag's commit.
 GIT_TAGS = {
@@ -70,6 +80,15 @@ GIT_TAGS = {
 def fetch(url: str) -> bytes:
     with urllib.request.urlopen(url, timeout=120) as r:  # noqa: S310 — fixed https URLs
         return r.read()
+
+
+def sha256_of(url: str) -> str:
+    # Streamed: some assets (the Claude Code binary) weigh hundreds of MB.
+    digest = hashlib.sha256()
+    with urllib.request.urlopen(url, timeout=300) as r:  # noqa: S310 — fixed https URLs
+        for chunk in iter(lambda: r.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def version_of(text: str, prefix: str, path: str) -> str:
@@ -105,12 +124,17 @@ def main() -> int:
         v = version_of(text, prefix, path)
         bare = v.removeprefix("v")
         upstream = fetch(tool["sums"].format(v=bare)).decode() if tool["sums"] else None
+        manifest = json.loads(fetch(tool["manifest"].format(v=bare))) if tool.get("manifest") else None
         for key, arch in tool["arch"].items():
             url = tool["url"].format(v=bare, a=arch)
-            digest = hashlib.sha256(fetch(url)).hexdigest()
+            digest = sha256_of(url)
             asset = url.rsplit("/", 1)[1]
             if upstream is not None and not re.search(rf"^{digest}\s+\*?{re.escape(asset)}$", upstream, re.M):
                 sys.exit(f"{prefix} {v} {key}: computed {digest} is NOT in the upstream checksums file — investigate before pinning")
+            if manifest is not None:
+                listed = manifest.get("platforms", {}).get(f"linux-{arch}", {}).get("checksum")
+                if listed != digest:
+                    sys.exit(f"{prefix} {v} {key}: computed {digest} does not match the release manifest ({listed}) — investigate before pinning")
             var = f"{prefix}_SHA256_{key}"
             if current_value(text, var) != digest:
                 drift += 1

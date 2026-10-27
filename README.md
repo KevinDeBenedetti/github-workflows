@@ -9,7 +9,8 @@
 - CI pipelines for Node.js (lint → typecheck → test → build), Python (lint → format → test), and shell (ShellCheck → actionlint → Bats)
 - CI pipelines for **Helm** (lint + template dry-run), **Kubernetes** (kubeconform validation), **Terraform** (validate + fmt check), and **Ansible** (lint + syntax check)
 - CD workflows for Docker/GHCR, Kaniko and BuildKit (self-hosted), GitHub Pages, and centralized docs sync
-- Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, and hash-locked ansible installs
+- Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, hash-locked ansible installs, and a checksum-pinned Claude Code setup
+- Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
 - Automated releases via release-please
 - Security scanning: dependency audit, CodeQL, and secret detection
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
@@ -72,6 +73,7 @@ jobs:
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
+| `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](docs/workflows/pr-description.md) |
 
 ## Documentation
 

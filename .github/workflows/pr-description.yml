@@ -1,0 +1,111 @@
+# Keeps the description of a pull request up to date with Claude Code: on every
+# push to the pull request, Claude reads the commits and the diff and rewrites a
+# managed block at the top of the description. Text outside the block is kept.
+#
+# Runs on the caller's Claude subscription (Pro, Max, Team or Enterprise): the
+# unmodified Claude Code CLI authenticates with a token from `claude
+# setup-token`, the way Anthropic documents subscription use in CI. A program
+# built on the Agent SDK must authenticate with an API key instead.
+#
+# The model is chosen in one place: the default of the `model` input below.
+name: PR description
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: >
+          Claude model that writes the description: an alias (opus, sonnet,
+          haiku, fable) or a full model name. This default is the one place
+          where the model is chosen for every caller.
+        type: string
+        required: false
+        default: claude-haiku-5-5
+      effort:
+        description: Claude Code effort level (low, medium, high, xhigh, max). Empty uses Claude Code's default.
+        type: string
+        required: false
+        default: medium
+      language:
+        description: Language the description is written in
+        type: string
+        required: false
+        default: English
+      max-diff-bytes:
+        description: >
+          Size cap of the diff sent to Claude, in bytes. Beyond it the diff is
+          cut and Claude is told; the commit list and the diffstat stay complete.
+        type: number
+        required: false
+        default: 100000
+      runner:
+        description: Runner labels as JSON — '"ubuntu-latest"' or '["self-hosted","linux"]' (Linux x64 or arm64 with glibc, curl, git, jq and python3)
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        description: >
+          Long-lived token from `claude setup-token`, tied to your Claude
+          subscription. Without it the job leaves the description unchanged
+          and prints a warning.
+        required: false
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+# A newer push supersedes the run in progress: describing an outdated diff
+# would only spend subscription usage.
+concurrency:
+  group: pr-description-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  describe:
+    name: Write the PR description
+    # Pull requests from branches of this repository, opened by a person: fork
+    # pull requests get no secrets, and bot pull requests (Renovate,
+    # release-please) carry descriptions of their own.
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.event.pull_request.user.type != 'Bot'
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read          # check out the pull request history
+      pull-requests: write    # rewrite the managed block of the PR body
+    steps:
+      - name: Check for the Claude Code token
+        id: token
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No CLAUDE_CODE_OAUTH_TOKEN secret was passed to pr-description.yml, so the description is left unchanged. Create a token with 'claude setup-token' and store it as a repository secret."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.token.outputs.present == 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Claude Code
+        if: steps.token.outputs.present == 'true'
+        uses: $/.github/actions/setup-claude-code
+
+      - name: Write the description
+        if: steps.token.outputs.present == 'true'
+        uses: $/.github/actions/pr-description
+        with:
+          claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          model: ${{ inputs.model }}
+          effort: ${{ inputs.effort }}
+          language: ${{ inputs.language }}
+          max-diff-bytes: ${{ inputs.max-diff-bytes }}

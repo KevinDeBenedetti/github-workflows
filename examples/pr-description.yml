@@ -1,0 +1,22 @@
+# Keep PR descriptions up to date with Claude Code — drop this file in .github/workflows/
+# Runs on your Claude subscription. Create the secret once per repository:
+#   claude setup-token                    # prints a one-year token (Pro, Max, Team or Enterprise)
+#   gh secret set CLAUDE_CODE_OAUTH_TOKEN
+name: PR description
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  describe:
+    # Pin to a release tag or commit SHA for reproducible runs.
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.29.0 # x-release-please-version
+    # Caller permissions cap the called workflow: it edits the PR body.
+    permissions:
+      contents: read
+      pull-requests: write
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
