@@ -13,7 +13,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.29.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.30.0 # x-release-please-version
     with:
       node-version: '24'
       # package-manager: bun  # décommente pour forcer bun
@@ -21,7 +21,7 @@ jobs:
   release:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.29.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.30.0 # x-release-please-version
     # No token secret: release-please runs on GITHUB_TOKEN (enable "Allow
     # GitHub Actions to create and approve pull requests" in the repo settings).
     permissions:
