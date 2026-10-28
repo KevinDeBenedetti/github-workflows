@@ -1,0 +1,137 @@
+# Retention for the container images a repository publishes to GHCR, meant to
+# run on a weekly schedule.
+#
+# Call it from the repository that publishes the packages: its GITHUB_TOKEN can
+# delete their versions, because a package published by a workflow grants that
+# repository the Admin role. No PAT and no GitHub App.
+#
+# The deletions go through dataaxiom/ghcr-cleanup-action, which follows the
+# links between an image index and its children: the platform images, the
+# provenance and SBOM attestations, and referrers such as GitHub artifact
+# attestations. Never point actions/delete-package-versions at these images:
+# it deletes the untagged children that tagged images still reference, which
+# breaks every image, the deployed ones included. It only suits single-manifest
+# packages such as Helm charts.
+#
+# The retention policy is set here, once for every caller:
+#   packages        never deleted: the tags matching exclude-tags (releases and
+#                   moving tags) and every image younger than older-than. Among
+#                   the older images, the keep-n-tagged most recent tagged ones
+#                   stay; the other tagged images and the untagged ones go.
+#   cache-packages  registry layer caches (<image>-cache, written by cd-buildkit
+#                   and cd-kaniko): every version older than older-than goes,
+#                   except the `buildcache` tag that cd-buildkit reads.
+#
+# A deleted version can be restored for 30 days, from the package settings.
+name: Cleanup GHCR
+
+on:
+  workflow_call:
+    inputs:
+      packages:
+        description: >
+          Comma-separated image packages to clean, as named in
+          ghcr.io/<owner>/<name>. Empty: the repository name, the image name
+          cd-docker, cd-buildkit and cd-kaniko use when `image-name` is empty.
+          List only packages that exist.
+        type: string
+        required: false
+        default: ''
+      cache-packages:
+        description: >
+          Comma-separated layer-cache packages (<image>-cache) to clean: only
+          their `buildcache` tag and their recent versions are kept. Empty: no
+          cache cleanup.
+        type: string
+        required: false
+        default: ''
+      exclude-tags:
+        description: >
+          Comma-separated tags never deleted (wildcards). The default keeps the
+          release tags (v1.2.3, 1.2) and the moving tags.
+        type: string
+        required: false
+        default: 'latest,stable,main,dev,v*,*.*'
+      older-than:
+        description: Only versions older than this are touched (e.g. "30 days", "8 weeks")
+        type: string
+        required: false
+        default: 30 days
+      keep-n-tagged:
+        description: Among the images older than older-than, how many of the most recent tagged ones to keep
+        type: number
+        required: false
+        default: 10
+      dry-run:
+        description: Log what would be deleted, delete nothing
+        type: boolean
+        required: false
+        default: false
+      runner:
+        description: Runner labels as JSON — '"ubuntu-latest"' or '["self-hosted","linux"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
+# Deny-all default: the job grants only the permission it needs.
+permissions: {}
+
+# The cleanup action is not safe to run twice at once against the same package.
+concurrency:
+  group: cleanup-ghcr-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Clean up GHCR packages
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 30
+    permissions:
+      packages: write   # delete package versions (Admin role of the publishing repository)
+    steps:
+      - name: Resolve packages
+        id: resolve
+        env:
+          PACKAGES: ${{ inputs.packages }}
+          CACHE_PACKAGES: ${{ inputs.cache-packages }}
+        run: |
+          # OCI repository names are lowercase; spaces after commas are dropped.
+          normalize() { printf '%s' "$1" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]'; }
+          images=$(normalize "$PACKAGES")
+          images="${images:-$(normalize "${GITHUB_REPOSITORY#*/}")}"
+          caches=$(normalize "$CACHE_PACKAGES")
+          for list in "$images" "$caches"; do
+            case "$list" in
+              *[!a-z0-9._/,-]*) echo "::error::invalid package list '${list}': expected comma-separated GHCR package names"; exit 1 ;;
+            esac
+          done
+          echo "Images: ${images}"
+          echo "Layer caches: ${caches:-none}"
+          {
+            echo "images=${images}"
+            echo "caches=${caches}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Clean up images
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          packages: ${{ steps.resolve.outputs.images }}
+          exclude-tags: ${{ inputs.exclude-tags }}
+          older-than: ${{ inputs.older-than }}
+          keep-n-tagged: ${{ inputs.keep-n-tagged }}
+          delete-untagged: true
+          # sha256-* referrers (GitHub artifact attestations, cosign) whose
+          # image is already gone.
+          delete-orphaned-images: true
+          dry-run: ${{ inputs.dry-run }}
+
+      - name: Clean up layer caches
+        if: steps.resolve.outputs.caches != ''
+        uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
+        with:
+          packages: ${{ steps.resolve.outputs.caches }}
+          exclude-tags: buildcache
+          delete-tags: '*'
+          delete-untagged: true
+          older-than: ${{ inputs.older-than }}
+          dry-run: ${{ inputs.dry-run }}

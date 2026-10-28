@@ -1,0 +1,25 @@
+# Weekly GHCR retention for the images this repository publishes — drop this
+# file in .github/workflows/. The retention policy lives in github-workflows
+# (cleanup-ghcr.yml): list your packages below.
+# Start in dry-run: run it once by hand from the Actions tab, read what the log
+# says it would delete, then remove the dry-run line.
+name: Cleanup GHCR
+
+on:
+  schedule:
+    - cron: "23 4 * * 1"  # Mondays, 04:23 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  cleanup:
+    # Pin to a release tag or commit SHA for reproducible runs.
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@v0.31.0 # x-release-please-version
+    # Caller permissions cap the called workflow: it deletes package versions.
+    permissions:
+      packages: write
+    with:
+      # packages: my-app              # default: the repository name
+      # cache-packages: my-app-cache  # layer cache of cd-buildkit / cd-kaniko
+      dry-run: true

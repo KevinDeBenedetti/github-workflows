@@ -54,7 +54,7 @@ jobs:
 - The debug image is busybox-only (no glibc), so it **cannot** run JS actions like `actions/checkout` or `docker/metadata-action`. Kaniko fetches the source itself via its git build context, and tags are computed in `sh`.
 - GHCR auth uses the job's `GITHUB_TOKEN` (`permissions: packages: write`) — no registry secret is needed. The same token clones the source (`GIT_USERNAME`/`GIT_PASSWORD`).
 - Single architecture only (native cluster arch — `linux/amd64`). No QEMU / multi-platform builds.
-- No GHA layer cache — Kaniko uses `--cache-repo` (`<image>-cache`) on GHCR instead.
+- No GHA layer cache — Kaniko uses `--cache-repo` (`<image>-cache`) on GHCR instead. Kaniko never deletes these per-layer cache images: [`cleanup-ghcr`](./cleanup-ghcr.md) purges them on a schedule.
 - Source is cloned by Kaniko from a git context, so the job runs on **push** events; PR refs (`refs/pull/N/merge`) are not fetchable this way.
 - No `digest` output — Kaniko does not expose it the way `docker/build-push-action` does.
 

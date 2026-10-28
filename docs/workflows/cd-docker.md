@@ -57,6 +57,7 @@ jobs:
 
 - Uses `docker/metadata-action` for automatic tag and label generation.
 - Build cache is scoped per `context` using GitHub Actions cache (`type=gha`).
+- Each build adds a `sha-*` tag, and each platform image and attestation is an untagged version in GHCR: [`cleanup-ghcr`](./cleanup-ghcr.md) deletes the old ones on a schedule without breaking multi-arch images.
 - The job runs in the `production` environment on `main`, otherwise `preview`.
 - **Caller permissions** — a reusable workflow gets at most what its caller grants, and GitHub refuses the run if a job asks for more (even when `attest` is false). Grant on the calling job:
   ```yaml
