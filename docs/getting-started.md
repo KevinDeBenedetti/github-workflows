@@ -274,6 +274,31 @@ jobs:
 
 ---
 
+### GHCR cleanup
+
+Deletes old image versions in GHCR every week, from the repository that publishes
+them. Release tags, moving tags and images younger than 30 days are never deleted.
+
+```yaml
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@main
+    permissions:
+      packages: write
+    with:
+      packages: my-app   # default: the repository name
+      dry-run: true      # remove once a manual run's log looks right
+```
+
+→ [Full reference](workflows/cleanup-ghcr.md)
+
+---
+
 ## All available workflows
 
 | Workflow | Description | Doc |
@@ -294,6 +319,7 @@ jobs:
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](workflows/pr-description.md) |
+| `cleanup-ghcr.yml` | Scheduled GHCR retention: keeps releases and recent images, deletes the rest and old layer caches | [→](workflows/cleanup-ghcr.md) |
 
 ---
 
@@ -342,3 +368,4 @@ Complete ready-to-use caller files live in [`examples/`](https://github.com/Kevi
 | `monorepo.yml` | Monorepo with change detection |
 | `vitepress.yml` | VitePress docs site |
 | `pr-description.yml` | PR descriptions written by Claude Code |
+| `cleanup-ghcr.yml` | Weekly GHCR retention |

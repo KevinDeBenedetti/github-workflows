@@ -14,6 +14,10 @@
         },
         {
           "type": "generic",
+          "path": "examples/cleanup-ghcr.yml"
+        },
+        {
+          "type": "generic",
           "path": "examples/dependabot.yml"
         },
         {

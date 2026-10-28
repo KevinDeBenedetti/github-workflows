@@ -230,4 +230,5 @@ kubectl delete namespace buildkit-smoke
 - Cluster path: registry credentials and secrets are written to a `0700` temporary directory removed at the end of the step.
 - GitHub-hosted path: the source comes from `actions/checkout` of the same commit, and the job logs in to GHCR even when `push` is false, since the layer cache lives there.
 - Layer cache: `<image>-cache:buildcache` on GHCR, shared by both paths (`mode=max`; export failures don't fail the build).
+- Each build leaves new versions in GHCR: the tagged image index with its untagged image and attestations, and the replaced cache manifest. [`cleanup-ghcr`](./cleanup-ghcr.md) deletes the old ones on a schedule.
 - Single architecture: the runner's native platform.
