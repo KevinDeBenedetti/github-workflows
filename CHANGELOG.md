@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.31.0...v0.32.0) (2026-10-28)
+
+
+### Features
+
+* **cleanup-ghcr:** add scheduled workflow for GHCR image retention ([46c33d5](https://github.com/KevinDeBenedetti/github-workflows/commit/46c33d5951a793d0133126bbb8f21ae4bc8e13ab))
+
 ## [0.31.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.30.0...v0.31.0) (2026-10-27)
 
 
