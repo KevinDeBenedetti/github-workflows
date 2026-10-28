@@ -13,7 +13,7 @@ permissions: {}
 jobs:
   describe:
     # Pin to a release tag or commit SHA for reproducible runs.
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.31.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.32.0 # x-release-please-version
     # Caller permissions cap the called workflow: it edits the PR body.
     permissions:
       contents: read
