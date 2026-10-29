@@ -39,7 +39,7 @@ steps:
 | `model`                   | string | — (required)                  | Claude model: an alias (`opus`, `sonnet`, …) or a full name |
 | `effort`                  | string | `''`                          | Claude Code effort level; empty for Claude Code's default   |
 | `language`                | string | `English`                     | Language of the text; the section headings stay in English  |
-| `max-diff-bytes`          | string | `100000`                      | Size cap of the diff sent to Claude, in bytes               |
+| `max-diff-bytes`          | string | `100000`                      | Size cap of each context block, in bytes; at most `3000000` |
 | `github-token`            | string | the job's `GITHUB_TOKEN`      | Token allowed to edit the pull request                      |
 | `pr-number`               | string | from the `pull_request` event | Pull request to update                                      |
 | `base-sha`                | string | from the `pull_request` event | Base commit of the diff                                     |
@@ -49,14 +49,21 @@ steps:
 ## Steps
 
 1. `collect-context.sh` prints the title, the commit messages, the diffstat and the
-   diff (lockfiles left out, cut at `max-diff-bytes`)
+   diff (lockfiles left out), each in a block cut at `max-diff-bytes`. The tags
+   around a block end in a random suffix drawn for the run, so text in a commit or
+   a file cannot close a block or open another. Git runs without external diff
+   drivers or textconv filters
 2. `write-description.sh` runs `claude -p` with the model, the effort and the system
-   prompt in `system-prompt.md`, with no tool, from empty working and configuration
-   directories. Only this step gets the Claude token
+   prompt in `system-prompt.md`, with no tool and no slash command, from empty
+   working, configuration and home directories. Claude Code gets the Claude token
+   and the runner's `PATH`, locale, time zone, proxy and CA certificate variables,
+   nothing else from the job: no `GITHUB_TOKEN`, cloud credential or
+   `ANTHROPIC_API_KEY`. Only this step gets the Claude token
 3. `update-body.sh` reads the current body through the REST API with `curl`,
-   `merge-body.py` replaces the managed block or puts one on top, and the body is
-   saved only when it changed. Only this step gets the GitHub token, through a
-   header file rather than a command line
+   `merge-body.py` filters the description (see [Filtered text](#filtered-text)),
+   then replaces the managed block or puts one on top, and the body is saved only
+   when it changed. Only this step gets the GitHub token, through a header file
+   rather than a command line, and only for an `https://` `GITHUB_API_URL`
 
 ## The managed block
 
@@ -77,3 +84,13 @@ A pull request template that holds the block gets it filled in place (see
 [Pull request template](../workflows/pr-description.md#pull-request-template));
 otherwise the block goes on top of the body. Delete the block to get a fresh one
 on top at the next push.
+
+## Filtered text
+
+The description is model output written from repository content, so
+`merge-body.py` treats it as data before it reaches the body. Outside code spans
+and fenced code blocks, it decodes HTML entities, removes HTML and images, turns
+links into their text, and wraps `@mentions`, issue references and URLs in code,
+to keep the generated text from notifying people, linking or closing issues on
+merge, loading remote images or offering links to click. Control, zero-width and
+bidirectional characters are dropped everywhere.

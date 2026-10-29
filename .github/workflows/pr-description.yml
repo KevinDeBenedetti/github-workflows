@@ -33,8 +33,10 @@ on:
         default: English
       max-diff-bytes:
         description: >
-          Size cap of the diff sent to Claude, in bytes. Beyond it the diff is
-          cut and Claude is told; the commit list and the diffstat stay complete.
+          Size cap, in bytes, of each block of context sent to Claude (the
+          commit list, the diffstat and the diff). Beyond it a block is cut and
+          Claude is told. At most 3000000: three blocks must fit in the 10 MB
+          `claude -p` reads from stdin.
         type: number
         required: false
         default: 100000
