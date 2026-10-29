@@ -122,7 +122,7 @@ template.
 | `model`          | string | set in `pr-description.yml` | Claude model that writes the description                                        |
 | `effort`         | string | `medium`                    | Claude Code effort level (`low` to `max`); empty for Claude Code's default      |
 | `language`       | string | `English`                   | Language of the text; the section headings stay in English                      |
-| `max-diff-bytes` | number | `100000`                    | Size cap of the diff sent to Claude; the commit list and diffstat stay complete |
+| `max-diff-bytes` | number | `100000`                    | Size cap of each block sent to Claude (commits, diffstat, diff), max `3000000`  |
 | `runner`         | string | `'"ubuntu-latest"'`         | Runner labels as JSON: Linux x64 or arm64 with glibc, curl, git, jq, python3    |
 
 ## Secrets
@@ -136,17 +136,25 @@ template.
 1. Runs only for `pull_request` events on branches of the repository itself,
    opened by a person: fork pull requests get no secrets, and bot pull requests
    (Renovate, release-please) keep their own descriptions.
-2. Collects the title, the commit messages, the diffstat and the diff. Lockfiles
-   and minified or source-map files stay out of the diff, and a diff over
-   `max-diff-bytes` is cut (Claude is told).
+2. Collects the title, the commit messages, the diffstat and the diff, each in a
+   block whose tags end in a random suffix drawn for the run: nothing in a commit
+   or a file can close a block or open another. Lockfiles and minified or
+   source-map files stay out of the diff, and a block over `max-diff-bytes` is cut
+   (Claude is told).
 3. Installs the pinned Claude Code CLI with
    [`setup-claude-code`](../actions/setup-claude-code.md) and runs it headless,
-   with no tool, from empty working and configuration directories: nothing in the
-   checked-out repository (hooks, MCP servers, `CLAUDE.md`, settings) loads.
-4. Writes the result into the managed block with the
+   with no tool and no slash command, from empty working, configuration and home
+   directories: nothing in the checked-out repository (hooks, MCP servers,
+   `CLAUDE.md`, skills, settings) loads. It gets the Claude token and the runner's
+   `PATH`, locale, time zone, proxy and CA certificate variables, nothing else from
+   the job: no `GITHUB_TOKEN`, cloud credential or `ANTHROPIC_API_KEY`.
+4. Filters the result, then writes it into the managed block with the
    [`pr-description` action](../actions/pr-description.md): in place when the body
    has the block, as a pull request template can, or on top of the body otherwise.
    Text outside the block is kept; edits inside it are overwritten on the next push.
+   The filter removes HTML and images, turns links into their text and wraps
+   `@mentions`, issue references and URLs in code (see
+   [Filtered text](../actions/pr-description.md#filtered-text)).
 
 ## Notes
 

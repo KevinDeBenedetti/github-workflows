@@ -25,11 +25,22 @@ case "$PR_NUMBER" in
     ;;
 esac
 
+# The token travels only over TLS, to the API root the runner names. curl
+# verifies the certificate and follows no redirect, so no other host sees it.
+api_url="${GITHUB_API_URL:-https://api.github.com}"
+case "$api_url" in
+  https://[!/]*) ;;
+  *)
+    echo "GITHUB_API_URL must be an https:// URL, got '${api_url}'" >&2
+    exit 2
+    ;;
+esac
+
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 work="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/pr-body.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
-url="${GITHUB_API_URL:-https://api.github.com}/repos/${REPO}/pulls/${PR_NUMBER}"
+url="${api_url%/}/repos/${REPO}/pulls/${PR_NUMBER}"
 (umask 077 && printf 'Authorization: Bearer %s\n' "$GITHUB_TOKEN" > "$work/auth-header")
 
 # api RESPONSE_FILE [curl args...]: the response body lands in RESPONSE_FILE,
@@ -37,7 +48,7 @@ url="${GITHUB_API_URL:-https://api.github.com}/repos/${REPO}/pulls/${PR_NUMBER}"
 api() {
   local response="$1"
   shift
-  curl -sS --fail-with-body --retry 3 --retry-delay 2 \
+  curl -sS --fail-with-body --retry 3 --retry-delay 2 --max-time 60 \
     -H @"$work/auth-header" \
     -H 'Accept: application/vnd.github+json' \
     -H 'X-GitHub-Api-Version: 2022-11-28' \
