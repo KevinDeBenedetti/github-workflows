@@ -16,7 +16,7 @@ on:
 jobs:
   # Block PRs that contain commits from unauthorised bots.
   bot-guard:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.32.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.32.1 # x-release-please-version
     with:
       # Bots allowed to author commits in a PR (JSON array of logins).
       allowed-bots: '["dependabot[bot]"]'
