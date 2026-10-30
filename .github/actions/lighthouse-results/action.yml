@@ -1,0 +1,62 @@
+name: Lighthouse results
+description: >
+  Summarize a Lighthouse CI run in the job summary (one row per page) and post
+  one commit status per page through the GitHub REST API, from what
+  `lhci assert` and `lhci upload --target=filesystem` left on disk. No
+  third-party service: Lighthouse CI's own statuses go through its GitHub App
+  or its public report storage. Runs on any Linux runner with bash, curl and
+  jq: no GitHub CLI needed.
+
+inputs:
+  report-dir:
+    description: Directory written by `lhci upload --target=filesystem` (holds manifest.json)
+    required: false
+    default: .lighthouse
+  assertions-file:
+    description: Results of `lhci assert` (no file when nothing was asserted)
+    required: false
+    default: .lighthouseci/assertion-results.json
+  post-statuses:
+    description: Post one commit status per page (needs statuses write). `false` writes the summary only.
+    required: false
+    default: 'true'
+  sha:
+    description: Commit the statuses go on
+    required: false
+    default: ${{ github.sha }}
+  version-url:
+    description: >
+      Optional URL of a JSON document whose `version` is the release tag the
+      audited site runs (e.g. https://example.com/api/health). The statuses
+      then go on that tag's commit instead of `sha`, and are skipped when it
+      names no tag of the repository.
+    required: false
+    default: ''
+  target-url:
+    description: Link of every status (e.g. the report artifact). Empty links the workflow run.
+    required: false
+    default: ''
+  context-prefix:
+    description: Status context before the page path (`lighthouse` gives `lighthouse/en`)
+    required: false
+    default: lighthouse
+  github-token:
+    description: Token with statuses write (and contents read, for version-url)
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Summarize and post statuses
+      shell: bash
+      env:
+        REPORT_DIR: ${{ inputs.report-dir }}
+        ASSERTIONS_FILE: ${{ inputs.assertions-file }}
+        POST_STATUSES: ${{ inputs.post-statuses }}
+        SHA: ${{ inputs.sha }}
+        VERSION_URL: ${{ inputs.version-url }}
+        TARGET_URL: ${{ inputs.target-url }}
+        CONTEXT_PREFIX: ${{ inputs.context-prefix }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: bash "$GITHUB_ACTION_PATH/lighthouse-results.sh"
