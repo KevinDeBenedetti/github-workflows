@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.34.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.33.0...v0.34.0) (2026-10-30)
+
+
+### Features
+
+* **perf-lighthouse:** add Lighthouse CI workflow with one commit status per page ([54f80a9](https://github.com/KevinDeBenedetti/github-workflows/commit/54f80a9305c28296c4b446e5b77761f887042b05))
+
 ## [0.33.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.32.1...v0.33.0) (2026-10-30)
 
 

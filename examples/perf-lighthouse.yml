@@ -10,7 +10,7 @@ on:
 jobs:
   lighthouse:
     # Pin to a release tag or commit SHA for reproducible runs.
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/perf-lighthouse.yml@v0.33.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/perf-lighthouse.yml@v0.34.0 # x-release-please-version
     permissions:
       contents: read # the config, and the commit behind version-url
       statuses: write # one status per page
