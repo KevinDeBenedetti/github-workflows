@@ -12,7 +12,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@v0.32.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@v0.32.1 # x-release-please-version
     with:
       python-version: '3.12'
 
@@ -26,7 +26,7 @@ jobs:
       deployments: write   # production/preview environment record
       id-token: write      # sign the image attestation (Sigstore)
       attestations: write  # store the attestation
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.32.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.32.1 # x-release-please-version
     with:
       context: .
       platforms: linux/amd64,linux/arm64
@@ -34,7 +34,7 @@ jobs:
   release:
     needs: deploy-production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.32.0 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.32.1 # x-release-please-version
     with:
       release-type: python
     # No token secret: release-please runs on GITHUB_TOKEN (enable "Allow

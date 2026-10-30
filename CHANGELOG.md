@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.32.0...v0.32.1) (2026-10-30)
+
+
+### Bug Fixes
+
+* **perf-sitespeed:** write the JSON the metrics extraction reads ([cf6273d](https://github.com/KevinDeBenedetti/github-workflows/commit/cf6273dc69d5ffa3fe4f6e40bef3c324ddea8700))
+
 ## [0.32.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.31.0...v0.32.0) (2026-10-28)
 
 
