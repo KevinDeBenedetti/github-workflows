@@ -19,7 +19,7 @@ mode() {
 
 # unsafe_chars FILE: how many control, zero-width or bidi characters FILE holds.
 unsafe_chars() {
-  python3 -c 'import re, sys; t = open(sys.argv[1], encoding="utf-8").read(); print(len(re.findall("[\x00-\x08\x0b-\x1f\x7f-\x9f​-‏ -‮⁠-⁤⁦-⁩﻿]", t)))' "$1"
+  python3 -c 'import re, sys; t = open(sys.argv[1], encoding="utf-8").read(); print(len(re.findall("[\x00-\x08\x0b-\x1f\x7f-\x9f\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u2069\ufeff]", t)))' "$1"
 }
 
 # nonce_of OUTPUT: the random tag suffix named on the second line of a context.
@@ -260,7 +260,7 @@ update() {
 }
 
 @test "merge: control, zero-width and bidirectional characters are dropped" {
-  python3 -c 'print("Adds \x1b[31mred\x1b[0m b​‮txet‬ in `co⁦de` &#8238;x.")' > description.md
+  python3 -c 'print("Adds \x1b[31mred\x1b[0m b\u200b\u202etxet\u202c in `co\u2066de` &#8238;x.")' > description.md
   : > current.md
   run python3 "$ACTION/merge-body.py" current.md description.md new.md
   [ "$status" -eq 0 ]

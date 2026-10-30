@@ -55,9 +55,10 @@ INLINE_CODE = re.compile(r"`+[^`\n]+`+")
 
 # Characters removed everywhere, code included: C0 and C1 controls (apart from
 # tab and newline), zero-width characters, bidirectional overrides and
-# isolates, the line and paragraph separators.
+# isolates, the line and paragraph separators. Written as escapes: an editor
+# can drop an invisible character unseen, as U+2028 once was here.
 UNSAFE_CHARS = re.compile(
-    "[\u0000-\u0008\u000b-\u001f\u007f-\u009f​-‏-‮⁠-⁤⁦-⁩﻿]"
+    "[\u0000-\u0008\u000b-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u2064\u2066-\u2069\ufeff]"
 )
 HTML_COMMENT = re.compile(r"<!--.*?-->", re.S)
 HTML_TAG = re.compile(r"</?[A-Za-z][^<>]*>")
