@@ -1,0 +1,202 @@
+name: Perf — Lighthouse CI
+
+# Lighthouse CI on chosen pages of a DEPLOYED site, held to the thresholds of
+# the caller's Lighthouse CI config (its `ci.assert`), with one commit status
+# per page (`lighthouse/<path>`) posted through the GitHub API by the
+# lighthouse-results action. No third-party service: Lighthouse CI's own
+# statuses go through its GitHub App or its public report storage. Scores go
+# to the step summary, the HTML and JSON reports to an artifact.
+#
+# The job fails when an `error` assertion fails (GitHub's failure email is the
+# alert); the statuses say which page.
+#
+# The statuses describe the run's commit, unless `version-url` is set: a site
+# deployed after the commit that runs this (GitOps, a manual merge) reports
+# its release tag there, and the statuses go on that tag's commit.
+#
+# Intended to be called from a `schedule:` or `workflow_dispatch:` caller.
+# Do NOT run it on a cluster-internal runner (k3s-*): auditing from the site's
+# own network skews the scores. Keep the default GitHub-hosted runner.
+
+on:
+  workflow_call:
+    inputs:
+      site:
+        description: Site to audit (e.g. https://example.com)
+        type: string
+        required: true
+      urls:
+        description: Comma-separated paths to audit (e.g. /,/about)
+        type: string
+        required: false
+        default: /
+      config:
+        description: >-
+          Lighthouse CI config in the caller repository (e.g. lighthouserc.json):
+          its `ci.assert` sets the thresholds, its `ci.collect` the runs and
+          settings; its own URLs and server are ignored. Empty: no assertions.
+        type: string
+        required: false
+        default: ""
+      version-url:
+        description: >-
+          URL of a JSON document whose `version` is the release tag the site
+          runs (e.g. https://example.com/api/health): the statuses go on that
+          tag's commit. Empty: on the run's commit.
+        type: string
+        required: false
+        default: ""
+      lhci-version:
+        description: "@lhci/cli version"
+        type: string
+        required: false
+        # renovate: datasource=npm depName=@lhci/cli
+        default: 0.15.1
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
+  # Keep them in sync manually — GitHub does not support shared input definitions.
+  workflow_dispatch:
+    inputs:
+      site:
+        description: Site to audit (e.g. https://example.com)
+        type: string
+        required: true
+      urls:
+        description: Comma-separated paths to audit (e.g. /,/about)
+        type: string
+        default: /
+      config:
+        description: Lighthouse CI config in the repository (its ci.assert sets the thresholds). Empty, no assertions
+        type: string
+        default: ""
+      version-url:
+        description: URL of a JSON document whose `version` is the release tag the site runs. Empty, the run's commit
+        type: string
+        default: ""
+      lhci-version:
+        description: "@lhci/cli version"
+        type: string
+        # renovate: datasource=npm depName=@lhci/cli
+        default: 0.15.1
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+# A scheduled audit must not be cancelled by the next trigger.
+concurrency:
+  group: perf-lighthouse-${{ github.workflow }}-${{ github.ref }}-${{ inputs.site }}
+  cancel-in-progress: false
+
+jobs:
+  lighthouse:
+    name: Lighthouse CI
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 30
+    permissions:
+      contents: read # the caller's config, and the commit behind version-url
+      statuses: write # one status per page
+
+    steps:
+      - name: Validate inputs
+        env:
+          SITE: ${{ inputs.site }}
+          URLS: ${{ inputs.urls }}
+          CONFIG: ${{ inputs.config }}
+          VERSION_URL: ${{ inputs.version-url }}
+        run: |
+          set -euo pipefail
+          [[ "$SITE" =~ ^https?://[^/]+ ]] || { echo "::error::site must start with http:// or https:// (got '${SITE}')"; exit 1; }
+          IFS=',' read -ra paths <<< "$URLS"
+          (( ${#paths[@]} > 0 )) || { echo "::error::urls is empty"; exit 1; }
+          for path in "${paths[@]}"; do
+            path="${path//[[:space:]]/}"
+            [[ "$path" == /* ]] || { echo "::error::every path in urls must start with / (got '${path}')"; exit 1; }
+          done
+          if [[ -n "$CONFIG" && ( "$CONFIG" == /* || "$CONFIG" == *..* ) ]]; then
+            echo "::error::config must be a path inside the repository (got '${CONFIG}')"
+            exit 1
+          fi
+          if [[ -n "$VERSION_URL" && ! "$VERSION_URL" =~ ^https?:// ]]; then
+            echo "::error::version-url must start with http:// or https:// (got '${VERSION_URL}')"
+            exit 1
+          fi
+
+      # The config file only: the audit needs nothing else from the repository.
+      - name: Checkout the config
+        if: inputs.config != ''
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: ${{ inputs.config }}
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      # Non-zero exit when an assertion fails — this step is what fails the job.
+      # The upload runs anyway: the report and the statuses say which page.
+      - name: Run Lighthouse CI
+        env:
+          SITE: ${{ inputs.site }}
+          URLS: ${{ inputs.urls }}
+          CONFIG: ${{ inputs.config }}
+          VERSION: ${{ inputs.lhci-version }}
+        run: |
+          set -euo pipefail
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
+          if [[ -n "$CHROME_PATH" ]]; then
+            export CHROME_PATH
+          fi
+          lhci() { npm exec --yes --package="@lhci/cli@${VERSION}" -- lhci "$@"; }
+          rc=(--no-lighthouserc)
+          if [[ -n "$CONFIG" ]]; then
+            rc=("--config=${CONFIG}")
+          fi
+          urls=()
+          IFS=',' read -ra paths <<< "$URLS"
+          for path in "${paths[@]}"; do
+            path="${path//[[:space:]]/}"
+            if [[ -n "$path" ]]; then
+              urls+=("--url=${SITE%/}${path}")
+            fi
+          done
+          # The deployed pages: the URLs and the server a config names for local
+          # runs are overridden.
+          lhci collect "${rc[@]}" "${urls[@]}" --startServerCommand=
+          status=0
+          if [[ -n "$CONFIG" ]]; then
+            lhci assert "${rc[@]}" || status=$?
+          fi
+          lhci upload "${rc[@]}" --target=filesystem --outputDir=.lighthouse
+          exit "$status"
+
+      - name: Upload report
+        id: report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lighthouse-report
+          path: .lighthouse
+          retention-days: 30
+          if-no-files-found: warn
+
+      # A status GitHub refuses (the caller did not grant statuses: write) must
+      # not hide the audit's own result: the job keeps the Lighthouse step's.
+      - name: Summarize and post statuses
+        if: ${{ !cancelled() }}
+        continue-on-error: true
+        uses: $/.github/actions/lighthouse-results
+        with:
+          version-url: ${{ inputs.version-url }}
+          target-url: ${{ steps.report.outputs.artifact-url }}

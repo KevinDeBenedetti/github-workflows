@@ -38,6 +38,10 @@
         },
         {
           "type": "generic",
+          "path": "examples/perf-lighthouse.yml"
+        },
+        {
+          "type": "generic",
           "path": "examples/perf-sitespeed.yml"
         },
         {

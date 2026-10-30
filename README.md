@@ -64,6 +64,7 @@ jobs:
 | `ci-prometheus.yml` | Prometheus CI (PromQL check + alert unit tests) | [→](docs/workflows/ci-prometheus.md) |
 | `perf-sitespeed.yml` | Core Web Vitals monitoring with sitespeed.io (budget + CSV history) | [→](docs/workflows/perf-sitespeed.md) |
 | `perf-unlighthouse.yml` | Lighthouse audit of every page (perf, a11y, SEO) with Unlighthouse, scheduled | [→](docs/workflows/perf-unlighthouse.md) |
+| `perf-lighthouse.yml` | Lighthouse CI on chosen pages of a deployed site: per-category assertions, one commit status per page | [→](docs/workflows/perf-lighthouse.md) |
 | `seo-crawl.yml` | SEO crawl: broken links, redirects, missing/duplicate tags | [→](docs/workflows/seo-crawl.md) |
 | `ci-prek.yml` | prek / pre-commit hooks run server-side (`prek run --all-files`) | [→](docs/workflows/ci-prek.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |

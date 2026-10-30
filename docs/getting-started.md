@@ -351,6 +351,7 @@ steps:
 | [`check-docs-external-links`](actions/check-docs-external-links.md) | Check the `http(s)` links of changed docs pages with lychee |
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
+| [`lighthouse-results`](actions/lighthouse-results.md) | Summarize a Lighthouse CI run and post one commit status per page |
 
 ---
 
