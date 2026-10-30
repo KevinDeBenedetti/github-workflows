@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.33.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.32.1...v0.33.0) (2026-10-30)
+
+
+### Features
+
+* **pr-description:** enhance context collection and description generation ([f3c3767](https://github.com/KevinDeBenedetti/github-workflows/commit/f3c3767d7504fc1f74d6674807e857f364804662))
+
+
+### Bug Fixes
+
+* **pr-description:** keep hyphens when dropping invisible characters ([c87cfc9](https://github.com/KevinDeBenedetti/github-workflows/commit/c87cfc9ef8d45104ede5cbb605cb1a7c4b8e1298))
+
 ## [0.32.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.32.0...v0.32.1) (2026-10-30)
 
 
