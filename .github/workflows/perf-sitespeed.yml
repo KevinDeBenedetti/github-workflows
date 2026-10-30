@@ -140,6 +140,8 @@ jobs:
           esac
 
       # Non-zero exit when the budget is exceeded — this step is what fails the job.
+      # analysisstorer, off by default, writes the JSON the next step reads: without
+      # it the result holds only the HTML report, videos and HARs.
       - name: Run sitespeed.io
         env:
           IMAGE: ${{ inputs.sitespeed-image }}
@@ -151,12 +153,14 @@ jobs:
           set -euo pipefail
           args=(-n "$ITERATIONS" -b chrome
                 --budget.configPath "$BUDGET_FILE" --budget.output json
+                --plugins.add analysisstorer
                 --outputFolder sitespeed-result)
           [[ "$DEVICE" == "mobile" ]] && args+=(--mobile)
           docker run --rm --shm-size=1g -v "$PWD:/sitespeed.io" "$IMAGE" "$URLS_FILE" "${args[@]}"
 
       # Runs even when the budget failed, so the artifact and history always exist.
-      # One row per URL: date,url,device,lcp,cls,tbt (medians).
+      # One row per URL: date,url,device,lcp,cls,tbt (medians), from the page
+      # summary analysisstorer writes for each URL, pages/<host>/<path>/data/.
       - name: Extract metrics
         if: always()
         env:
@@ -176,15 +180,22 @@ jobs:
                 (.statistics.googleWebVitals.cumulativeLayoutShift.median // ""),
                 (.statistics.googleWebVitals.totalBlockingTime.median // "")
               ] | join(",")' "$f" >> "$out"
-          done < <(find sitespeed-result -name browsertime.summary.json -print0)
+          done < <(find sitespeed-result -name browsertime.pageSummary.json -print0)
 
           {
             echo "### Core Web Vitals — ${DEVICE}"
             echo
-            echo "| URL | LCP (ms) | CLS | TBT (ms) |"
-            echo "|---|---|---|---|"
-            awk -F, '{ printf "| %s | %s | %s | %s |\n", $2, $4, $5, $6 }' "$out"
+            if [[ -s "$out" ]]; then
+              echo "| URL | LCP (ms) | CLS | TBT (ms) |"
+              echo "|---|---|---|---|"
+              awk -F, '{ printf "| %s | %s | %s | %s |\n", $2, $4, $5, $6 }' "$out"
+            else
+              echo "No metrics: sitespeed.io wrote no \`browsertime.pageSummary.json\`."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
+          if [[ ! -s "$out" ]]; then
+            echo "::warning::no browsertime.pageSummary.json under sitespeed-result — no metrics extracted"
+          fi
 
       - name: Upload results
         if: always()

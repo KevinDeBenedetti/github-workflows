@@ -1,3 +1,7 @@
+---
+title: Perf — sitespeed.io
+---
+
 # Perf — sitespeed.io
 
 Core Web Vitals monitoring with [sitespeed.io](https://www.sitespeed.io/) (real
@@ -45,9 +49,13 @@ perf/budget.json  # {"budget": {"googleWebVitals": {"largestContentfulPaint": 25
 ## Jobs
 
 1. **`sitespeed`** (one per device) — checkout, validate inputs, run the
-   container (`--mobile` for mobile), extract the median LCP/CLS/TBT, write a
-   step summary, upload `sitespeed-result-<device>` (90 days). Extraction and
-   upload use `if: always()` so they run even when the budget failed.
+   container (`--mobile` for mobile) with the `analysisstorer` plugin, extract
+   the median LCP/CLS/TBT, write a step summary, upload
+   `sitespeed-result-<device>` (90 days). Extraction and upload use
+   `if: always()` so they run even when the budget failed. The medians come
+   from the `pages/<host>/<path>/data/browsertime.pageSummary.json` file that
+   `analysisstorer` writes for each URL: sitespeed.io writes no JSON without
+   that plugin, which is off by default.
 2. **`history`** (only if `history-branch` is set) — downloads the artifacts and
    appends `date,url,device,lcp,cls,tbt` rows to `history.csv` on the history
    branch. Has `contents: write`, scoped to this job only. A single job writes
@@ -69,5 +77,5 @@ perf/budget.json  # {"budget": {"googleWebVitals": {"largestContentfulPaint": 25
 ```bash
 docker run --rm --shm-size=1g -v "$(pwd)/sitespeed-result:/sitespeed.io" \
   sitespeedio/sitespeed.io:<tag> https://example.com/ -n 5 -b chrome \
-  --budget.configPath budget.json
+  --budget.configPath budget.json --plugins.add analysisstorer
 ```
