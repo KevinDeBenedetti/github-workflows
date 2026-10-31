@@ -1,5 +1,9 @@
 # CD — Kaniko
 
+::: danger Deprecated since 2026-10-31
+No caller is left: the portfolio images are built with [`cd-buildkit.yml`](./cd-buildkit.md), and the infra runners no longer carry the Kaniko executor. Use `cd-buildkit.yml` for new builds. This page stays as a reference until the workflow is removed.
+:::
+
 Builds and pushes a container image with **Kaniko** on a self-hosted k3s runner, then pushes to **GHCR**.
 A drop-in replacement for `cd-docker.yml` for builds running inside the cluster — single-arch, no Docker daemon, no JS actions.
 

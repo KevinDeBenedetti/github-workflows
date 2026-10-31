@@ -4,7 +4,7 @@ Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless i
 Successor of [`cd-kaniko.yml`](cd-kaniko.md) (upstream Kaniko is archived): same inputs and tags, but on the cluster the builder runs as a non-root user, and the workflow adds a `digest` output, build secrets, provenance and SBOM.
 
 ::: warning Experimental on the cluster
-The self-hosted path is not yet validated on the cluster: it needs the cluster-side setup below, and until then keep `cd-kaniko.yml` there. The GitHub-hosted path needs no setup.
+The self-hosted path is not yet validated on the cluster: it needs the cluster-side setup below. The GitHub-hosted path needs no setup and is the one in production: it built the portfolio prod image v0.22.0 on 2026-10-31. `cd-kaniko.yml` is deprecated since then.
 :::
 
 ## Usage
