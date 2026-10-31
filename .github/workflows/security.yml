@@ -55,6 +55,15 @@ on:
         type: boolean
         required: false
         default: false
+      secret-scan-upload-sarif:
+        description: >
+          Upload the Gitleaks SARIF report to code scanning (the Security tab)
+          when a leak is found. Code scanning needs GitHub Code Security on a
+          private repository: turn this off there, the findings stay in the
+          job log. The job requests `security-events: write` either way.
+        type: boolean
+        required: false
+        default: true
       run-dependency-review:
         description: >
           On pull requests, fail when the change adds a dependency with a known
@@ -119,6 +128,10 @@ on:
         description: Ignore inline `gitleaks:allow` comments (gitleaks --ignore-gitleaks-allow)
         type: boolean
         default: false
+      secret-scan-upload-sarif:
+        description: Upload the Gitleaks SARIF report to code scanning when a leak is found
+        type: boolean
+        default: true
       run-dependency-review:
         description: On pull requests, fail when the change adds a vulnerable dependency
         type: boolean
@@ -264,6 +277,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           IGNORE_INLINE_ALLOW: ${{ inputs.secret-scan-ignore-inline-allow }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           has_commit() { [ -n "$1" ] && git cat-file -e "$1^{commit}" 2>/dev/null; }
 
@@ -273,11 +287,12 @@ jobs:
           # commits only sit behind the second parent — following first parents
           # would skip exactly the commits that need scanning.
           #
-          # TRUSTED is the commit the scanned range starts from: the gitleaks
-          # config and ignore list are read from THERE, never from the commits
-          # under scan. Gitleaks otherwise auto-loads .gitleaks.toml and
-          # .gitleaksignore from the checkout, so a PR (or a push) could add an
-          # allowlist matching everything and silence its own leaks.
+          # TRUSTED is where the gitleaks config and ignore list are read from,
+          # never the commits under scan: the commit the scanned range starts
+          # from, or the default branch for a manual or scheduled run. Gitleaks
+          # otherwise auto-loads .gitleaks.toml and .gitleaksignore from the
+          # checkout, so a PR (or a push) could add an allowlist matching
+          # everything and silence its own leaks.
           if [[ "$EVENT" == pull_request* ]] && has_commit "$PR_BASE_SHA" && has_commit "$PR_HEAD_SHA"; then
             # Every commit the PR brings, whatever the event action.
             RANGE="${PR_BASE_SHA}..${PR_HEAD_SHA}"
@@ -287,10 +302,24 @@ jobs:
             && has_commit "$BEFORE"; then
             RANGE="${BEFORE}..HEAD"
             TRUSTED="$BEFORE"
+          elif [ "$EVENT" = "workflow_dispatch" ] && [ -n "$DEFAULT_BRANCH" ] \
+            && has_commit "refs/remotes/origin/${DEFAULT_BRANCH}"; then
+            # Manual run: no range, so scan everything that was fetched, with
+            # the config and ignore list of the default branch. That branch
+            # went through review, and nothing in this run can change it.
+            RANGE=""
+            TRUSTED="refs/remotes/origin/${DEFAULT_BRANCH}"
+          elif [ "$EVENT" = "schedule" ]; then
+            # Scheduled run: the checkout is the default branch's own tip.
+            RANGE=""
+            TRUSTED="HEAD"
           else
-            # First push of a branch, manual run, or the range fell outside a
-            # shallow clone: scan everything that was fetched. No commit
-            # predates the range, so the scan falls back to the default rules.
+            # First push of a branch, or the range fell outside a shallow
+            # clone: scan everything that was fetched. No commit predates the
+            # range, so the scan falls back to the default rules.
+            if [ "$EVENT" = "workflow_dispatch" ]; then
+              echo "::warning::The default branch (${DEFAULT_BRANCH:-unknown}) is not in this clone: a finite secret-scan-fetch-depth fetches the triggering branch only. Gitleaks' default rules apply, without the repository's ignore list."
+            fi
             RANGE=""
             TRUSTED=""
           fi
@@ -326,16 +355,19 @@ jobs:
                 || { echo "::error::extended config '${EXTEND_REL}' not found at ${TRUSTED:0:7}"; exit 1; }
               EXTEND_WATCH=("$EXTEND_REL")
             fi
-            # Config changes in the scanned range take effect once merged —
-            # flag them so the reviewer looks at what they would silence.
-            CHANGED=$(git diff --name-only "$RANGE" -- .gitleaks.toml .gitleaksignore "${EXTEND_WATCH[@]}" 2>/dev/null || true)
-            if [ -n "$CHANGED" ]; then
-              echo "::warning::This change modifies $(echo "$CHANGED" | tr '\n' ' ')— not applied to this scan (the config of ${TRUSTED:0:7} is used). Review what it allowlists before merging."
-            fi
-            # Inline `gitleaks:allow` comments silence the finding on their line.
-            ALLOWS=$(git diff --unified=0 "$RANGE" 2>/dev/null | grep -c '^+.*gitleaks:allow' || true)
-            if [ "${ALLOWS:-0}" -gt 0 ]; then
-              echo "::warning::This change adds ${ALLOWS} \`gitleaks:allow\` comment(s), each silencing a finding — check them before merging (or set secret-scan-ignore-inline-allow)."
+            # Only with a range: a manual or scheduled run has nothing to compare.
+            if [ -n "$RANGE" ]; then
+              # Config changes in the scanned range take effect once merged —
+              # flag them so the reviewer looks at what they would silence.
+              CHANGED=$(git diff --name-only "$RANGE" -- .gitleaks.toml .gitleaksignore "${EXTEND_WATCH[@]}" 2>/dev/null || true)
+              if [ -n "$CHANGED" ]; then
+                echo "::warning::This change modifies $(echo "$CHANGED" | tr '\n' ' ')— not applied to this scan (the config of ${TRUSTED:0:7} is used). Review what it allowlists before merging."
+              fi
+              # Inline `gitleaks:allow` comments silence the finding on their line.
+              ALLOWS=$(git diff --unified=0 "$RANGE" 2>/dev/null | grep -c '^+.*gitleaks:allow' || true)
+              if [ "${ALLOWS:-0}" -gt 0 ]; then
+                echo "::warning::This change adds ${ALLOWS} \`gitleaks:allow\` comment(s), each silencing a finding — check them before merging (or set secret-scan-ignore-inline-allow)."
+              fi
             fi
           fi
 
@@ -365,7 +397,7 @@ jobs:
             --log-opts="$LOG_OPTS"
 
       - name: Upload SARIF report
-        if: failure() && hashFiles('results.sarif') != ''
+        if: failure() && inputs.secret-scan-upload-sarif && hashFiles('results.sarif') != ''
         continue-on-error: true
         uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
