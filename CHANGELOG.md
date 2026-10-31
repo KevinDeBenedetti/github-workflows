@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.35.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.34.0...v0.35.0) (2026-10-31)
+
+
+### Features
+
+* **security:** scan manual runs with the default branch's config, add secret-scan-upload-sarif ([6e191a8](https://github.com/KevinDeBenedetti/github-workflows/commit/6e191a87d62754bb87f1db9ff41ae91459116c49))
+
+
+### Bug Fixes
+
+* **perf:** upload the dot-folder reports of Lighthouse and Unlighthouse ([3a0e8fc](https://github.com/KevinDeBenedetti/github-workflows/commit/3a0e8fcfa238d50923e94c131bd1b74e59a4f543))
+
 ## [0.34.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.33.0...v0.34.0) (2026-10-30)
 
 
