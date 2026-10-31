@@ -51,10 +51,10 @@ on:
       notify-reviewers:
         description: >
           Comma-separated GitHub usernames to request a review from on the
-          release PR (e.g. 'octocat' or 'octocat,hubot'). Each user is added as
-          a requested reviewer so they get a GitHub notification. Each release PR
-          is notified at most once (tracked via a hidden marker comment), so
-          re-runs on later pushes won't re-request or re-ping. Leave empty to disable.
+          release PR (e.g. 'octocat' or 'octocat,hubot'), so they get a GitHub
+          notification. A user already asked to review that PR (by an earlier
+          run, or by GitHub through CODEOWNERS) is skipped, so each user is
+          notified at most once per release PR. Leave empty to disable.
         type: string
         required: false
         default: ''
@@ -219,7 +219,7 @@ jobs:
         # notify-reviewers was added after the PR opened, or the first attempt
         # failed. So prefer the `prs` output, but fall back to querying open
         # release PRs by the configured pending label. Duplicate notifications
-        # are still prevented by the marker guard below.
+        # are still prevented by the review-request check below.
         if: inputs.notify-reviewers != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -245,12 +245,14 @@ jobs:
           echo "ℹ️ Release PRs to notify: ${NUMBERS:-none}"
 
       - name: Notify reviewers on release PR
-        # Requests a review AND posts an @mention comment on each release PR.
-        # A review request alone is easy to miss (notification settings vary),
-        # but an @mention reliably reaches the user. Both actions are gated by a
-        # single hidden marker comment: once a PR has been notified, later runs
-        # (on any push while the PR stays open) skip it entirely — so reviewers
-        # are never re-requested or re-pinged. Each PR is notified at most once.
+        # Requests a review from each listed user who hasn't been asked to
+        # review that PR yet: one notification per user and release PR, with
+        # no @mention comment on top. "Asked" means any review_requested event
+        # on the PR's timeline — from an earlier run of this step, or from
+        # GitHub itself when the user owns the changed files (CODEOWNERS), in
+        # which case the step leaves that user alone. Later runs (on any push
+        # while the PR stays open) skip users already asked, even once they
+        # have reviewed or been removed, so nobody is pinged twice.
         if: inputs.notify-reviewers != '' && steps.find-prs.outputs.numbers != ''
         env:
           GH_TOKEN: ${{ github.token }}
@@ -258,34 +260,37 @@ jobs:
           REVIEWERS: ${{ inputs.notify-reviewers }}
         shell: bash
         run: |
-          # Hidden marker so re-runs don't re-request reviewers or repost comments.
-          MARKER="<!-- release-please-notify -->"
-
-          # Build "@user1 @user2" from the comma-separated reviewer list.
-          MENTIONS=""
-          IFS=',' read -ra USERS <<< "$REVIEWERS"
-          for u in "${USERS[@]}"; do
+          USERS=()
+          IFS=',' read -ra ENTRIES <<< "$REVIEWERS"
+          for u in "${ENTRIES[@]}"; do
             u="$(echo "$u" | xargs)"
-            [ -n "$u" ] && MENTIONS="${MENTIONS}@${u} "
+            [ -n "$u" ] && USERS+=("$u")
           done
 
           echo "$NUMBERS" | while read -r pr; do
             [ -n "$pr" ] || continue
-            if gh pr view "$pr" --repo "$GITHUB_REPOSITORY" --json comments \
-                --jq '.comments[].body' 2>/dev/null | grep -qF "$MARKER"; then
-              echo "ℹ️ Already notified on PR #$pr, skipping"
+            # Every login ever asked to review the PR, by anyone.
+            if ! ASKED=$(gh api --paginate \
+                "repos/${GITHUB_REPOSITORY}/issues/${pr}/timeline" \
+                --jq '.[] | select(.event == "review_requested") | .requested_reviewer.login // empty'); then
+              echo "⚠️ Could not read the timeline of PR #$pr, skipping"
               continue
             fi
-            echo "ℹ️ Requesting review from $REVIEWERS on PR #$pr"
+            MISSING=()
+            for u in "${USERS[@]}"; do
+              if grep -qixF -- "$u" <<< "$ASKED"; then
+                echo "ℹ️ $u was already asked to review PR #$pr, skipping"
+              else
+                MISSING+=("$u")
+              fi
+            done
+            [ "${#MISSING[@]}" -gt 0 ] || continue
+            LIST="$(IFS=','; echo "${MISSING[*]}")"
+            echo "ℹ️ Requesting review from $LIST on PR #$pr"
             gh pr edit "$pr" \
               --repo "$GITHUB_REPOSITORY" \
-              --add-reviewer "$REVIEWERS" \
+              --add-reviewer "$LIST" \
               || echo "⚠️ Could not request review on PR #$pr"
-            echo "ℹ️ Commenting on PR #$pr"
-            gh pr comment "$pr" \
-              --repo "$GITHUB_REPOSITORY" \
-              --body "${MARKER}"$'\n'"🚀 ${MENTIONS}a new release PR is ready for review." \
-              || echo "⚠️ Could not comment on PR #$pr"
           done
 
   tag-workflows:
