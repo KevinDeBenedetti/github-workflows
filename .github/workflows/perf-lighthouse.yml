@@ -190,6 +190,9 @@ jobs:
           path: .lighthouse
           retention-days: 30
           if-no-files-found: warn
+          # `.lighthouse` is a dot-folder: upload-artifact skips hidden paths unless
+          # told to (v4.4.0+). It holds the Lighthouse reports of public pages, no secret.
+          include-hidden-files: true
 
       # A status GitHub refuses (the caller did not grant statuses: write) must
       # not hide the audit's own result: the job keeps the Lighthouse step's.
