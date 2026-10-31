@@ -1,3 +1,7 @@
+---
+title: Release
+---
+
 # Release
 
 Automates releases using [release-please](https://github.com/googleapis/release-please-action).
@@ -31,7 +35,7 @@ jobs:
 | `git-user-name`   | string | `''`               | Name for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_NAME` repo variable, then `github-actions[bot]`. |
 | `git-user-email`  | string | `''`               | Email for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_EMAIL` repo variable, then the Actions noreply address. |
 | `runner`          | string | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'`.                                     |
-| `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to notify when a release PR is opened. Each user is requested as a reviewer **and** @mentioned in a PR comment, so a notification reliably reaches them. Each PR is notified at most once. Leave empty to disable. |
+| `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to request a review from when a release PR is opened, so each gets one GitHub notification. A user already asked to review that PR (by an earlier run, or by GitHub through CODEOWNERS) is skipped. Leave empty to disable. |
 | `release-pending-label` | string | `'autorelease: pending'` | Label used to find the open release PR on runs where release-please didn't create/update it (the fallback path for `notify-reviewers`). Override only if you customized `pull-request-label` in your release-please config. |
 | `pre-major-alias` | string | `both`             | Alias tag(s) moved while at 0.x: `both` (`v0` + `v0.<minor>`), `minor` (`v0.<minor>` only) or `major` (`v0` only). Ignored from 1.0. |
 | `app-client-id`   | string | `''`               | **Deprecated, ignored** (a warning is printed): the release runs on `GITHUB_TOKEN`. Still declared so existing callers don't fail. |
@@ -64,9 +68,9 @@ jobs:
 - The major alias (e.g. `v1`) is force-pushed after each release, enabling callers to pin to `@v1` without a breaking update.
 - Before 1.0, `pre-major-alias` picks the alias(es): `both` (default) moves `v0` and `v0.<minor>` (e.g. `v0.25`); `minor` moves only `v0.<minor>` — with `bump-minor-pre-major`, release-please ships breaking changes as minor bumps, so a moving `v0` carries callers across them; `major` moves only `v0`. Switching to `minor` freezes an existing `v0` tag: tell callers pinned to `@v0` to move to `@v0.<minor>`.
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
-- With `notify-reviewers` set, the PR comment carries a hidden `<!-- release-please-notify -->` marker. Both the review request and the comment are gated on this marker, so once a PR is notified, later runs (on any push while the PR stays open) skip it entirely — reviewers are never re-requested or re-pinged.
+- With `notify-reviewers` set, a listed user is requested as a reviewer only when the PR's timeline has no `review_requested` event for them yet. Later runs (on any push while the PR stays open) skip users already asked, even once they have reviewed or been removed, so nobody is pinged twice.
 - Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.
-- A review request alone can be missed (it depends on each user's notification settings), which is why an @mention comment is also posted — mentions notify reliably. This matters when the release PR is opened by a bot or another account rather than by you.
+- Only a review request is sent — no @mention comment — so each user gets a single notification per release PR. When a listed user owns the release PR's files through CODEOWNERS, GitHub requests their review itself as the PR opens, and the workflow leaves them alone.
 
 ## Token: `GITHUB_TOKEN` only
 
