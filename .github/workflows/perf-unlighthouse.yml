@@ -189,3 +189,6 @@ jobs:
           path: .unlighthouse
           retention-days: 30
           if-no-files-found: warn
+          # `.unlighthouse` is a dot-folder: upload-artifact skips hidden paths unless
+          # told to (v4.4.0+). It holds the Unlighthouse report of public pages, no secret.
+          include-hidden-files: true
