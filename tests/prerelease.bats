@@ -299,3 +299,29 @@ EOF
   [ "$status" -ne 0 ]
   [[ "$output" == *"GITHUB_TOKEN"* ]]
 }
+
+@test "a branch that has not merged back the last release is refused, not pre-released below it" {
+  stub_curl
+  commit -m "chore: init"
+  tag v0.22.0
+  commit -m "fix(csp): a"
+  # The release ships from another branch; this one never merges it back.
+  git checkout -q -b release
+  commit -m "chore(main): release 0.22.1"
+  tag v0.22.1
+  git checkout -q -
+  commit -m "docs: b"
+  run bash "$SCRIPT"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"v0.22.1 is already released"*"merge the release branch"* ]]
+  MODE=publish GITHUB_TOKEN=t GITHUB_REPOSITORY=owner/repo run bash "$SCRIPT"
+  [ "$status" -ne 0 ]
+  [ ! -f "$STUB_DIR/curl.log" ]
+  # Once the release is merged back, the next pre-release starts above it.
+  git -c user.name=t -c user.email=t@t -c "com""mit.gpgsign=false" merge -q --no-edit release
+  commit -m "feat: c"
+  run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(out base-tag)" = v0.22.1 ]
+  [ "$(out tag)" = v0.23.0-rc.3 ]
+}

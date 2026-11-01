@@ -22,7 +22,8 @@ jobs:
 
   build:
     needs: prerelease-plan
-    # ... APP_VERSION=${{ needs.prerelease-plan.outputs.tag }}
+    # Bake it in, and tag the image with it: cd-buildkit.yml's `version`.
+    # ... ${{ needs.prerelease-plan.outputs.tag || format('sha-{0}', github.sha) }}
 
   prerelease-publish:
     needs: [prerelease-plan, deploy]
@@ -76,6 +77,13 @@ publish.
   `0.23.0` is out. Starting from the last final tag stays right across releases.
 - **release-please on the release branch is unaffected.** It looks for the tag of its
   manifest version and ignores these.
+- **The branch must contain the last release.** After a final release, merge the release
+  branch back into the integration branch. Until then the job fails rather than publish a
+  pre-release below a version already out, such as `v0.22.1-rc.10` after `v0.22.1`.
+- **The tag works as an image version.** Given to [cd-buildkit.yml](./cd-buildkit.md) as
+  `version`, it tags the image `v1.3.0-rc.7` with no `1.3` alias, which belongs to the final
+  releases; a deploy that points the infrastructure at that tag records the version each
+  environment runs.
 - **A re-run publishes nothing twice.** An existing pre-release on the same commit is left
   alone; a tag of the same name on another commit, after a rewritten branch, fails the job.
 - **No workflow runs on these tags.** They are created with the job's `GITHUB_TOKEN`, whose
