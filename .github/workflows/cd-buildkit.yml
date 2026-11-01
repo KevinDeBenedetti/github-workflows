@@ -247,6 +247,9 @@ jobs:
             add_tag "$VERSION"
             SEMVER="${VERSION#v}"
             case "$SEMVER" in
+              # A pre-release (1.2.3-rc.4) keeps its own tag only: the 1.2
+              # alias belongs to the final releases.
+              *-*) ;;
               [0-9]*.[0-9]*.[0-9]*) add_tag "$(printf '%s' "$SEMVER" | cut -d. -f1-2)" ;;
             esac
           fi
@@ -454,6 +457,9 @@ jobs:
             add_tag "$VERSION"
             SEMVER="${VERSION#v}"
             case "$SEMVER" in
+              # A pre-release (1.2.3-rc.4) keeps its own tag only: the 1.2
+              # alias belongs to the final releases.
+              *-*) ;;
               [0-9]*.[0-9]*.[0-9]*) add_tag "$(printf '%s' "$SEMVER" | cut -d. -f1-2)" ;;
             esac
           fi
