@@ -245,6 +245,23 @@ Uses [release-please](https://github.com/googleapis/release-please). Automatical
 
 ---
 
+### Pre-releases of an integration branch
+
+```yaml
+jobs:
+  prerelease:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/prerelease.yml@main
+    with:
+      publish: true
+    permissions:
+      contents: write
+```
+
+Tags each releasable commit of a branch such as `dev` as a GitHub pre-release, `v<next>-rc.<n>`, computed from the Conventional Commits since the last release tag.
+→ [Full reference](workflows/prerelease.md)
+
+---
+
 ### Security scanning
 
 ```yaml
@@ -364,6 +381,7 @@ steps:
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
 | [`lighthouse-results`](actions/lighthouse-results.md) | Summarize a Lighthouse CI run and post one commit status per page |
+| [`prerelease`](actions/prerelease.md) | Compute the next pre-release of a branch and publish it as a GitHub pre-release |
 
 ---
 
