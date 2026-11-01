@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.36.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.35.0...v0.36.0) (2026-11-01)
+
+
+### Features
+
+* **prerelease:** add pre-releases of an integration branch ([27f586d](https://github.com/KevinDeBenedetti/github-workflows/commit/27f586d53ee2780e322cbef751caad367a0a684c))
+
 ## [0.35.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.34.0...v0.35.0) (2026-10-31)
 
 
