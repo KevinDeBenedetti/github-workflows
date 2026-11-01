@@ -51,7 +51,7 @@ Both paths build for the runner's native platform: use an x86_64 runner for an x
 | `push`       | boolean | `true`                                     | Push the image to the registry                                                       |
 | `target`     | string  | `''`                                       | Build target stage (e.g. `dev`, `prod`)                                              |
 | `tag-latest` | boolean | `false`                                    | Also tag as `:latest` on the default branch                                          |
-| `version`    | string  | `''`                                       | Explicit version tag (e.g. `v1.2.3`); a `major.minor` tag is added when semver       |
+| `version`    | string  | `''`                                       | Version tag (e.g. `v1.2.3`); semver adds a `major.minor` alias, a pre-release none   |
 | `build-args` | string  | `''`                                       | Build args, one per line, `KEY=VALUE`. **Never secrets** — use `BUILD_SECRETS`       |
 | `provenance` | string  | `mode=max`                                 | SLSA provenance (`mode=max`, `mode=min`, `false`). `mode=max` records the build-args |
 | `sbom`       | boolean | `true`                                     | Attach an SBOM attestation                                                           |
