@@ -176,6 +176,12 @@ if ((bump > 0)); then
       ;;
     1) patch=$((patch + 1)) ;;
   esac
+  # The next version already shipped from the release branch, which this
+  # commit has not merged back: its pre-release would sort before a release
+  # that is already out (v0.22.1-rc.10 after v0.22.1). Stop and say why.
+  if git rev-parse --quiet --verify "refs/tags/v${major}.${minor}.${patch}" > /dev/null; then
+    fail "v${major}.${minor}.${patch} is already released, but ${SHA:0:7} does not contain it: merge the release branch into this one first"
+  fi
   releasable=true
   version="${major}.${minor}.${patch}-${PRERELEASE_TYPE}.${count}"
   tag="v${version}"
