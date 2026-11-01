@@ -8,7 +8,7 @@ name: CI — Prometheus rules
 # checks out the calling repo, so the same scripts back CI and the local prek
 # hooks — no second copy of the logic to keep in sync.
 #
-# Caller requirements (defaults match KevinDeBenedetti/infra):
+# Caller requirements (the input defaults):
 #   scripts/promtool-check.sh   PromQL syntax + lint
 #   scripts/promtool-test.sh    alert unit tests (skipped if absent)
 
@@ -51,7 +51,7 @@ on:
         default: v4.53.3
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
         default: '"ubuntu-latest"'
@@ -87,7 +87,7 @@ on:
         default: v4.53.3
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
         default: '"ubuntu-latest"'

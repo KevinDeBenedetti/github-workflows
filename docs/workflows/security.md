@@ -31,7 +31,7 @@ jobs:
 | `dependency-review-fail-on-severity` | string | `moderate`              | Lowest advisory severity that fails the review                              |
 | `run-codeql`               | boolean | `true`                          | Run CodeQL SAST analysis                                                    |
 | `codeql-languages`         | string  | `'["javascript-typescript"]'` | JSON array of CodeQL languages — JS and TS are one language: `javascript-typescript` |
-| `runner`                   | string  | `'"ubuntu-latest"'`             | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
+| `runner`                   | string  | `'"ubuntu-latest"'`             | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
 
 ## Jobs
 

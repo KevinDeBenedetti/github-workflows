@@ -11,13 +11,13 @@ Composite action that generates a GitHub Job Summary with deployment details, en
   if: always()
   uses: KevinDeBenedetti/github-workflows/.github/actions/notify-deployment@main
   with:
-    app-name: 'portfolio-dev'
+    app-name: 'my-app-dev'
     environment: 'development'
     status: ${{ job.status }}
     version: 'dev-latest'
-    url: 'portfolio.kevindb.dev'
-    argocd-url: 'https://argocd.kevindb.dev/applications/portfolio-dev'
-    infra-commit-url: 'https://github.com/KevinDeBenedetti/infra/commit/main'
+    url: 'app.example.com'
+    argocd-url: 'https://argocd.example.com/applications/my-app-dev'
+    infra-commit-url: 'https://github.com/<owner>/<infra-repo>/commit/<sha>'
 ```
 
 :::
@@ -26,7 +26,7 @@ Composite action that generates a GitHub Job Summary with deployment details, en
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `app-name` | Name of the application (e.g., portfolio-dev) | Yes | — |
+| `app-name` | Name of the application (e.g. `my-app-dev`) | Yes | — |
 | `environment` | Environment name (e.g., development, production) | No | `development` |
 | `status` | Deployment status (success, failure) | No | `success` |
 | `version` | Image version or tag | Yes | — |
@@ -50,19 +50,19 @@ The action generates a formatted Markdown table in the GitHub Job Summary contai
 
 ### Example Output
 
-```
-✅ Deployment portfolio-dev
+```markdown
+✅ Deployment my-app-dev
 
 | Property | Value |
 | :--- | :--- |
 | **Status** | ✅ success |
 | **Environment** | `development` |
 | **Version** | `dev-latest` |
-| **URL** | [portfolio.kevindb.dev](https://portfolio.kevindb.dev) |
+| **URL** | [app.example.com](https://app.example.com) |
 
 Monitoring:
-- 🛰️ [View in ArgoCD](https://argocd.kevindb.dev/applications/portfolio-dev)
-- 📝 [Infra commit](https://github.com/KevinDeBenedetti/infra/commit/main)
+- 🛰️ [View in ArgoCD](https://argocd.example.com/applications/my-app-dev)
+- 📝 [Infra commit](https://github.com/<owner>/<infra-repo>/commit/<sha>)
 - 📊 [Workflow run logs](...)
 ```
 

@@ -63,7 +63,7 @@ perf/budget.json  # {"budget": {"googleWebVitals": {"largestContentfulPaint": 25
 
 ## Notes
 
-- **Do not use a `k3s-*` runner.** Testing from the cluster's own network skews
+- **Do not use a cluster-internal runner.** Testing from the cluster's own network skews
   LCP and TTFB; the default GitHub-hosted runner is the right vantage point.
 - The caller's `permissions:` cap the called workflow. Grant `contents: write`
   on the calling job when the history is enabled; with `history-branch: ''`

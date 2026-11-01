@@ -45,7 +45,7 @@ jobs:
 
 ## Notes
 
-- **Do not use a `k3s-*` runner**: crawl from outside so the result matches
+- **Do not use a cluster-internal runner**: crawl from outside so the result matches
   what search engines see.
 - Both checks always run, then the job fails if either failed, so the reports
   and the artifact (`seo-crawl-result`, 30 days) exist even on failure.

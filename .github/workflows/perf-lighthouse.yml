@@ -15,7 +15,7 @@ name: Perf — Lighthouse CI
 # its release tag there, and the statuses go on that tag's commit.
 #
 # Intended to be called from a `schedule:` or `workflow_dispatch:` caller.
-# Do NOT run it on a cluster-internal runner (k3s-*): auditing from the site's
+# Do NOT run it on a cluster-internal runner: auditing from the site's
 # own network skews the scores. Keep the default GitHub-hosted runner.
 
 on:
@@ -53,7 +53,7 @@ on:
         # renovate: datasource=npm depName=@lhci/cli
         default: 0.15.1
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew scores)
         type: string
         required: false
         default: '"ubuntu-latest"'
@@ -83,7 +83,7 @@ on:
         # renovate: datasource=npm depName=@lhci/cli
         default: 0.15.1
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew scores)
         type: string
         required: false
         default: '"ubuntu-latest"'

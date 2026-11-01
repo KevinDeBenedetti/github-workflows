@@ -10,7 +10,7 @@ name: SEO — Crawl
 # Complements perf-unlighthouse.yml, which scores pages but does not detect
 # broken links or duplicate tags.
 #
-# Do NOT run it on a cluster-internal runner (k3s-*): crawl from outside so the
+# Do NOT run it on a cluster-internal runner: crawl from outside so the
 # result matches what search engines see.
 
 on:
@@ -52,7 +52,7 @@ on:
         # renovate: datasource=npm depName=linkinator
         default: 8.1.0
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners
         type: string
         required: false
         default: '"ubuntu-latest"'
@@ -90,7 +90,7 @@ on:
         # renovate: datasource=npm depName=linkinator
         default: 8.1.0
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners
         type: string
         required: false
         default: '"ubuntu-latest"'

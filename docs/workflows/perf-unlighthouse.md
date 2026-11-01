@@ -39,7 +39,7 @@ jobs:
 
 ## Notes
 
-- **Do not use a `k3s-*` runner**: auditing from the site's own network skews
+- **Do not use a cluster-internal runner**: auditing from the site's own network skews
   the scores.
 - Unlighthouse samples dynamic routes (e.g. `/blog/*`) by default, so large
   sites stay affordable. Use `urls` to pin an explicit list.

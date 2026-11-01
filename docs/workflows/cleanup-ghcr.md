@@ -28,7 +28,7 @@ jobs:
       packages: write
     with:
       packages: my-app              # default: the repository name
-      cache-packages: my-app-cache  # layer cache of cd-buildkit / cd-kaniko
+      cache-packages: my-app-cache  # layer cache of cd-buildkit
       dry-run: true
 ```
 
@@ -53,10 +53,9 @@ The policy is set once, in this workflow, for every caller:
   multi-architecture image, its provenance and SBOM attestations, and referrers
   such as GitHub artifact attestations.
 - `cache-packages` targets the registry layer caches written by
-  [`cd-buildkit`](./cd-buildkit.md) and [`cd-kaniko`](./cd-kaniko.md), named
-  `<image>-cache`. BuildKit reads only `buildcache`; Kaniko's per-layer cache
-  images and the cache manifests that `buildcache` replaced are deleted once older
-  than `older-than`.
+  [`cd-buildkit`](./cd-buildkit.md), named `<image>-cache`. BuildKit reads only
+  `buildcache`; the cache manifests it replaced (and the per-layer images a
+  former Kaniko build left) are deleted once older than `older-than`.
 
 ## Inputs
 
@@ -70,9 +69,9 @@ The policy is set once, in this workflow, for every caller:
 | `dry-run`        | boolean | `false`                           | Log what would be deleted, delete nothing                            |
 | `runner`         | string  | `'"ubuntu-latest"'`               | Runner labels as JSON                                                |
 
-`packages` defaults to the repository name, the name [`cd-docker`](./cd-docker.md),
-[`cd-buildkit`](./cd-buildkit.md) and [`cd-kaniko`](./cd-kaniko.md) give the image
-when their `image-name` input is empty. Package names are lowercased.
+`packages` defaults to the repository name, the name [`cd-docker`](./cd-docker.md)
+and [`cd-buildkit`](./cd-buildkit.md) give the image when their `image-name`
+input is empty. Package names are lowercased.
 
 ## Permissions
 

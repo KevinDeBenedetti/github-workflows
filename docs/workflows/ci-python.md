@@ -27,7 +27,7 @@ jobs:
 | `run-coverage`        | boolean | `false`                       | Enable coverage report via `pytest-cov`                   |
 | `coverage-fail-under` | number  | `80`                          | Minimum coverage percentage required to pass              |
 | `test-command`        | string  | `uv run pytest --tb=short -q` | Custom pytest command (ignored when `run-coverage: true`) |
-| `runner`              | string  | `'"ubuntu-latest"'`           | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
+| `runner`              | string  | `'"ubuntu-latest"'`           | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
 | `timeout-minutes`     | number  | `30`                          | Minutes before the job is cancelled (GitHub's default is 360) — raise it for a slow test suite |
 
 ## Steps

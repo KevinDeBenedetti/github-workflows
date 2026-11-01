@@ -8,7 +8,7 @@ name: Perf — Unlighthouse
 # static HTML report is kept as an artifact.
 #
 # Intended to be called from a `schedule:` caller. Do NOT run it on a
-# cluster-internal runner (k3s-*): auditing from the site's own network skews
+# cluster-internal runner: auditing from the site's own network skews
 # the scores. Keep the default GitHub-hosted runner.
 
 on:
@@ -50,7 +50,7 @@ on:
         # renovate: datasource=npm depName=@unlighthouse/cli
         default: 0.19.1
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew scores)
         type: string
         required: false
         default: '"ubuntu-latest"'
@@ -88,7 +88,7 @@ on:
         # renovate: datasource=npm depName=@unlighthouse/cli
         default: 0.19.1
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew scores)
         type: string
         required: false
         default: '"ubuntu-latest"'

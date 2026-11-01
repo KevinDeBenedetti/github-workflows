@@ -53,7 +53,7 @@ on:
         default: .env.example
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
         default: '"ubuntu-latest"'
@@ -95,7 +95,7 @@ on:
         default: .env.example
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
         default: '"ubuntu-latest"'
