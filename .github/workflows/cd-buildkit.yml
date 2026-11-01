@@ -89,6 +89,14 @@ on:
         type: string
         required: false
         default: '["self-hosted","linux","k3s","kaniko"]'
+      timeout-minutes:
+        description: >
+          Minutes before the build job is cancelled (GitHub's default is 360):
+          a build stuck on a network pull is cut off instead of holding the
+          runner.
+        type: number
+        required: false
+        default: 60
     secrets:
       BUILD_SECRETS:
         description: >
@@ -150,6 +158,10 @@ on:
         description: Runner labels as JSON
         type: string
         default: '["self-hosted","linux","k3s","kaniko"]'
+      timeout-minutes:
+        description: Minutes before the build job is cancelled (GitHub's default is 360)
+        type: number
+        default: 60
 
 env:
   REGISTRY: ghcr.io
@@ -167,6 +179,7 @@ jobs:
     name: BuildKit build & push (${{ inputs.context }})
     if: ${{ !contains(inputs.runner, '"ubuntu-') }}
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     container:
       # Pinned by digest: the tag is mutable, and this container holds a
       # packages: write token.
@@ -377,6 +390,7 @@ jobs:
     name: Buildx build & push (${{ inputs.context }})
     if: ${{ contains(inputs.runner, '"ubuntu-') }}
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
       run:
         # Same shell as the buildkit job, for the steps the two jobs share.

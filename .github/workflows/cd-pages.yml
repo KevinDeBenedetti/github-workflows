@@ -35,10 +35,18 @@ on:
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
 
+# One deployment at a time per site, as in GitHub's own Pages workflow: a run
+# in progress is never cancelled (deploy-pages would leave a half-published
+# site), a queued one waits, and GitHub keeps only the newest queued run.
+concurrency:
+  group: cd-pages-${{ github.ref }}-${{ inputs.working-directory }}
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build (${{ inputs.working-directory }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     # The build runs the project's install/build scripts: read-only token.
     permissions:
       contents: read
@@ -80,6 +88,7 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     environment:
       name: github-pages
       url: ${{ steps.pages.outputs.page_url }}

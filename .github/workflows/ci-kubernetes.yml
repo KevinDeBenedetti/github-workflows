@@ -116,6 +116,7 @@ jobs:
     name: Validate Kubernetes manifests
     if: inputs.run-kubeconform
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -138,6 +139,7 @@ jobs:
     name: .env.example check
     if: inputs.run-env-example
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
     permissions:
       contents: read
 

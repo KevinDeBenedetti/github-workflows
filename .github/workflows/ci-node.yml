@@ -78,6 +78,13 @@ on:
         type: string
         required: false
         default: '"ubuntu-latest"'
+      timeout-minutes:
+        description: >
+          Minutes before the job is cancelled (GitHub's default is 360): a hung
+          install, test or build is cut off instead of burning runner time.
+        type: number
+        required: false
+        default: 30
     secrets:
       github-token:
         description: GitHub token passed as GITHUB_TOKEN env var to the build step (e.g. for scripts that call the GitHub API)
@@ -143,6 +150,10 @@ on:
         description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
         type: string
         default: '"ubuntu-latest"'
+      timeout-minutes:
+        description: Minutes before the job is cancelled (GitHub's default is 360)
+        type: number
+        default: 30
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
@@ -155,6 +166,7 @@ jobs:
   ci:
     name: CI (${{ inputs.working-directory }})
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:
       contents: read
 
@@ -227,17 +239,18 @@ jobs:
 
       # Next.js keeps an incremental compiler cache in .next/cache. Deps are
       # already cached by setup-node; this restores the build cache so unchanged
-      # routes/modules aren't recompiled. Keyed on the lockfile + commit sha so
-      # each run saves a fresh entry, with restore-keys falling back to the most
-      # recent cache for the same dependency set. No-op for non-Next frameworks.
+      # routes/modules aren't recompiled. Keyed on the lockfile setup-node
+      # resolved (the workspace root's in a monorepo) + commit sha so each run
+      # saves a fresh entry, with restore-keys falling back to the most recent
+      # cache for the same dependency set. No-op for non-Next frameworks.
       - name: Cache Next.js build
         if: inputs.run-build && inputs.framework == 'next'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ inputs.working-directory }}/.next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/package-lock.json', inputs.working-directory)) }}-${{ github.sha }}
+          key: nextjs-${{ runner.os }}-${{ hashFiles(steps.setup.outputs.lockfile) }}-${{ github.sha }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock', inputs.working-directory), format('{0}/pnpm-lock.yaml', inputs.working-directory), format('{0}/package-lock.json', inputs.working-directory)) }}-
+            nextjs-${{ runner.os }}-${{ hashFiles(steps.setup.outputs.lockfile) }}-
 
       - name: Build
         if: inputs.run-build

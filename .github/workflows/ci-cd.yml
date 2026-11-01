@@ -78,6 +78,7 @@ jobs:
   ci-actions:
     name: CI — Local actions
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -158,6 +159,7 @@ jobs:
   ci-zizmor:
     name: CI — zizmor
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -228,6 +230,7 @@ jobs:
   ci-commits:
     name: CI — Commit messages
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
@@ -284,6 +287,7 @@ jobs:
     needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-commits, security]
     if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions: {}
     steps:
       - name: Check CI results

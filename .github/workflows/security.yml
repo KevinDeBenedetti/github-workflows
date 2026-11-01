@@ -164,7 +164,8 @@ jobs:
     name: Audit Node.js dependencies
     if: inputs.run-node-audit
     runs-on: ${{ fromJson(inputs.runner) }}
-    # Installing dependencies runs their lifecycle scripts: read-only token.
+    timeout-minutes: 15
+    # Nothing here needs more than reading the checkout: read-only token.
     permissions:
       contents: read
 
@@ -174,11 +175,15 @@ jobs:
         with:
           persist-credentials: false
 
+      # No install: pnpm, npm and bun audit the lockfile against the advisory
+      # database, so installing the project would be wasted time — and would
+      # run the lifecycle scripts of every dependency in this job for nothing.
       - name: Setup Node.js
         id: setup
         uses: $/.github/actions/setup-node
         with:
           working-directory: ${{ inputs.node-working-directory }}
+          install: 'false'
 
       - name: Audit dependencies
         working-directory: ${{ inputs.node-working-directory }}
@@ -196,6 +201,7 @@ jobs:
     name: Audit Python dependencies
     if: inputs.run-python-audit
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
     # Installing dependencies runs their lifecycle scripts: read-only token.
     permissions:
       contents: read
@@ -231,6 +237,7 @@ jobs:
     name: Scan for leaked secrets
     if: inputs.run-secret-scan
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 20
     permissions:
       security-events: write  # upload SARIF results to code scanning
       actions: read           # code scanning reads the workflow run metadata
@@ -412,6 +419,7 @@ jobs:
     name: Dependency review
     if: inputs.run-dependency-review && startsWith(github.event_name, 'pull_request')
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 10
     permissions:
       contents: read
 
@@ -426,6 +434,9 @@ jobs:
     name: CodeQL (${{ matrix.language }})
     if: inputs.run-codeql
     runs-on: ${{ fromJson(inputs.runner) }}
+    # Generous: an autobuild of a compiled language can take a while, but a
+    # stuck one must not hold the runner for GitHub's default 6 hours.
+    timeout-minutes: 90
     permissions:
       security-events: write  # upload SARIF results to code scanning
       actions: read           # code scanning reads the workflow run metadata

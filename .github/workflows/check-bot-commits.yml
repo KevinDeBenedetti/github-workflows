@@ -24,12 +24,18 @@ on:
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
 
+# A newer push to the pull request supersedes the check in progress.
+concurrency:
+  group: check-bot-commits-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Guard: no bot-authored commits in PRs ──────────────────────────────────
   check-authors:
     name: Check for bot-authored commits
     if: github.event_name == 'pull_request' || github.event_name == 'pull_request_target'
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read     # list the commits of the pull request

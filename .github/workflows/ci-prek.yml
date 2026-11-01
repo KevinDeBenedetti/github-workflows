@@ -90,6 +90,7 @@ jobs:
   prek:
     name: prek hooks
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 20
     permissions:
       contents: read
 

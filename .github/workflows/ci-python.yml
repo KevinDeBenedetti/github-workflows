@@ -48,6 +48,18 @@ on:
         type: string
         required: false
         default: 'uv run pytest --tb=short -q'
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+      timeout-minutes:
+        description: >
+          Minutes before the job is cancelled (GitHub's default is 360): a hung
+          install or test run is cut off instead of burning runner time.
+        type: number
+        required: false
+        default: 30
 
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
@@ -89,6 +101,14 @@ on:
         description: Custom pytest command (ignored when run-coverage is true)
         type: string
         default: 'uv run pytest --tb=short -q'
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        default: '"ubuntu-latest"'
+      timeout-minutes:
+        description: Minutes before the job is cancelled (GitHub's default is 360)
+        type: number
+        default: 30
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
@@ -100,7 +120,8 @@ concurrency:
 jobs:
   ci:
     name: CI (${{ inputs.working-directory }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:
       contents: read
     defaults:

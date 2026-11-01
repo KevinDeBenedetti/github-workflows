@@ -45,8 +45,9 @@ Reference any workflow from your caller workflow file.
 jobs:
   ci:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
-    secrets: inherit
 ```
+
+Pass a workflow only the secrets it declares and grant the calling job only the permissions its docs list (never `secrets: inherit`) — see [SECURITY.md](SECURITY.md).
 
 → Full usage guide: [docs](https://kevindebenedetti.github.io/github-workflows/getting-started)
 

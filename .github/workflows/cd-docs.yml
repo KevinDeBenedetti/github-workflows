@@ -53,12 +53,19 @@ on:
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
 
+# A newer push supersedes the run in progress: the central site rebuilds from
+# the newest commit anyway, so verifying and dispatching an older one is waste.
+concurrency:
+  group: cd-docs-${{ github.ref }}-${{ inputs.docs-directory }}
+  cancel-in-progress: true
+
 jobs:
   # Verify the docs BEFORE dispatching, so a broken doc never triggers a failing
   # rebuild on the central site. If any check fails, `dispatch` is skipped.
   verify:
     name: Verify docs
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -92,6 +99,7 @@ jobs:
     needs: verify
     if: inputs.client-id != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     outputs:

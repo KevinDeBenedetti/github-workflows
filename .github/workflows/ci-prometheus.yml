@@ -106,6 +106,7 @@ jobs:
   prometheus-rules:
     name: Prometheus rules
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
     permissions:
       contents: read
 

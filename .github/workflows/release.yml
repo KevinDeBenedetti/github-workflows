@@ -121,6 +121,7 @@ jobs:
   release:
     name: Release Please
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
     permissions:
       contents: write        # release-please pushes the release branch and tags
       issues: write          # release-please labels the release PR (issues API)
@@ -298,6 +299,7 @@ jobs:
     needs: release
     if: needs.release.outputs.released == 'true'
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 10
     permissions:
       contents: write  # move the major/minor alias tags
 

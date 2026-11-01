@@ -76,6 +76,7 @@ jobs:
   terraform:
     name: Terraform validate
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 20
     permissions:
       contents: read
     defaults:

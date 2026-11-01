@@ -25,6 +25,7 @@ jobs:
 | `run-template`            | boolean | `false`       | Run `helm template` dry-run on all charts to catch render errors         |
 | `template-values`         | string  | `''`          | Optional path to a values file used during `helm template`              |
 | `template-exclude-paths`  | string  | `''`          | Space-separated chart paths to skip during the template dry-run only (lint still covers them) |
+| `runner`                  | string  | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
 
 ## Steps
 
@@ -34,7 +35,7 @@ jobs:
 ## Notes
 
 - A directory counts as a chart only when it contains a `Chart.yaml`. If no matching charts are found, the job exits with an error.
-- The `helm-lint` and `helm-template` jobs are independent and gated by `run-lint` / `run-template` respectively.
+- The `helm-lint` and `helm-template` jobs are independent and gated by `run-lint` / `run-template` respectively. Each is cut off after 15 minutes.
 - `helm dependency update` failures during the template dry-run do not fail the step — a chart may depend on a momentarily unreachable repo. The failure is logged as a warning, because `helm template` may still fail afterwards on the missing dependency.
 - `template-exclude-paths` matches whole paths, not prefixes: excluding `charts/foo` leaves `charts/foobar` in the dry-run. It is meant for umbrella charts whose dependencies are pulled from a registry — rendering those validates the published artifacts rather than the source tree, which couples the workflow to registry state.
 - Exclusions never substitute for a rendered chart: if every path matching `chart-paths` is excluded, the dry-run job fails rather than reporting success on zero validated charts.

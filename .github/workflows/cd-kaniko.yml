@@ -82,6 +82,14 @@ on:
         type: string
         required: false
         default: '["self-hosted","linux","k3s","kaniko"]'
+      timeout-minutes:
+        description: >
+          Minutes before the build job is cancelled (GitHub's default is 360):
+          a build stuck on a network pull is cut off instead of holding the
+          runner.
+        type: number
+        required: false
+        default: 60
     outputs:
       image:
         description: Primary image tag
@@ -125,6 +133,10 @@ on:
         description: Runner labels as JSON — use '"k3s-portfolio"' (ARC scale set) or '["self-hosted","linux","k3s","kaniko"]'
         type: string
         default: '["self-hosted","linux","k3s","kaniko"]'
+      timeout-minutes:
+        description: Minutes before the build job is cancelled (GitHub's default is 360)
+        type: number
+        default: 60
 
 env:
   REGISTRY: ghcr.io
@@ -140,6 +152,7 @@ jobs:
   kaniko:
     name: Kaniko build & push (${{ inputs.context }})
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     # Kaniko must run as root in its own disposable container (it extracts
     # image layers onto /). Requires ARC containerMode: kubernetes.
     container:
