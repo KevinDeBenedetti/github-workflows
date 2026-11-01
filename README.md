@@ -73,6 +73,7 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](docs/workflows/cd-pages.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
+| `prerelease.yml` | Pre-releases of an integration branch, `v<next>-rc.<n>` from the Conventional Commits since the last release tag | [→](docs/workflows/prerelease.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](docs/workflows/pr-description.md) |

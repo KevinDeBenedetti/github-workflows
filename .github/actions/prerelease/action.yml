@@ -1,0 +1,69 @@
+name: Pre-release
+description: >
+  Compute the next pre-release of a branch, v<next>-<type>.<n>, from its
+  Conventional Commits since the last final release tag vX.Y.Z, and
+  optionally publish it as a GitHub pre-release (tag on the commit, never
+  marked latest). Needs a checkout with the full history and its tags. Runs on
+  any Linux runner with bash, git, curl and jq: no GitHub CLI needed. The
+  rules are documented at the top of prerelease.sh.
+
+inputs:
+  mode:
+    description: plan computes only; publish also creates the tag and the GitHub pre-release
+    required: false
+    default: plan
+  sha:
+    description: Commit to pre-release
+    required: false
+    default: ${{ github.sha }}
+  prerelease-type:
+    description: Pre-release identifier (v1.2.3-<type>.<n>)
+    required: false
+    default: rc
+  config-file:
+    description: >
+      release-please config holding bump-minor-pre-major and
+      bump-patch-for-minor-pre-major. Empty:
+      .github/release/release-please-config.json, then
+      release-please-config.json, else both off.
+    required: false
+    default: ''
+  tag:
+    description: >
+      publish: the tag an earlier plan computed, checked against this run's so
+      what ships is what the build baked in. Empty: no check.
+    required: false
+    default: ''
+  github-token:
+    description: Token with contents write (publish only)
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  releasable:
+    description: true when a feat, fix, perf, revert or breaking change landed since the last final tag
+    value: ${{ steps.prerelease.outputs.releasable }}
+  tag:
+    description: The pre-release tag (e.g. v1.3.0-rc.7), empty when not releasable
+    value: ${{ steps.prerelease.outputs.tag }}
+  version:
+    description: The tag without its v (e.g. 1.3.0-rc.7), empty when not releasable
+    value: ${{ steps.prerelease.outputs.version }}
+  base-tag:
+    description: The last final tag the commit contains (e.g. v1.2.4), empty before the first release
+    value: ${{ steps.prerelease.outputs.base-tag }}
+
+runs:
+  using: composite
+  steps:
+    - name: Compute the pre-release
+      id: prerelease
+      shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        SHA: ${{ inputs.sha }}
+        PRERELEASE_TYPE: ${{ inputs.prerelease-type }}
+        CONFIG_FILE: ${{ inputs.config-file }}
+        TAG: ${{ inputs.tag }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: bash "$GITHUB_ACTION_PATH/prerelease.sh"
