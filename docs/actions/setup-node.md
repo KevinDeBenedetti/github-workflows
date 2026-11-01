@@ -30,13 +30,14 @@ steps:
 | Output | Description |
 |---|---|
 | `package-manager` | Resolved package manager (`pnpm`, `bun` or `npm`) |
+| `lockfile` | Path of the lockfile the package manager reads (the working directory's, else the repository root's for a workspace member), relative to the repository root — hash it with `hashFiles` to key a cache of your own on the same dependency set |
 | `cache-hit` | Whether the package cache was restored |
 
 ## Steps
 
 1. Resolve package manager from the nearest lockfile — `working-directory` first, then the repository root, so workspace members work (`bun.lockb` / `bun.lock` → bun, `package-lock.json` → npm, otherwise → pnpm)
 2. Setup pnpm, bun or npm (with Node.js)
-3. Restore cache (pnpm store, `~/.bun/install/cache`, or `~/.npm` via setup-node)
+3. Restore cache (pnpm store, `~/.bun/install/cache`, or `~/.npm` via setup-node), keyed on the hash of the resolved lockfile — the repository root's for a workspace member, so a monorepo app's cache follows its dependency set instead of sharing one never-refreshed entry
 4. Install dependencies (`pnpm install --frozen-lockfile`, `bun install --frozen-lockfile` or `npm ci`, the latter run where `package-lock.json` lives)
 
 ## Notes

@@ -56,6 +56,7 @@ Both paths build for the runner's native platform: use an x86_64 runner for an x
 | `provenance` | string  | `mode=max`                                 | SLSA provenance (`mode=max`, `mode=min`, `false`). `mode=max` records the build-args |
 | `sbom`       | boolean | `true`                                     | Attach an SBOM attestation                                                           |
 | `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'` | Runner labels as JSON; picks the path (see [Runners](#runners))                      |
+| `timeout-minutes` | number | `60`                                  | Minutes before the build job is cancelled (GitHub's default is 360)                  |
 
 ## Secrets
 

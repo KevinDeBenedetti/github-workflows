@@ -214,6 +214,7 @@ jobs:
     name: ShellCheck
     if: inputs.run-shellcheck
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -232,6 +233,7 @@ jobs:
     name: Validate YAML
     if: inputs.run-actionlint
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -250,6 +252,7 @@ jobs:
     name: Bats tests
     if: inputs.run-bats
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -281,6 +284,7 @@ jobs:
     name: Docker — ${{ matrix.target }}
     if: inputs.run-docker
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -292,6 +296,8 @@ jobs:
         with:
           persist-credentials: false
           submodules: ${{ inputs.bats-submodules }}
+          # Same token as the bats job: a private submodule needs the PAT here too.
+          token: ${{ secrets.token || github.token }}
 
       - name: Build ${{ matrix.target }}
         env:
@@ -308,6 +314,7 @@ jobs:
     name: Link check
     if: inputs.run-link-check
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -327,6 +334,7 @@ jobs:
     name: Docs link check
     if: inputs.run-docs-link-check
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -346,6 +354,7 @@ jobs:
     name: Docs external link check
     if: inputs.run-docs-external-link-check
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -363,6 +372,7 @@ jobs:
     name: VitePress markdown check
     if: inputs.run-vitepress-check
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
 
     steps:
       - name: Checkout

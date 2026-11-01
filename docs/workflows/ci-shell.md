@@ -65,7 +65,8 @@ jobs:
 ## Notes
 
 - Docker targets run in parallel via a matrix strategy with `fail-fast: false`.
-- The `bats-submodules` flag applies to both the `bats` and `docker-test` jobs.
+- The `bats-submodules` flag applies to both the `bats` and `docker-test` jobs, and so does the `token` secret: a private submodule is checked out with it in both.
+- Every job is cut off after 15 minutes (`docker-test`: 30), so a hung check never holds a runner for GitHub's default 6 hours.
 - ShellCheck and actionlint use their own composite actions: [`shellcheck`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/shellcheck), [`actionlint`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/actionlint). actionlint covers YAML syntax, expression type checking, and action input validation — no separate yamllint needed.
 - `link-check` runs [lychee](https://github.com/lycheeverse/lychee) in offline mode — no external HTTP requests are made.
 - `docs-external-link-check` uses the [`check-docs-external-links`](../actions/check-docs-external-links.md) action — lychee online, on the `docs/` files the push or pull request changed only, with github.com links checked through the job token.

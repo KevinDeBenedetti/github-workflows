@@ -38,8 +38,10 @@ Workflows default to `permissions: {}` and grant per-job least privilege;
 third-party actions are pinned by commit SHA (Renovate, with a 3-day
 `minimumReleaseAge`); downloaded tools are verified against pinned SHA-256
 values (`scripts/update-tool-checksums.py`); caller inputs never reach a
-`run:` script through `${{ }}`; and every push is linted by
-[zizmor](https://docs.zizmor.sh) (`ci-cd.yml`, policy in `.github/zizmor.yml`).
+`run:` script through `${{ }}`; every job carries a `timeout-minutes` well
+under GitHub's 6-hour default, so a stuck step cannot hold a runner; and every
+push is linted by [zizmor](https://docs.zizmor.sh) (`ci-cd.yml`, policy in
+`.github/zizmor.yml`).
 
 ### Repository settings (maintainer checklist)
 

@@ -107,6 +107,7 @@ jobs:
   sitespeed:
     name: sitespeed.io (${{ matrix.device }})
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 90
     permissions:
       contents: read
     strategy:
@@ -212,6 +213,7 @@ jobs:
     needs: sitespeed
     if: ${{ !cancelled() && inputs.history-branch != '' }}
     runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 10
     permissions:
       contents: write  # commit the measurement history to the history branch
     concurrency:
@@ -219,29 +221,40 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      # Under RUNNER_TEMP, wiped between jobs: the workspace of a persistent
+      # self-hosted runner is not, and leftover rows would be appended again.
       - name: Download results
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: sitespeed-result-*
-          path: results
+          path: ${{ runner.temp }}/sitespeed-results
 
       - name: Append to history.csv
         env:
           BRANCH: ${{ inputs.history-branch }}
-          GH_TOKEN: ${{ github.token }}
+          PUSH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
 
-          rows="$(cat results/*/history-rows.csv 2>/dev/null || true)"
+          rows="$(cat "${RUNNER_TEMP}"/sitespeed-results/*/history-rows.csv 2>/dev/null || true)"
           if [[ -z "$rows" ]]; then
             echo "::warning::no metrics extracted — history left untouched"
             exit 0
           fi
 
-          mkdir history && cd history
+          # The token reaches git through this step's environment only (the
+          # way release.yml moves its tags), never through a remote URL that
+          # .git/config would keep on disk after the job on a persistent runner.
+          AUTH="$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 | tr -d '\n')"
+          echo "::add-mask::${AUTH}"
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.${GITHUB_SERVER_URL}/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${AUTH}"
+
+          rm -rf "${RUNNER_TEMP}/history"
+          mkdir "${RUNNER_TEMP}/history" && cd "${RUNNER_TEMP}/history"
           git init -q
-          git remote add origin "$remote"
+          git remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 

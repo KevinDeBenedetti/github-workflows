@@ -65,7 +65,6 @@ jobs:
     with:
       build-command: 'pnpm docs:build'
       output-directory: docs/.vitepress/dist
-    secrets: inherit
 ```
 
 See [`examples/vitepress.yml`](https://github.com/KevinDeBenedetti/github-workflows/blob/main/examples/vitepress.yml) for a ready-to-copy caller.
@@ -73,5 +72,6 @@ See [`examples/vitepress.yml`](https://github.com/KevinDeBenedetti/github-workfl
 ## Notes
 
 - Requires **GitHub Pages** to be enabled in repository settings (source: GitHub Actions).
-- The deploy job requires `pages: write` and `id-token: write` permissions (automatically granted).
+- Grant the calling job `contents: read`, `pages: write` and `id-token: write`: a reusable workflow gets at most what its caller grants.
+- One deployment at a time per site (`concurrency`, as in GitHub's own Pages workflow): a run in progress is never cancelled, a queued one waits, and GitHub keeps only the newest queued run.
 - Uses `actions/upload-pages-artifact` + `actions/deploy-pages` for the two-stage build → deploy split.

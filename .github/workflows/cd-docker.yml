@@ -71,6 +71,14 @@ on:
         type: boolean
         required: false
         default: true
+      timeout-minutes:
+        description: >
+          Minutes before the build job is cancelled (GitHub's default is 360):
+          a build stuck on a network pull or an emulated step is cut off
+          instead of burning runner time.
+        type: number
+        required: false
+        default: 60
     secrets:
       BUILD_SECRETS:
         description: >
@@ -100,6 +108,7 @@ jobs:
   docker:
     name: Docker build & push (${{ inputs.context }})
     runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     environment: ${{ inputs.push && (github.ref == 'refs/heads/main' && 'production' || 'preview') || '' }}
     permissions:
       contents: read
@@ -145,7 +154,10 @@ jobs:
             ${{ inputs.version != '' && format('type=raw,value={0}', inputs.version) || '' }}
             ${{ inputs.tag-latest && 'type=raw,value=latest,enable={{is_default_branch}}' || '' }}
 
+      # Only for a foreign architecture: an amd64-only build on the amd64
+      # runner needs no emulator, and registering one costs a container pull.
       - name: Set up QEMU (multi-platform)
+        if: inputs.platforms != 'linux/amd64'
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
 
       - name: Set up Docker Buildx
@@ -204,6 +216,7 @@ jobs:
     needs: docker
     if: inputs.push && inputs.attest
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       id-token: write      # OIDC token for the Sigstore signing certificate
       attestations: write  # store the attestation on the repository

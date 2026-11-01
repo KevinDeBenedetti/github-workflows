@@ -16,8 +16,9 @@ Workflows are called with `workflow_call` and referenced from your own workflow 
 jobs:
   ci:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/<name>.yml@main
-    secrets: inherit
 ```
+
+Pass a workflow only the secrets it declares (a `secrets:` block naming each one) and grant the calling job only the permissions its page lists — never `secrets: inherit`. A reusable workflow gets at most what its caller grants. See the [security policy](https://github.com/KevinDeBenedetti/github-workflows/blob/main/SECURITY.md).
 
 > **Production tip:** Pin to a release tag (`@vX.Y.Z`) or the minor alias (`@v0.<minor>`) instead of `@main`. The workflows call their composite actions with `uses: $/…`, resolved to the workflow's own commit, so a pin covers the actions too.
 
@@ -42,7 +43,6 @@ on:
 jobs:
   ci:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
-    secrets: inherit
 ```
 
 Auto-detects `pnpm` or `bun` from your lockfile. Runs lint → typecheck → test → build.
@@ -64,7 +64,6 @@ on:
 jobs:
   ci:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
-    secrets: inherit
 ```
 
 Uses `uv` and `ruff`. Runs lint → format check → test.
@@ -86,7 +85,6 @@ on:
 jobs:
   ci:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
-    secrets: inherit
 ```
 
 Runs ShellCheck → actionlint → Bats.
@@ -103,7 +101,6 @@ jobs:
     with:
       chart-paths: 'charts/*'
       run-template: true
-    secrets: inherit
 ```
 
 Runs `helm lint` and an optional `helm template` dry-run on all charts.
@@ -118,7 +115,6 @@ jobs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@main
     with:
       kubeconform-paths: kubernetes/
-    secrets: inherit
 ```
 
 Validates Kubernetes manifests with kubeconform (CRDs-catalog enabled by default).
@@ -133,7 +129,6 @@ jobs:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-terraform.yml@main
     with:
       tf-dir: terraform
-    secrets: inherit
 ```
 
 Runs `terraform validate` and `terraform fmt -check -diff`.
@@ -149,7 +144,6 @@ jobs:
     with:
       ansible-dir: ansible/
       run-syntax-check: true
-    secrets: inherit
 ```
 
 Runs `ansible-lint` and an optional `ansible-playbook --syntax-check`.
@@ -162,10 +156,15 @@ Runs `ansible-lint` and an optional `ansible-playbook --syntax-check`.
 jobs:
   deploy:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
+    permissions:
+      contents: read
+      packages: write      # push the image to GHCR
+      deployments: write   # production/preview environment record
+      id-token: write      # sign the image attestation (Sigstore)
+      attestations: write  # store the attestation
     with:
       image-name: my-app
       tag-latest: true
-    secrets: inherit
 ```
 
 Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
@@ -179,10 +178,12 @@ Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
 jobs:
   deploy:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-kaniko.yml@main
+    permissions:
+      contents: read
+      packages: write  # push the image to GHCR
     with:
       image-name: my-app
       runner: '["self-hosted","linux","k3s","kaniko"]'
-    secrets: inherit
 ```
 
 Builds and pushes an image to GHCR using Kaniko on self-hosted runners (no Docker daemon required).
@@ -195,9 +196,12 @@ Builds and pushes an image to GHCR using Kaniko on self-hosted runners (no Docke
 jobs:
   deploy:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
+    permissions:
+      contents: read
+      pages: write     # publish the Pages deployment
+      id-token: write  # deploy-pages authenticates with OIDC
     with:
       output-directory: dist
-    secrets: inherit
 ```
 
 → [Full reference](workflows/cd-pages.md)
@@ -227,7 +231,12 @@ jobs:
 jobs:
   release:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
-    secrets: inherit
+    # No token secret: release-please runs on GITHUB_TOKEN (enable "Allow
+    # GitHub Actions to create and approve pull requests" in the repo settings).
+    permissions:
+      contents: write        # release branch, tags and releases
+      issues: write          # release-please labels the release PR
+      pull-requests: write   # open/update the release PR
 ```
 
 Uses [release-please](https://github.com/googleapis/release-please). Automatically moves a `v<major>` tag after each release.
@@ -241,7 +250,10 @@ Uses [release-please](https://github.com/googleapis/release-please). Automatical
 jobs:
   security:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@main
-    secrets: inherit
+    permissions:
+      security-events: write  # upload the Gitleaks and CodeQL results to code scanning
+      actions: read           # code scanning reads the workflow run metadata
+      contents: read
 ```
 
 Combines Gitleaks secret scanning, CodeQL SAST, and optional dependency audits.

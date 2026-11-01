@@ -43,6 +43,13 @@ outputs:
   package-manager:
     description: Resolved package manager ("pnpm", "bun" or "npm")
     value: ${{ steps.resolve.outputs.pm }}
+  lockfile:
+    description: >
+      Path of the lockfile the package manager reads (the working directory's,
+      else the repository root's for a workspace member), relative to the
+      repository root — what the dependency caches are keyed on. Hash it
+      (`hashFiles`) to key a cache of your own on the same dependency set.
+    value: ${{ steps.resolve.outputs.lockfile }}
   cache-hit:
     description: Whether the package cache was restored
     value: ${{ steps.cache-pnpm.outputs.cache-hit || steps.cache-bun.outputs.cache-hit || steps.setup-npm.outputs.cache-hit }}
@@ -117,12 +124,25 @@ runs:
           done
         fi
 
+        # The lockfile the caches are keyed on: the one the package manager
+        # reads. Hashing only "$DIR/<lockfile>" hashed nothing for a workspace
+        # member (the lockfile sits at the root), so every member of every
+        # dependency set shared one key — saved once, then never refreshed.
+        # Falls back to the (absent) working-directory path, an empty hash.
+        case "$PM" in
+          pnpm) LOCKFILE="$(find_lock pnpm-lock.yaml)"; LOCKFILE="${LOCKFILE:-$DIR/pnpm-lock.yaml}" ;;
+          bun)  LOCKFILE="$(find_lock bun.lock bun.lockb)"; LOCKFILE="${LOCKFILE:-$DIR/bun.lock}" ;;
+          npm)  LOCKFILE="$NPM_LOCKFILE" ;;
+        esac
+        LOCKFILE="${LOCKFILE#./}"
+
         {
           echo "pm=$PM"
           echo "pnpm-version=$PNPM_VERSION"
           echo "package-json=$PKG_JSON"
           echo "npm-lockfile=$NPM_LOCKFILE"
           echo "npm-dir=$NPM_DIR"
+          echo "lockfile=$LOCKFILE"
         } >> "$GITHUB_OUTPUT"
         echo "📦 Package manager: $PM"
         if [ "$PM" = "pnpm" ]; then
@@ -156,7 +176,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ steps.pnpm-store.outputs.path }}
-        key: pnpm-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles(format('{0}/pnpm-lock.yaml', inputs.working-directory)) }}
+        key: pnpm-${{ runner.os }}-${{ inputs.node-version }}-${{ hashFiles(steps.resolve.outputs.lockfile) }}
         restore-keys: |
           pnpm-${{ runner.os }}-${{ inputs.node-version }}-
           pnpm-${{ runner.os }}-
@@ -182,7 +202,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.bun/install/cache
-        key: bun-${{ runner.os }}-${{ hashFiles(format('{0}/bun.lock*', inputs.working-directory)) }}
+        key: bun-${{ runner.os }}-${{ hashFiles(steps.resolve.outputs.lockfile) }}
         restore-keys: |
           bun-${{ runner.os }}-
 

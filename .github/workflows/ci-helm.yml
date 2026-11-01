@@ -45,6 +45,11 @@ on:
         type: string
         required: false
         default: ''
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
 
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
@@ -78,6 +83,10 @@ on:
         description: Space-separated chart paths to skip during the template dry-run only
         type: string
         default: ''
+      runner:
+        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s","kaniko"]'
+        type: string
+        default: '"ubuntu-latest"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
@@ -94,7 +103,8 @@ jobs:
   helm-lint:
     name: Helm lint
     if: inputs.run-lint
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -137,7 +147,8 @@ jobs:
   helm-template:
     name: Helm template dry-run
     if: inputs.run-template
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
     permissions:
       contents: read
 

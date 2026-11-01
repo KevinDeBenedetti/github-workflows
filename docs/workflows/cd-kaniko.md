@@ -34,6 +34,7 @@ jobs:
 | `version`    | string  | `''`                                             | Explicit version tag (e.g. `v1.2.3`); a `major.minor` tag is added when semver |
 | `build-args` | string  | `''`                                             | Build args, one per line, `KEY=VALUE`. **Never secrets**: they stay in the image history |
 | `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'`       | Runner labels as JSON — `'"k3s-portfolio"'` (ARC scale set) or a label array |
+| `timeout-minutes` | number | `60`                                        | Minutes before the build job is cancelled (GitHub's default is 360)      |
 
 ## Outputs
 
