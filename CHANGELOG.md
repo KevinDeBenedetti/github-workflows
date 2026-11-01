@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.36.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.36.0...v0.36.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **cd-buildkit:** add no major.minor alias to a pre-release ([f70a788](https://github.com/KevinDeBenedetti/github-workflows/commit/f70a788aaf36224912c998d205b2d36ae687dd89))
+* **prerelease:** refuse a pre-release of a version already released ([976f72f](https://github.com/KevinDeBenedetti/github-workflows/commit/976f72fbc82797b2d1d863640ce9ad539b6fbe86))
+
 ## [0.36.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.35.0...v0.36.0) (2026-11-01)
 
 
