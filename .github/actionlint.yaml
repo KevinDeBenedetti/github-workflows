@@ -1,9 +1,6 @@
-self-hosted-runner:
-  labels:
-    - k3s
-    - kaniko
-    - k3s-infra
-    - k3s-portfolio
+# No self-hosted labels listed: every `runs-on` here is an expression over the
+# `runner` input (actionlint does not check those), and the names of the ARC
+# scale sets stay out of this public repository.
 
 # `uses: $/…` (GitHub's self-repository syntax, 2026-07) is unknown to
 # actionlint (1.7.12 and main, checked 2026-10-24): it reports both forms as

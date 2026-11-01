@@ -1,10 +1,10 @@
 # CD — BuildKit
 
-Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless inside the job container on a self-hosted k3s runner, or through **Docker Buildx** on a GitHub-hosted runner. The `runner` input picks the path, and the caller changes nothing else: tags, provenance, SBOM and the registry layer cache are the same on both.
-Successor of [`cd-kaniko.yml`](cd-kaniko.md) (upstream Kaniko is archived): same inputs and tags, but on the cluster the builder runs as a non-root user, and the workflow adds a `digest` output, build secrets, provenance and SBOM.
+Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless inside the job container on a self-hosted Kubernetes (ARC) runner, or through **Docker Buildx** on a GitHub-hosted runner. The `runner` input picks the path, and the caller changes nothing else: tags, provenance, SBOM and the registry layer cache are the same on both.
+On the cluster the builder runs as a non-root user; both paths expose a `digest` output and take build secrets, provenance and SBOM inputs. Its predecessor `cd-kaniko.yml` (upstream Kaniko is archived) was removed from this repository once the cluster dropped the Kaniko executor.
 
 ::: warning Experimental on the cluster
-The self-hosted path is not yet validated on the cluster: it needs the cluster-side setup below. The GitHub-hosted path needs no setup and is the one in production: it built the portfolio prod image v0.22.0 on 2026-10-31. `cd-kaniko.yml` is deprecated since then.
+The self-hosted path is not yet validated on the cluster: it needs the cluster-side setup below. The GitHub-hosted path needs no setup and is the one in production: it has built production images since 2026-10-31.
 :::
 
 ## Usage
@@ -12,7 +12,7 @@ The self-hosted path is not yet validated on the cluster: it needs the cluster-s
 ```yaml
 jobs:
   build:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-buildkit.yml@v0.27.0
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-buildkit.yml@main
     permissions:
       contents: read
       packages: write
@@ -21,7 +21,7 @@ jobs:
       context: apps/api
       version: ${{ needs.release.outputs.version }}
       tag-latest: true
-      runner: '"k3s-portfolio"'
+      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-latest
     secrets:
       BUILD_SECRETS: |
         npm_token=${{ secrets.NPM_TOKEN }}
@@ -31,14 +31,14 @@ jobs:
 
 | `runner` input                                                         | Job        | Builder                                                                                             |
 | ---------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| A self-hosted label, e.g. `'"k3s-portfolio"'` or the default label array | `buildkit` | Rootless BuildKit in the job container: needs the [cluster prerequisites](#cluster-prerequisites) |
-| A GitHub-hosted label starting with `ubuntu-`, e.g. `'"ubuntu-latest"'`   | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
+| A GitHub-hosted label starting with `ubuntu-`, e.g. `'"ubuntu-latest"'` (the default) | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
+| Any other label, the ARC scale set set up for image builds               | `buildkit` | Rootless BuildKit in the job container: needs the [cluster prerequisites](#cluster-prerequisites) |
 
 Both paths build for the runner's native platform: use an x86_64 runner for an x86_64 cluster. One repository variable can then move every job, image builds included:
 
 ```yaml
     with:
-      runner: ${{ vars.CI_RUNNER || '"k3s-portfolio"' }}
+      runner: ${{ vars.CI_RUNNER || '"my-scale-set"' }}
 ```
 
 ## Inputs
@@ -55,7 +55,7 @@ Both paths build for the runner's native platform: use an x86_64 runner for an x
 | `build-args` | string  | `''`                                       | Build args, one per line, `KEY=VALUE`. **Never secrets** — use `BUILD_SECRETS`       |
 | `provenance` | string  | `mode=max`                                 | SLSA provenance (`mode=max`, `mode=min`, `false`). `mode=max` records the build-args |
 | `sbom`       | boolean | `true`                                     | Attach an SBOM attestation                                                           |
-| `runner`     | string  | `'["self-hosted","linux","k3s","kaniko"]'` | Runner labels as JSON; picks the path (see [Runners](#runners))                      |
+| `runner`     | string  | `'"ubuntu-latest"'`                        | Runner labels as JSON; picks the path (see [Runners](#runners))                      |
 | `timeout-minutes` | number | `60`                                  | Minutes before the build job is cancelled (GitHub's default is 360)                  |
 
 ## Secrets
@@ -94,7 +94,7 @@ spec:
 - **Pod Security**: `seccompProfile: Unconfined` and AppArmor `Unconfined` are refused by the **`baseline`** level, so the namespace running the build pods must enforce **`privileged`**. User namespaces (`hostUsers: false`) do not avoid it: without the unconfined profiles, BuildKit would need `CAP_SYS_ADMIN`, which `baseline` refuses too. Run the build scale set in a dedicated namespace rather than relaxing the one shared by every runner.
 - **Policy engines** (Kyverno, Gatekeeper…) that enforce `allowPrivilegeEscalation: false` or `capabilities.drop: [ALL]` reject the pod as well — dropping ALL removes the `CAP_SETUID` that `newuidmap` needs.
 - Use a **dedicated hook template** referenced only by the scale set(s) that build images, so the other `container:` jobs keep the default profiles.
-- The trade-off: Kaniko ran as **root** under the default profiles; rootless BuildKit runs as an **unprivileged user** in its own user namespace, without the default seccomp/AppArmor filters.
+- The trade-off versus a root builder under the default profiles: rootless BuildKit runs as an **unprivileged user** in its own user namespace, without the default seccomp/AppArmor filters.
 - The workflow sets `BUILDKITD_FLAGS=--oci-worker-no-process-sandbox` (Kubernetes has no `systempaths=unconfined`): `RUN` steps share the builder's PID namespace, as in BuildKit's own Kubernetes examples.
 
 ### Validate the cluster first
@@ -227,7 +227,7 @@ kubectl delete namespace buildkit-smoke
 
 ## Notes
 
-- Cluster path: like the Kaniko image, the BuildKit image cannot run JavaScript actions. BuildKit fetches the source itself from a git context (`<repo>.git#<sha>:<context>`) with the job token, passed as the `GIT_AUTH_TOKEN` build secret.
+- Cluster path: the rootless BuildKit image has no glibc Node.js, so it cannot run JavaScript actions. BuildKit fetches the source itself from a git context (`<repo>.git#<sha>:<context>`) with the job token, passed as the `GIT_AUTH_TOKEN` build secret.
 - Cluster path: registry credentials and secrets are written to a `0700` temporary directory removed at the end of the step.
 - GitHub-hosted path: the source comes from `actions/checkout` of the same commit, and the job logs in to GHCR even when `push` is false, since the layer cache lives there.
 - Layer cache: `<image>-cache:buildcache` on GHCR, shared by both paths (`mode=max`; export failures don't fail the build).

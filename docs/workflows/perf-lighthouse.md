@@ -82,7 +82,7 @@ jobs:
   reports, so a daily run marks what is actually live. When it names no tag of
   the repository, no status is posted (a warning says so); the summary and the
   artifact stay.
-- **Do not use a `k3s-*` runner**: auditing from the site's own network skews
+- **Do not use a cluster-internal runner**: auditing from the site's own network skews
   the scores.
 - Lighthouse scores vary run to run: `numberOfRuns` (3 by default) runs each page
   several times and keeps the median one. Start loose and tighten after a few

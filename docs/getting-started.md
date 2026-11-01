@@ -172,21 +172,22 @@ Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
 
 ---
 
-### Kaniko (self-hosted)
+### BuildKit (self-hosted or GitHub-hosted)
 
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-kaniko.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-buildkit.yml@main
     permissions:
       contents: read
-      packages: write  # push the image to GHCR
+      packages: write  # push the image and its layer cache to GHCR
     with:
       image-name: my-app
-      runner: '["self-hosted","linux","k3s","kaniko"]'
+      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-latest
 ```
 
-Builds and pushes an image to GHCR using Kaniko on self-hosted runners (no Docker daemon required).
+Builds and pushes an image to GHCR with rootless BuildKit inside the job container on a self-hosted runner (no Docker daemon), or with Docker Buildx on a GitHub-hosted one.
+→ [Full reference](workflows/cd-buildkit.md)
 
 ---
 
@@ -323,7 +324,6 @@ jobs:
 | `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](workflows/ci-kubernetes.md) |
 | `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](workflows/ci-terraform.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](workflows/cd-docker.md) |
-| `cd-kaniko.yml` | Build & push image with Kaniko on self-hosted runners (upstream archived — see `cd-buildkit.yml`) | [→](workflows/cd-kaniko.md) |
 | `cd-buildkit.yml` | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones | [→](workflows/cd-buildkit.md) |
 | `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](workflows/cd-pages.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](workflows/cd-docs.md) |

@@ -18,8 +18,8 @@
 #                   moving tags) and every image younger than older-than. Among
 #                   the older images, the keep-n-tagged most recent tagged ones
 #                   stay; the other tagged images and the untagged ones go.
-#   cache-packages  registry layer caches (<image>-cache, written by cd-buildkit
-#                   and cd-kaniko): every version older than older-than goes,
+#   cache-packages  registry layer caches (<image>-cache, written by
+#                   cd-buildkit): every version older than older-than goes,
 #                   except the `buildcache` tag that cd-buildkit reads.
 #
 # A deleted version can be restored for 30 days, from the package settings.
@@ -32,7 +32,7 @@ on:
         description: >
           Comma-separated image packages to clean, as named in
           ghcr.io/<owner>/<name>. Empty: the repository name, the image name
-          cd-docker, cd-buildkit and cd-kaniko use when `image-name` is empty.
+          cd-docker and cd-buildkit use when `image-name` is empty.
           List only packages that exist.
         type: string
         required: false

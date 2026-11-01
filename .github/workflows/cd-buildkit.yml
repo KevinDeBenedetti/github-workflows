@@ -1,11 +1,11 @@
 name: Deploy — BuildKit (rootless on self-hosted, Buildx on GitHub-hosted)
 
-# Successor of cd-kaniko.yml (upstream Kaniko is archived): same inputs and
-# tags, built by BuildKit on whichever runner the `runner` input selects, so a
-# caller switching runners changes nothing else — both paths compute the same
-# tags, attach the same provenance and SBOM, and share one registry cache.
+# The image build of this repository's callers: the same inputs and tags,
+# built by BuildKit on whichever runner the `runner` input selects, so a caller
+# switching runners changes nothing else — both paths compute the same tags,
+# attach the same provenance and SBOM, and share one registry cache.
 #
-#   - Self-hosted runner (default; ARC `containerMode: kubernetes`): the
+#   - Self-hosted runner (ARC `containerMode: kubernetes`): the
 #     `buildkit` job runs INSIDE the moby/buildkit rootless image as an
 #     unprivileged user; buildctl-daemonless.sh starts a throw-away buildkitd
 #     for the single build. Rootless BuildKit creates its own user namespace,
@@ -13,23 +13,23 @@ name: Deploy — BuildKit (rootless on self-hosted, Buildx on GitHub-hosted)
 #     needs the dedicated setup described in the docs (seccomp + AppArmor
 #     Unconfined, runAsUser 1000) — a cluster-side change. Status: EXPERIMENTAL
 #     until validated on the cluster — see docs/workflows/cd-buildkit.md.
-#     Like the Kaniko image, this one has no glibc Node.js: NO JavaScript
-#     actions; BuildKit fetches the source itself (git context) and tags are
-#     computed in sh.
-#   - GitHub-hosted runner (a label starting with `ubuntu-`): the `buildx` job
+#     The rootless image has no glibc Node.js: NO JavaScript actions;
+#     BuildKit fetches the source itself (git context) and tags are computed
+#     in sh.
+#   - GitHub-hosted runner (a label starting with `ubuntu-`, the default): the `buildx` job
 #     runs the same build through Docker Buildx, which drives BuildKit with the
 #     runner's Docker daemon, from a checkout of the same commit.
 # Both build for the runner's native platform: pick an x86_64 runner for an
 # x86_64 cluster.
 #
-# Differences vs. cd-kaniko.yml:
+# What both paths provide:
 #   - On the cluster, the builder process runs as non-root (rootless)
 #   - `digest` output (from the build metadata)
 #   - BUILD_SECRETS secret (BuildKit secret mounts), provenance + SBOM inputs
 #   - Layer cache in GHCR (<image>-cache:buildcache, mode=max)
-#   - A GitHub-hosted path (Docker Buildx), picked by the runner label
 #
-# Migration: change `uses: .../cd-kaniko.yml` → `uses: .../cd-buildkit.yml`.
+# Its predecessor cd-kaniko.yml (upstream Kaniko is archived) was removed on
+# 2026-11-01, after the cluster dropped the Kaniko executor and its push config.
 
 on:
   workflow_call:
@@ -85,10 +85,10 @@ on:
         required: false
         default: true
       runner:
-        description: Runner labels as JSON — a self-hosted label (e.g. '"k3s-portfolio"') runs rootless BuildKit, a GitHub-hosted ubuntu-… label (e.g. '"ubuntu-latest"') runs Docker Buildx
+        description: Runner labels as JSON — a GitHub-hosted ubuntu-… label (e.g. '"ubuntu-latest"') runs Docker Buildx, any other label (the name of an ARC runner scale set set up for image builds) runs rootless BuildKit
         type: string
         required: false
-        default: '["self-hosted","linux","k3s","kaniko"]'
+        default: '"ubuntu-latest"'
       timeout-minutes:
         description: >
           Minutes before the build job is cancelled (GitHub's default is 360):
@@ -157,7 +157,7 @@ on:
       runner:
         description: Runner labels as JSON
         type: string
-        default: '["self-hosted","linux","k3s","kaniko"]'
+        default: '"ubuntu-latest"'
       timeout-minutes:
         description: Minutes before the build job is cancelled (GitHub's default is 360)
         type: number
@@ -227,7 +227,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           TAG_LATEST: ${{ inputs.tag-latest }}
         run: |
-          # Same tag set as cd-kaniko.yml (subset of docker/metadata-action).
+          # Same tag set as cd-docker.yml (subset of docker/metadata-action).
           TAGS=""
           add_tag() { TAGS="${TAGS:+$TAGS }$1"; }
 
@@ -434,7 +434,7 @@ jobs:
           VERSION: ${{ inputs.version }}
           TAG_LATEST: ${{ inputs.tag-latest }}
         run: |
-          # Same tag set as cd-kaniko.yml (subset of docker/metadata-action).
+          # Same tag set as cd-docker.yml (subset of docker/metadata-action).
           TAGS=""
           add_tag() { TAGS="${TAGS:+$TAGS }$1"; }
 

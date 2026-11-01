@@ -8,7 +8,7 @@ name: Perf — sitespeed.io
 # Results are kept as artifacts and, optionally, appended as one CSV row per
 # URL/device to a `history-branch` of the calling repo.
 #
-# Do NOT run it on a cluster-internal runner (k3s-*): measuring from the same
+# Do NOT run it on a cluster-internal runner: measuring from the same
 # network as the site skews LCP and TTFB. Keep the default GitHub-hosted runner.
 #
 # Caller requirements (defaults):
@@ -54,7 +54,7 @@ on:
         default: perf-history
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew LCP/TTFB)
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew LCP/TTFB)
         type: string
         required: false
         default: '"ubuntu-latest"'
@@ -90,7 +90,7 @@ on:
         default: perf-history
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid k3s-* runners (they skew LCP/TTFB)
+        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew LCP/TTFB)
         type: string
         required: false
         default: '"ubuntu-latest"'

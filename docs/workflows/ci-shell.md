@@ -41,7 +41,7 @@ jobs:
 | `run-vitepress-check`      | boolean | `false`                        | Check `docs/` markdown for unescaped Vue interpolations that break the VitePress SSR build |
 | `run-docs-external-link-check` | boolean | `false`                    | Check the `http(s)` links of the `docs/` markdown files changed by the push or pull request (lychee) |
 | `docs-directory`           | string  | `docs`                         | Path to the docs folder checked by `docs-link-check`, `docs-external-link-check` and `vitepress-check` |
-| `runner`                   | string  | `'"ubuntu-latest"'`            | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'["self-hosted","linux","k3s","kaniko"]'` |
+| `runner`                   | string  | `'"ubuntu-latest"'`            | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
 
 ## Secrets
 
