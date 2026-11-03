@@ -11,10 +11,11 @@
 #      branch bump/<source name>, based on the branch's tip. Every release
 #      force-updates that branch: one pull request follows the latest release;
 #   4. open the pull request, or update the one already open;
-#   5. turn on auto-merge, with the first merge method the repository allows
-#      (squash, merge, rebase). Without auto-merge allowed on the repository,
-#      or when the pull request could merge at once (no required check), it
-#      stays open for a person: nothing merges before CI has run.
+#   5. turn on auto-merge, with the first merge method the repository and
+#      the branch's rules allow (squash, merge, rebase). Without auto-merge
+#      allowed on the repository, or when the pull request could merge at
+#      once (no required check), it stays open for a person, with a notice:
+#      nothing merges before CI has run.
 # An archived repository is skipped. A repository that fails is reported, the
 # next one still runs, and the run fails at the end.
 #
@@ -146,7 +147,7 @@ problem() {
 
 # propagate NAME BASE: the pull request of one repository.
 propagate() {
-  local name="$1" base="$2" status root dir path mode blob base_sha base_tree new_tree commit existing number url node method
+  local name="$1" base="$2" status root dir path mode blob base_sha base_tree new_tree commit existing number url node method reason
   repo="${owner}/${name}"
   root="${api_url}/repos/${repo}"
   dir="$work/repos/$name"
@@ -295,18 +296,38 @@ propagate() {
     result "pull request, merges once its checks pass" "$url"
     return 0
   fi
-  method="$(jq -r 'if .allow_squash_merge != false then "SQUASH" elif .allow_merge_commit != false then "MERGE"
-    elif .allow_rebase_merge != false then "REBASE" else "SQUASH" end' "$dir/repo.json")"
+  # The first merge method that both the repository and the rules of the
+  # target branch allow: a ruleset can narrow them, to rebase only for
+  # instance. A private repository on GitHub Free has no rules (GitHub
+  # answers 403): its settings decide alone.
+  status="$(api "$dir/rules.json" auth-header "$root/rules/branches/$base")"
+  [[ "$status" == 200 ]] || echo '[]' > "$dir/rules.json"
+  method="$(jq -rn --slurpfile repo "$dir/repo.json" --slurpfile rules "$dir/rules.json" '
+    $repo[0] as $settings
+    | [$rules[0][]? | select(.type == "pull_request") | .parameters.allowed_merge_methods // empty] as $lists
+    | [{name: "squash", on: $settings.allow_squash_merge}, {name: "merge", on: $settings.allow_merge_commit},
+       {name: "rebase", on: $settings.allow_rebase_merge}]
+    | map(select(.on != false and (.name as $m | all($lists[]; any(.[]; . == $m)))))
+    | (.[0].name // "squash") | ascii_upcase')"
   jq -n --arg id "$node" --arg method "$method" '{
     query: "mutation($id: ID!, $method: PullRequestMergeMethod!) { enablePullRequestAutoMerge(input: {pullRequestId: $id, mergeMethod: $method}) { clientMutationId } }",
     variables: {id: $id, method: $method}}' > "$dir/automerge-request.json"
   status="$(post "$dir/automerge.json" "$graphql_url" "$dir/automerge-request.json")"
   if [[ "$status" == 200 ]] && jq -e '(.errors // []) | length == 0' "$dir/automerge.json" > /dev/null; then
     result "pull request, merges once its checks pass" "$url"
-  else
-    echo "::warning::${repo}: auto-merge not turned on ($(message "$dir/automerge.json")): the pull request waits for a person."
-    result "pull request, to merge by hand" "$url"
+    return 0
   fi
+  reason="$(message "$dir/automerge.json")"
+  case "$reason" in
+    # How the repository is set up, not a failure: auto-merge is off in its
+    # settings (always, for a private repository on GitHub Free), or its
+    # branch requires no status check for auto-merge to wait for.
+    *"Auto merge is not allowed"* | *"clean status"*)
+      echo "::notice::${repo}: no auto-merge (${reason}): the pull request waits for a person."
+      ;;
+    *) echo "::warning::${repo}: auto-merge not turned on (${reason}): the pull request waits for a person." ;;
+  esac
+  result "pull request, to merge by hand" "$url"
 }
 
 failed=0
