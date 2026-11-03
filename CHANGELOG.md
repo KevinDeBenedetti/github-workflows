@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.38.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.37.0...v0.38.0) (2026-11-03)
+
+
+### Features
+
+* **workflow:** add propagate release workflow for consumer repositories ([6d075f6](https://github.com/KevinDeBenedetti/github-workflows/commit/6d075f687162a699ea65df6545200ca0bc595aff))
+* **workflows:** add scheduled cleanup for workflow runs ([1c24848](https://github.com/KevinDeBenedetti/github-workflows/commit/1c2484806b5ca23d2726fd8ec93eb229cf37c16f))
+
 ## [0.37.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.36.1...v0.37.0) (2026-11-03)
 
 
