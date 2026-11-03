@@ -1,0 +1,51 @@
+name: Propagate release
+description: >
+  Open a pull request in each consumer repository that moves its pins of this
+  repository's workflows and actions to a release, and turn on auto-merge so
+  it lands once its checks pass. Needs a token with contents, pull-requests
+  and workflows write on the consumers (a GitHub App installation token: a
+  GITHUB_TOKEN can neither reach another repository nor change a workflow
+  file). Runs on any Linux runner with bash, curl, jq and python3: no GitHub
+  CLI, no checkout. The rules are at the top of propagate-release.sh and
+  bump-pins.py.
+
+inputs:
+  repositories:
+    description: >
+      Consumer repositories of the same owner, one per line or
+      comma-separated: name, or name:branch to target a branch other than the
+      default one.
+    required: true
+  tag:
+    description: Release to move to (vX.Y.Z). Empty means the latest release of this repository.
+    required: false
+    default: ''
+  auto-merge:
+    description: Turn on auto-merge on each pull request, so it merges once its checks pass
+    required: false
+    default: 'true'
+  dry-run:
+    description: Log what would move, write nothing
+    required: false
+    default: 'false'
+  token:
+    description: Token with contents, pull-requests and workflows write on the consumer repositories
+    required: true
+  source-token:
+    description: Token that reads the releases of this repository
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Open the pull requests
+      shell: bash
+      env:
+        REPOSITORIES: ${{ inputs.repositories }}
+        TAG: ${{ inputs.tag }}
+        AUTO_MERGE: ${{ inputs.auto-merge }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+        SOURCE_TOKEN: ${{ inputs.source-token }}
+      run: bash "$GITHUB_ACTION_PATH/propagate-release.sh"

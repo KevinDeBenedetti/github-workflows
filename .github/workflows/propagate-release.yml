@@ -1,0 +1,106 @@
+# Moves the consumer repositories to a release of this repository as soon as
+# it is published: in each one, a pull request moves the pins of this
+# repository's workflows and actions to the release, and merges itself once
+# its checks pass. No waiting for a weekly Dependabot or Renovate run.
+#
+# Works through a GitHub App with contents, pull requests and workflows write,
+# installed on every consumer: a GITHUB_TOKEN can neither reach another
+# repository nor change a workflow file. The token is created for the listed
+# repositories only, with those three permissions (read only in a dry run),
+# and expires with the job.
+#
+# The rules (which pins move, the branch, auto-merge) are at the top of
+# .github/actions/propagate-release/propagate-release.sh and bump-pins.py.
+name: Propagate release
+
+on:
+  workflow_call:
+    inputs:
+      repositories:
+        description: >
+          Consumer repositories of the same owner, one per line or
+          comma-separated: name, or name:branch to target a branch other than
+          the default one. Keep the list in a repository variable.
+        type: string
+        required: true
+      tag:
+        description: Release to move to (vX.Y.Z). Empty means the latest release of this repository.
+        type: string
+        required: false
+        default: ''
+      app-client-id:
+        description: Client ID of the GitHub App installed on the consumer repositories
+        type: string
+        required: true
+      auto-merge:
+        description: Turn on auto-merge on each pull request, so it merges once its checks pass
+        type: boolean
+        required: false
+        default: true
+      dry-run:
+        description: Log what would move, write nothing (the token is read only)
+        type: boolean
+        required: false
+        default: false
+      runner:
+        description: Runner labels as JSON — '"ubuntu-latest"' or '["self-hosted","linux"]' (Linux with bash, curl, jq and python3)
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+    secrets:
+      APP_PRIVATE_KEY:
+        description: Private key of the GitHub App
+        required: true
+
+# Deny-all default: the job grants only the permission it needs.
+permissions: {}
+
+# Two releases in a row: the second waits, then updates the same pull requests.
+concurrency:
+  group: propagate-release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  propagate:
+    name: Open the pull requests
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read          # read the releases of this repository
+    steps:
+      - name: Resolve the repositories
+        id: repositories
+        env:
+          REPOSITORIES: ${{ inputs.repositories }}
+        run: |
+          # The names the App token is limited to: trimmed entries without their :branch.
+          names=$(printf '%s\n' "$REPOSITORIES" | tr ',' '\n' |
+            awk '{ gsub(/^[ \t\r]+|[ \t\r]+$/, "") } $0 != "" { sub(/:.*/, ""); if (!seen[$0]++) print }' | paste -sd, -)
+          case "$names" in
+            '') echo "::error::no repository listed: set the repositories input"; exit 1 ;;
+            *[!A-Za-z0-9_.,-]*) echo "::error::invalid repository list '${names}': expected repository names, optionally followed by :branch"; exit 1 ;;
+          esac
+          echo "Repositories: ${names}"
+          echo "names=${names}" >> "$GITHUB_OUTPUT"
+
+      - name: Create the GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ steps.repositories.outputs.names }}
+          permission-contents: ${{ inputs.dry-run && 'read' || 'write' }}
+          permission-pull-requests: ${{ inputs.dry-run && 'read' || 'write' }}
+          # Empty, so not requested, in a dry run.
+          permission-workflows: ${{ !inputs.dry-run && 'write' || '' }}
+
+      - name: Open the pull requests
+        uses: $/.github/actions/propagate-release
+        with:
+          repositories: ${{ inputs.repositories }}
+          tag: ${{ inputs.tag }}
+          auto-merge: ${{ inputs.auto-merge }}
+          dry-run: ${{ inputs.dry-run }}
+          token: ${{ steps.app-token.outputs.token }}

@@ -39,10 +39,10 @@ log says it would delete, then remove the `dry-run` line so the weekly run delet
 
 The policy is set once, in this workflow, for every caller:
 
-| Packages         | Kept                                                                                                                        | Deleted                                                 |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `packages`       | tags matching `exclude-tags`, every image younger than `older-than`, then the `keep-n-tagged` most recent older tagged ones | the other tagged images, untagged images, ghost images  |
-| `cache-packages` | the `buildcache` tag, every version younger than `older-than`                                                               | every other version                                     |
+| Packages         | Kept                                                                                                                        | Deleted                                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `packages`       | tags matching `exclude-tags`, every image younger than `older-than`, then the `keep-n-tagged` most recent older tagged ones | the other tagged images, untagged images, ghost images |
+| `cache-packages` | the `buildcache` tag, every version younger than `older-than`                                                               | every other version                                    |
 
 - The default `exclude-tags` keeps the release tags (`v1.2.3`, `1.2`) and the
   moving tags `latest`, `stable`, `main` and `dev`, so a deployed release is never

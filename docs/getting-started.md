@@ -371,6 +371,7 @@ jobs:
 | `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](workflows/cd-pages.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](workflows/release.md) |
+| `propagate-release.yml` | A pull request in each consumer repository moves its pins to the new release | [→](workflows/propagate-release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](workflows/pr-description.md) |
@@ -410,6 +411,7 @@ steps:
 | [`lighthouse-results`](actions/lighthouse-results.md) | Summarize a Lighthouse CI run and post one commit status per page |
 | [`prerelease`](actions/prerelease.md) | Compute the next pre-release of a branch and publish it as a GitHub pre-release |
 | [`cleanup-runs`](actions/cleanup-runs.md) | Delete the old workflow runs of the repository, keeping the recent ones |
+| [`propagate-release`](actions/propagate-release.md) | Open a pull request in each consumer repository that moves its pins to a release |
 
 ---
 
