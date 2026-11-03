@@ -18,6 +18,10 @@
         },
         {
           "type": "generic",
+          "path": "examples/cleanup-runs.yml"
+        },
+        {
+          "type": "generic",
           "path": "examples/dependabot.yml"
         },
         {
