@@ -21,6 +21,7 @@
 #   ci-gate      — single required check: all CI jobs above passed      [push + PR]
 #   pr-description — PR body written by Claude Code (pr-description.yml) [PR, outside the gate]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
+#   propagate    — bump PR in each consumer repo (propagate-release.yml) [after a release]
 # =============================================================================
 name: CI / CD
 
@@ -326,3 +327,26 @@ jobs:
       # Move only v0.<minor>: breaking changes ship as minor bumps before 1.0,
       # so this repo's callers must never be carried across one by an alias.
       pre-major-alias: minor
+
+  # ── Propagate the release ────────────────────────────────────────────────────
+  # Right after a release, a pull request in each consumer repository moves its
+  # pins to it and merges itself once its checks pass. The list lives in the
+  # PROPAGATE_REPOSITORIES variable, out of this public file; the GitHub App is
+  # the one release.yml used before it moved to GITHUB_TOKEN. Without the
+  # variable, the job is skipped. propagate.yml runs it by hand, as a dry run.
+  propagate:
+    name: Propagate release
+    needs: [release]
+    if: >-
+      needs.release.outputs.released == 'true'
+      && needs.release.outputs.prerelease != 'true'
+      && vars.PROPAGATE_REPOSITORIES != ''
+    uses: ./.github/workflows/propagate-release.yml
+    permissions:
+      contents: read          # read the release of this repository
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+      repositories: ${{ vars.PROPAGATE_REPOSITORIES }}
+      app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}

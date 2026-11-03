@@ -35,10 +35,10 @@ steps:
 
 ## Outputs
 
-| Output      | Description                                                      |
-| ----------- | ---------------------------------------------------------------- |
-| `deleted`   | Runs deleted by this run (in a dry run, the runs that would be)  |
-| `remaining` | Runs left for a later run by `max-deletions`                     |
+| Output      | Description                                                     |
+| ----------- | --------------------------------------------------------------- |
+| `deleted`   | Runs deleted by this run (in a dry run, the runs that would be) |
+| `remaining` | Runs left for a later run by `max-deletions`                    |
 
 ## Notes
 

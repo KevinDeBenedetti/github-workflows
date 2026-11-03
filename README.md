@@ -13,7 +13,7 @@
 - Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
 - Scheduled GHCR cleanup that keeps releases and recent images, safe for multi-arch images and attestations
 - Scheduled workflow-run cleanup that keeps recent runs and the last runs of each workflow, and clears deleted workflows from the Actions sidebar
-- Automated releases via release-please
+- Automated releases via release-please, and release propagation: each release opens a pull request in every consumer repository that moves its pins, merged once its checks pass
 - Security scanning: dependency audit, CodeQL, and secret detection
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
 
@@ -75,6 +75,7 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
 | `prerelease.yml` | Pre-releases of an integration branch, `v<next>-rc.<n>` from the Conventional Commits since the last release tag | [→](docs/workflows/prerelease.md) |
+| `propagate-release.yml` | Release propagation: a pull request in each consumer repository moves its pins to the new release, merged once its checks pass | [→](docs/workflows/propagate-release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](docs/workflows/pr-description.md) |

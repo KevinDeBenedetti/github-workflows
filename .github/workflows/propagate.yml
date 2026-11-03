@@ -1,0 +1,34 @@
+# Propagates a release of this repository by hand: a dry run by default, to
+# check the setup (the GitHub App reaches every listed repository, the pins
+# found in each). ci-cd.yml's propagate job does it for real after every
+# release. Not a reusable workflow: it serves this repository only.
+name: Propagate release (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release to move to (vX.Y.Z). Empty means the latest release.
+        type: string
+        default: ''
+      dry-run:
+        description: Log what would move, write nothing
+        type: boolean
+        default: true
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+jobs:
+  propagate:
+    name: Propagate release
+    uses: ./.github/workflows/propagate-release.yml
+    permissions:
+      contents: read          # read the release of this repository
+    with:
+      tag: ${{ inputs.tag }}
+      repositories: ${{ vars.PROPAGATE_REPOSITORIES }}
+      app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+      dry-run: ${{ inputs.dry-run }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
