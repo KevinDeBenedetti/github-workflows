@@ -39,10 +39,10 @@ log says it would delete, then remove the `dry-run` line so the weekly run delet
 
 The policy is set once, in this workflow, for every caller:
 
-| Packages         | Kept                                                                                                                        | Deleted                                  |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `packages`       | tags matching `exclude-tags`, every image younger than `older-than`, then the `keep-n-tagged` most recent older tagged ones | the other tagged images, untagged images |
-| `cache-packages` | the `buildcache` tag, every version younger than `older-than`                                                               | every other version                      |
+| Packages         | Kept                                                                                                                        | Deleted                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `packages`       | tags matching `exclude-tags`, every image younger than `older-than`, then the `keep-n-tagged` most recent older tagged ones | the other tagged images, untagged images, ghost images  |
+| `cache-packages` | the `buildcache` tag, every version younger than `older-than`                                                               | every other version                                     |
 
 - The default `exclude-tags` keeps the release tags (`v1.2.3`, `1.2`) and the
   moving tags `latest`, `stable`, `main` and `dev`, so a deployed release is never
@@ -58,6 +58,13 @@ The policy is set once, in this workflow, for every caller:
 - Deleting an image also deletes its children: the platform images of a
   multi-architecture image, its provenance and SBOM attestations, and referrers
   such as GitHub artifact attestations.
+- A ghost image, a multi-architecture image whose platform images are all gone,
+  can be pulled on no platform: it is deleted once older than `older-than`, unless
+  `exclude-tags` matches it. An image with only some platform images gone is kept:
+  it may still run where the others do.
+- After the deletions, every multi-architecture image left is checked for missing
+  platform images, and each one found is reported as a warning in the log. The
+  check never fails the job.
 - `cache-packages` targets the registry layer caches written by
   [`cd-buildkit`](./cd-buildkit.md), named `<image>-cache`. BuildKit reads only
   `buildcache`; the cache manifests it replaced (and the per-layer images a

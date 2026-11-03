@@ -12,6 +12,7 @@
 - Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, hash-locked ansible installs, and a checksum-pinned Claude Code setup
 - Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
 - Scheduled GHCR cleanup that keeps releases and recent images, safe for multi-arch images and attestations
+- Scheduled workflow-run cleanup that keeps recent runs and the last runs of each workflow, and clears deleted workflows from the Actions sidebar
 - Automated releases via release-please
 - Security scanning: dependency audit, CodeQL, and secret detection
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
@@ -78,6 +79,7 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](docs/workflows/pr-description.md) |
 | `cleanup-ghcr.yml` | Scheduled GHCR retention: keeps releases and recent images, deletes the rest and old layer caches | [→](docs/workflows/cleanup-ghcr.md) |
+| `cleanup-runs.yml` | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest | [→](docs/workflows/cleanup-runs.md) |
 
 ## Documentation
 

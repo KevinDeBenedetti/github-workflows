@@ -1,0 +1,56 @@
+name: Cleanup workflow runs
+description: >
+  Delete the old workflow runs of the repository, with their logs and
+  artifacts, oldest first. Kept: runs not completed, runs younger than
+  older-than-days, the keep-runs most recent runs of each workflow, and the
+  runs of the head commit of an open pull request or of the run's own commit.
+  A workflow whose file was deleted keeps no run, so it leaves the Actions
+  sidebar. Runs on any Linux runner with bash, curl and jq: no GitHub CLI
+  needed. The rules are documented at the top of cleanup-runs.sh.
+
+inputs:
+  keep-runs:
+    description: Most recent runs kept per workflow, whatever their age (0 to 100)
+    required: false
+    default: '10'
+  older-than-days:
+    description: Age, in days, before a run can be deleted (1 or more)
+    required: false
+    default: '30'
+  max-deletions:
+    description: >
+      Runs deleted at most in one run (1 to 1000), one a second: the
+      GITHUB_TOKEN may send 1,000 REST requests an hour per repository. A
+      larger backlog goes over the next runs.
+    required: false
+    default: '500'
+  dry-run:
+    description: Log what would be deleted, delete nothing
+    required: false
+    default: 'false'
+  github-token:
+    description: Token with actions write and pull-requests read
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  deleted:
+    description: Runs deleted by this run (in a dry run, the runs that would be)
+    value: ${{ steps.cleanup.outputs.deleted }}
+  remaining:
+    description: Runs left for a later run by max-deletions
+    value: ${{ steps.cleanup.outputs.remaining }}
+
+runs:
+  using: composite
+  steps:
+    - name: Delete old workflow runs
+      id: cleanup
+      shell: bash
+      env:
+        KEEP_RUNS: ${{ inputs.keep-runs }}
+        OLDER_THAN_DAYS: ${{ inputs.older-than-days }}
+        MAX_DELETIONS: ${{ inputs.max-deletions }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: bash "$GITHUB_ACTION_PATH/cleanup-runs.sh"

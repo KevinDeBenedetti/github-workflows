@@ -1,0 +1,77 @@
+# Retention for the workflow runs of a repository, meant to run on a weekly
+# schedule: the old runs are deleted with their logs and artifacts, the recent
+# ones stay.
+#
+# Call it from the repository whose runs to clean: its GITHUB_TOKEN can delete
+# them. No PAT and no GitHub App; a GITHUB_TOKEN reaches only its own
+# repository, so every repository calls this workflow itself.
+#
+# The retention policy is set here, once for every caller (the rules are
+# detailed at the top of .github/actions/cleanup-runs/cleanup-runs.sh):
+#   never deleted  runs not completed, runs younger than older-than-days, the
+#                  keep-runs most recent runs of each workflow, and the runs of
+#                  the head commit of an open pull request or of the commit
+#                  this workflow runs on (on a schedule, the default branch's).
+#   deleted        every other run, oldest first, at most max-deletions per
+#                  run. A workflow whose file was deleted keeps no run: once
+#                  its last run is old enough, it leaves the Actions sidebar.
+#
+# A deleted run cannot be restored.
+name: Cleanup workflow runs
+
+on:
+  workflow_call:
+    inputs:
+      keep-runs:
+        description: Most recent runs kept per workflow, whatever their age (0 to 100)
+        type: number
+        required: false
+        default: 10
+      older-than-days:
+        description: Age, in days, before a run can be deleted (1 or more)
+        type: number
+        required: false
+        default: 30
+      max-deletions:
+        description: >
+          Runs deleted at most in one run (1 to 1000), one a second: the
+          GITHUB_TOKEN may send 1,000 REST requests an hour per repository. A
+          larger backlog goes over the next runs.
+        type: number
+        required: false
+        default: 500
+      dry-run:
+        description: Log what would be deleted, delete nothing
+        type: boolean
+        required: false
+        default: false
+      runner:
+        description: Runner labels as JSON — '"ubuntu-latest"' or '["self-hosted","linux"]' (Linux with bash, curl and jq)
+        type: string
+        required: false
+        default: '"ubuntu-latest"'
+
+# Deny-all default: the job grants only the permissions it needs.
+permissions: {}
+
+# Two runs at once would race over the same runs.
+concurrency:
+  group: cleanup-runs-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Clean up workflow runs
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 30
+    permissions:
+      actions: write          # list and delete the workflow runs
+      pull-requests: read     # keep the runs of the open pull requests
+    steps:
+      - name: Delete old workflow runs
+        uses: $/.github/actions/cleanup-runs
+        with:
+          keep-runs: ${{ inputs.keep-runs }}
+          older-than-days: ${{ inputs.older-than-days }}
+          max-deletions: ${{ inputs.max-deletions }}
+          dry-run: ${{ inputs.dry-run }}

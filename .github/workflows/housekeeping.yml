@@ -1,0 +1,32 @@
+# Weekly housekeeping of this repository: its old workflow runs, through the
+# reusable cleanup-runs.yml of the same commit. Not a reusable workflow: it
+# cleans this repository only (no package is published here, so no GHCR
+# cleanup).
+#
+# The schedule deletes. A manual run is a dry run unless unticked: it shows
+# what the next scheduled run will delete.
+name: Housekeeping
+
+on:
+  schedule:
+    - cron: '43 4 * * 1'  # Mondays, 04:43 UTC
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Log what would be deleted, delete nothing
+        type: boolean
+        default: true
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+jobs:
+  cleanup-runs:
+    name: Cleanup workflow runs
+    uses: ./.github/workflows/cleanup-runs.yml
+    permissions:
+      actions: write          # list and delete the workflow runs
+      pull-requests: read     # keep the runs of the open pull requests
+    with:
+      # Empty on a schedule: false.
+      dry-run: ${{ inputs.dry-run == true }}

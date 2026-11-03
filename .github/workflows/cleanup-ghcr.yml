@@ -17,9 +17,12 @@
 #   packages        never deleted: the tags matching exclude-tags (releases and
 #                   moving tags; with use-regex, a regular expression that can
 #                   leave pre-releases out) and every image younger than
-#                   older-than. Among
-#                   the older images, the keep-n-tagged most recent tagged ones
-#                   stay; the other tagged images and the untagged ones go.
+#                   older-than. Among the older images, the keep-n-tagged most
+#                   recent tagged ones stay; the other tagged images, the
+#                   untagged ones and the ghost images (multi-arch images whose
+#                   platform images are all gone, which nothing can pull) go.
+#                   A last pass warns about any multi-arch image left with a
+#                   platform image missing.
 #   cache-packages  registry layer caches (<image>-cache, written by
 #                   cd-buildkit): every version older than older-than goes,
 #                   except the `buildcache` tag that cd-buildkit reads.
@@ -134,9 +137,18 @@ jobs:
           older-than: ${{ inputs.older-than }}
           keep-n-tagged: ${{ inputs.keep-n-tagged }}
           delete-untagged: true
+          # Multi-arch images whose platform images are all gone: no platform
+          # can pull them. exclude-tags and older-than still protect them. A
+          # partial image (some platforms gone) stays: it may still run where
+          # its remaining platforms do.
+          delete-ghost-images: true
           # sha256-* referrers (GitHub artifact attestations, cosign) whose
           # image is already gone.
           delete-orphaned-images: true
+          # After the deletions, warn about every multi-arch image left with a
+          # platform image missing: proof that no kept image was broken.
+          # Informational: it never fails the job.
+          validate: true
           dry-run: ${{ inputs.dry-run }}
 
       - name: Clean up layer caches
