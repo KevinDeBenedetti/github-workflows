@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.38.0...v0.39.0) (2026-11-03)
+
+
+### Features
+
+* **propagate-release:** enhance auto-merge handling and documentation ([23ede96](https://github.com/KevinDeBenedetti/github-workflows/commit/23ede96b216b2344a6d305d31882bcd71a6f85d7))
+
 ## [0.38.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.37.0...v0.38.0) (2026-11-03)
 
 
