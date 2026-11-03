@@ -55,9 +55,11 @@ jobs:
    Each line is `name`, a repository of the same owner, or `name:branch` to target a
    branch other than the default one, such as an integration branch.
 3. In each consumer repository:
-   - allow auto-merge (**Settings → General → Allow auto-merge**) and require status
-     checks on the target branch: auto-merge waits for them. Without required checks,
-     the pull request stays open for a person, so nothing merges before CI has run;
+   - for pull requests that merge themselves, allow auto-merge (**Settings → General →
+     Allow auto-merge**) and require status checks on the target branch, in a ruleset:
+     auto-merge waits for them. Without both, the pull request stays open for a person,
+     so nothing merges before CI has run. On GitHub Free, a private repository has
+     neither auto-merge nor rulesets: its pull requests always wait for a person;
    - when it runs [`check-bot-commits`](./check-bot-commits.md), add the App's bot,
      `<app-slug>[bot]`, to `allowed-bots`;
    - stop Dependabot or Renovate from proposing the same update. Dependabot, in its
@@ -96,9 +98,10 @@ actions.
   the release.
 - The next release force-updates the same branch and pull request: a commit pushed to
   that branch is overwritten then.
-- Auto-merge is turned on with the first merge method the repository allows: squash,
-  merge, rebase. When the repository does not allow it, the job warns and the pull
-  request waits for a person.
+- Auto-merge is turned on with the first merge method that both the repository and the
+  rules of the target branch allow: squash, merge, rebase. When the repository does not
+  allow auto-merge, or its branch requires no status check, the job says so in a
+  notice and the pull request waits for a person; any other refusal is a warning.
 - An archived repository is skipped. A repository that fails, for instance one the App
   is not installed on, is reported; the others still get their pull request, and the
   job fails at the end.

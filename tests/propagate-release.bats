@@ -77,7 +77,12 @@ writes() {
 
 # A curl that plays the GitHub API from files in $STUB_DIR, and logs every
 # call as "SEQ METHOD PATH" (API root cut off), with its payload in
-# sent/SEQ.json and the headers it got in headers.log.
+# sent/SEQ.json and the headers it got in headers.log. Besides the files
+# `consumer` writes:
+#   rules-<name>.json     the rules of the target branch (default: 404)
+#   pulls-<name>.json     the open pull requests (default: none)
+#   automerge-on-<name>   present: the pull request already has auto-merge
+#   graphql-error         the error that turning auto-merge on answers
 stub_curl() {
   cat > "$BATS_TEST_TMPDIR/bin/curl" <<'EOF'
 #!/usr/bin/env bash
@@ -109,6 +114,7 @@ case "$method $path" in
   "GET /repos/o/"*/git/trees/*) name="${path#/repos/o/}"; file "tree-${name%%/*}.json" 200 ;;
   "GET /repos/o/"*/git/blobs/*) file "blob-${path##*/}" 200 ;;
   "GET /repos/o/"*/git/commits/*) file "commit-${path##*/}.json" 200 ;;
+  "GET /repos/o/"*/rules/branches/*) name="${path#/repos/o/}"; file "rules-${name%%/*}.json" 200 ;;
   "GET /repos/o/"*/pulls\?*) name="${path#/repos/o/}"; name="${name%%/*}"
     if [ -f "$STUB_DIR/pulls-$name.json" ]; then reply 200 "$(cat "$STUB_DIR/pulls-$name.json")"; else reply 200 '[]'; fi ;;
   "GET /repos/o/"*) file "repo-${path#/repos/o/}.json" 200 ;;
@@ -123,8 +129,8 @@ case "$method $path" in
     status=201; [ "$method" = POST ] || status=200
     reply "$status" "{\"number\":7,\"html_url\":\"https://github.test/o/$name/pull/7\",\"node_id\":\"PR_$name\",\"auto_merge\":$auto}" ;;
   "POST /graphql")
-    if [ -f "$STUB_DIR/graphql-errors" ]; then
-      reply 200 '{"errors":[{"message":"Pull request Auto merge is not allowed for this repository"}]}'
+    if [ -f "$STUB_DIR/graphql-error" ]; then
+      reply 200 "$(jq -n --rawfile m "$STUB_DIR/graphql-error" '{errors: [{message: ($m | rtrimstr("\n"))}]}')"
     else
       reply 200 '{"data":{"enablePullRequestAutoMerge":{"clientMutationId":null}}}'
     fi ;;
@@ -303,15 +309,41 @@ EOF
   [ -z "$(writes)" ]
 }
 
-@test "auto-merge refused by the repository leaves the pull request for a person, with a warning" {
+@test "a repository without auto-merge, or with no required check, keeps the pull request for a person, with a notice" {
   file app .github/workflows/ci.yml "    uses: o/src/.github/workflows/ci.yml@$OLD # v1.0.0"
   consumer app main '{"allow_squash_merge": false, "allow_merge_commit": true}'
-  touch "$STUB_DIR/graphql-errors"
+  echo 'Auto merge is not allowed for this repository' > "$STUB_DIR/graphql-error"
   REPOSITORIES=app run bash "$SCRIPT"
   [ "$status" -eq 0 ]
   sent 'POST /graphql' | jq -e '.variables.method == "MERGE"'
-  [[ "$output" == *"::warning::o/app: auto-merge not turned on (Pull request Auto merge is not allowed for this repository)"* ]]
+  [[ "$output" == *"::notice::o/app: no auto-merge (Auto merge is not allowed for this repository): the pull request waits for a person."* ]]
   [[ "$output" == *"o/app: pull request, to merge by hand"* ]]
+  refute grep -q '::warning::' <<< "$output"
+  echo 'Pull request Pull request is in clean status' > "$STUB_DIR/graphql-error"
+  REPOSITORIES=app run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice::o/app: no auto-merge (Pull request Pull request is in clean status)"* ]]
+}
+
+@test "an unexpected auto-merge error is a warning, and the run still succeeds" {
+  file app .github/workflows/ci.yml "    uses: o/src/.github/workflows/ci.yml@$OLD # v1.0.0"
+  consumer app
+  echo 'Something went wrong' > "$STUB_DIR/graphql-error"
+  REPOSITORIES=app run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"::warning::o/app: auto-merge not turned on (Something went wrong)"* ]]
+}
+
+@test "the merge method is one the branch's rules allow too" {
+  file app .github/workflows/ci.yml "    uses: o/src/.github/workflows/ci.yml@$OLD # v1.0.0"
+  consumer app
+  # The repository allows every method; its ruleset, rebase only.
+  echo '[{"type":"deletion"},{"type":"pull_request","parameters":{"allowed_merge_methods":["rebase"]}}]' \
+    > "$STUB_DIR/rules-app.json"
+  REPOSITORIES=app run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  grep -q 'GET /repos/o/app/rules/branches/main$' "$STUB_DIR/curl.log"
+  sent 'POST /graphql' | jq -e '.variables.method == "REBASE"'
 }
 
 @test "without a tag, the latest release of the source is used" {
