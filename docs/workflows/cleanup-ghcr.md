@@ -46,7 +46,13 @@ The policy is set once, in this workflow, for every caller:
 
 - The default `exclude-tags` keeps the release tags (`v1.2.3`, `1.2`) and the
   moving tags `latest`, `stable`, `main` and `dev`, so a deployed release is never
-  deleted. Any tag that contains a dot is kept.
+  deleted. Any tag that contains a dot is kept, the pre-releases (`v1.2.3-rc.4`)
+  included: they pile up forever.
+- To let the pre-releases go like any other image, set `use-regex: true` and an
+  `exclude-tags` regular expression that names the releases only:
+  `^(latest|stable|main|dev|v\d+\.\d+\.\d+|\d+\.\d+)$`. A pre-release then
+  stays while it is younger than `older-than` or among the `keep-n-tagged` most
+  recent older images, like a `sha-*` tag. The layer caches keep their own rules.
 - An image deployed through a `sha-*` tag stays while it is younger than
   `older-than` or among the `keep-n-tagged` most recent older images.
 - Deleting an image also deletes its children: the platform images of a
@@ -64,6 +70,7 @@ The policy is set once, in this workflow, for every caller:
 | `packages`       | string  | the repository name               | Comma-separated image packages, as named in `ghcr.io/<owner>/<name>` |
 | `cache-packages` | string  | `''`                              | Comma-separated layer-cache packages; empty skips the cache cleanup  |
 | `exclude-tags`   | string  | `'latest,stable,main,dev,v*,*.*'` | Comma-separated tags never deleted, with `*` wildcards               |
+| `use-regex`      | boolean | `false`                           | Read `exclude-tags` as a regular expression                          |
 | `older-than`     | string  | `30 days`                         | Only versions older than this are touched (`8 weeks`, `6 months`…)   |
 | `keep-n-tagged`  | number  | `10`                              | Most recent tagged images kept among those older than `older-than`   |
 | `dry-run`        | boolean | `false`                           | Log what would be deleted, delete nothing                            |
