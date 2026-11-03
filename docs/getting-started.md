@@ -257,7 +257,7 @@ jobs:
       contents: write
 ```
 
-Tags each releasable commit of a branch such as `dev` as a GitHub pre-release, `v<next>-rc.<n>`, computed from the Conventional Commits since the last release tag.
+Tags each releasable commit of a branch such as `dev` as a GitHub pre-release, `v<next>-rc.<n>`, computed from the Conventional Commits since the last release tag. To merge a pull request for each pre-release instead, call `release.yml` on that branch with `target-branch` ([pre-releases from a second branch](workflows/release.md#pre-releases-from-a-second-branch)).
 → [Full reference](workflows/prerelease.md)
 
 ---

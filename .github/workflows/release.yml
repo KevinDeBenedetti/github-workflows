@@ -29,6 +29,15 @@ on:
         type: string
         required: false
         default: ''
+      target-branch:
+        description: >
+          Branch the release PR targets and releases are cut from, e.g. 'dev'
+          for pre-releases from a second branch (a config with
+          "versioning": "prerelease" and "prerelease": true, and its own
+          manifest). Empty: the repository's default branch.
+        type: string
+        required: false
+        default: ''
       git-user-name:
         description: >
           Name used for the git tagger identity when moving the major version tag.
@@ -109,6 +118,9 @@ on:
       tag:
         description: Tag name of the release (e.g. v1.2.3)
         value: ${{ jobs.release.outputs.tag }}
+      prerelease:
+        description: Whether the release is a semver pre-release (e.g. v1.3.0-rc.2), which moves no alias tag
+        value: ${{ jobs.release.outputs.prerelease }}
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
@@ -129,6 +141,7 @@ jobs:
     outputs:
       released: ${{ steps.rp.outputs.release_created }}
       tag: ${{ steps.rp.outputs.tag_name }}
+      prerelease: ${{ steps.kind.outputs.prerelease }}
 
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
@@ -211,6 +224,24 @@ jobs:
           release-type: ${{ inputs.release-type || '' }}
           config-file: ${{ steps.detect-paths.outputs.config-file }}
           manifest-file: ${{ steps.detect-paths.outputs.manifest-file }}
+          target-branch: ${{ inputs.target-branch }}
+
+      - name: Classify the release
+        id: kind
+        # A semver pre-release tag (v1.3.0-rc.2, also my-lib-v1.3.0-beta.1)
+        # must not move the alias tags: tag-workflows would point v1 (or v0
+        # and v0.3) at a release candidate.
+        if: steps.rp.outputs.release_created == 'true'
+        env:
+          TAG: ${{ steps.rp.outputs.tag_name }}
+        shell: bash
+        run: |
+          if [[ "$TAG" =~ [0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.-]+$ ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ $TAG is a pre-release: the alias tags stay where they are"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Find release PRs to notify
         id: find-prs
@@ -226,8 +257,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PRS: ${{ steps.rp.outputs.prs }}
           PENDING_LABEL: ${{ inputs.release-pending-label }}
+          # The release PR of this flow only: with a target-branch flow next to
+          # the default branch's, both PRs carry the pending label.
+          BASE_BRANCH: ${{ inputs.target-branch || github.event.repository.default_branch }}
         shell: bash
         run: |
+          BASE_ARGS=()
+          if [ -n "$BASE_BRANCH" ]; then
+            BASE_ARGS=(--base "$BASE_BRANCH")
+          fi
           if [ -n "$PRS" ] && [ "$PRS" != "null" ]; then
             NUMBERS=$(echo "$PRS" | jq -r '.[].number')
           else
@@ -235,6 +273,7 @@ jobs:
               --repo "$GITHUB_REPOSITORY" \
               --label "$PENDING_LABEL" \
               --state open \
+              "${BASE_ARGS[@]}" \
               --json number --jq '.[].number' \
               || true)
           fi
@@ -297,7 +336,8 @@ jobs:
   tag-workflows:
     name: Tag @v<major> alias (@v0.<minor> before 1.0)
     needs: release
-    if: needs.release.outputs.released == 'true'
+    # A pre-release (see "Classify the release") moves no alias.
+    if: needs.release.outputs.released == 'true' && needs.release.outputs.prerelease != 'true'
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 10
     permissions:
