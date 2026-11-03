@@ -7,6 +7,9 @@ title: Pre-release
 Publishes pre-releases of a long-lived integration branch, such as `dev`, whose final
 releases ship from another branch through [release.yml](./release.md). Each pre-release is
 `v<next>-<type>.<n>`, a GitHub pre-release tagged on the commit and never marked latest.
+Nothing is asked of anyone: each releasable push is pre-released. To review and merge a
+pull request for each pre-release instead, run release-please on that branch too:
+[release.yml](./release.md#pre-releases-from-a-second-branch), with `target-branch`.
 
 ## Usage
 
