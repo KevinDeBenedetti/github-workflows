@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.37.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.36.1...v0.37.0) (2026-11-03)
+
+
+### Features
+
+* **cleanup-ghcr:** let pre-release images go with use-regex ([85cafc4](https://github.com/KevinDeBenedetti/github-workflows/commit/85cafc476a50f4a8676fc871c50fc0240eb80b28))
+* **release:** cut pre-releases from a second branch with target-branch ([7782b49](https://github.com/KevinDeBenedetti/github-workflows/commit/7782b495151d26f22113bf188c6de7187166b79a))
+
 ## [0.36.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.36.0...v0.36.1) (2026-11-01)
 
 
