@@ -15,7 +15,9 @@
 #
 # The retention policy is set here, once for every caller:
 #   packages        never deleted: the tags matching exclude-tags (releases and
-#                   moving tags) and every image younger than older-than. Among
+#                   moving tags; with use-regex, a regular expression that can
+#                   leave pre-releases out) and every image younger than
+#                   older-than. Among
 #                   the older images, the keep-n-tagged most recent tagged ones
 #                   stay; the other tagged images and the untagged ones go.
 #   cache-packages  registry layer caches (<image>-cache, written by
@@ -47,11 +49,21 @@ on:
         default: ''
       exclude-tags:
         description: >
-          Comma-separated tags never deleted (wildcards). The default keeps the
-          release tags (v1.2.3, 1.2) and the moving tags.
+          Comma-separated tags never deleted (wildcards), or a regular expression
+          with use-regex. The default keeps the release tags (v1.2.3, 1.2) and the
+          moving tags, and with them every pre-release (v1.2.3-rc.4).
         type: string
         required: false
         default: 'latest,stable,main,dev,v*,*.*'
+      use-regex:
+        description: >
+          Read exclude-tags as a regular expression, which wildcards cannot
+          make keep the releases but not their pre-releases, e.g.
+          ^(latest|stable|main|dev|v\d+\.\d+\.\d+|\d+\.\d+)$. The layer
+          caches keep their own wildcard rules.
+        type: boolean
+        required: false
+        default: false
       older-than:
         description: Only versions older than this are touched (e.g. "30 days", "8 weeks")
         type: string
@@ -117,6 +129,8 @@ jobs:
         with:
           packages: ${{ steps.resolve.outputs.images }}
           exclude-tags: ${{ inputs.exclude-tags }}
+          # Tags only: without expand-packages, `packages` stays a plain list.
+          use-regex: ${{ inputs.use-regex }}
           older-than: ${{ inputs.older-than }}
           keep-n-tagged: ${{ inputs.keep-n-tagged }}
           delete-untagged: true
