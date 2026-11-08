@@ -1,3 +1,7 @@
+---
+title: Perf — Unlighthouse
+---
+
 # Perf — Unlighthouse
 
 [Unlighthouse](https://unlighthouse.dev/) audits **every page** of a site with
@@ -35,7 +39,7 @@ jobs:
 | `urls`                 | string | `""`               | Comma-separated paths to audit instead of crawling               |
 | `exclude-urls`         | string | `""`               | Comma-separated paths or regexes to skip                         |
 | `unlighthouse-version` | string | `<version>`        | `@unlighthouse/cli` version, bumped by Renovate                  |
-| `runner`               | string | `'"ubuntu-latest"'` | Runner labels as JSON                                           |
+| `runner`               | string | `'"ubuntu-26.04"'`  | Runner labels as JSON                                           |
 
 ## Notes
 

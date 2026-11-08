@@ -1,3 +1,7 @@
+---
+title: Action — detect-changes
+---
+
 # Action — detect-changes
 
 Detects which subdirectories under `apps/` (or a custom directory) have changed since the
@@ -8,7 +12,7 @@ last commit, and outputs a JSON matrix for use in downstream matrix jobs.
 ```yaml
 jobs:
   detect:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       changed-apps: ${{ steps.changes.outputs.changed-apps }}
       has-changes:  ${{ steps.changes.outputs.has-changes }}
@@ -28,7 +32,7 @@ jobs:
     strategy:
       matrix:
         app: ${{ fromJson(needs.detect.outputs.changed-apps) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - run: echo "Building ${{ matrix.app }}"
 ```

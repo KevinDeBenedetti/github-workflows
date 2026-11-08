@@ -46,10 +46,10 @@ on:
         required: false
         default: false
       runner:
-        description: Runner labels as JSON — '"ubuntu-latest"' or '["self-hosted","linux"]' (Linux with bash, curl and jq)
+        description: Runner labels as JSON — '"ubuntu-26.04"' or '["self-hosted","linux"]' (Linux with bash, curl and jq)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # Deny-all default: the job grants only the permissions it needs.
 permissions: {}

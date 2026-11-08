@@ -64,7 +64,7 @@ jobs:
   # rebuild on the central site. If any check fails, `dispatch` is skipped.
   verify:
     name: Verify docs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     permissions:
       contents: read
@@ -98,7 +98,7 @@ jobs:
     name: Dispatch docs-updated → ${{ inputs.target-repo }}
     needs: verify
     if: inputs.client-id != ''
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read

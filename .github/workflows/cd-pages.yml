@@ -45,7 +45,7 @@ concurrency:
 jobs:
   build:
     name: Build (${{ inputs.working-directory }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     # The build runs the project's install/build scripts: read-only token.
     permissions:
@@ -87,7 +87,7 @@ jobs:
   deploy:
     name: Deploy to GitHub Pages
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     environment:
       name: github-pages

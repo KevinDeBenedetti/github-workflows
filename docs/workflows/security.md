@@ -35,7 +35,7 @@ jobs:
 | `dependency-review-fail-on-severity` | string | `moderate`              | Lowest advisory severity that fails the review                              |
 | `run-codeql`               | boolean | `true`                          | Run CodeQL SAST analysis                                                    |
 | `codeql-languages`         | string  | `'["javascript-typescript"]'` | JSON array of CodeQL languages — JS and TS are one language: `javascript-typescript` |
-| `runner`                   | string  | `'"ubuntu-latest"'`             | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
+| `runner`                   | string  | `'"ubuntu-26.04"'`              | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set)  |
 
 ## Jobs
 
@@ -54,7 +54,7 @@ jobs:
 - Only the PR scan is a real gate: on a push to a feature branch, the trusted commit is the branch's previous tip, which its author controls. Make the secret scan a required check on pull requests.
 - Inline `gitleaks:allow` comments still silence their line (existing fixtures keep working); the job warns when a change adds one. Set `secret-scan-ignore-inline-allow: true` to disregard them.
 - A trusted `.gitleaks.toml` that `[extend]`s a `path` inside the repository: that file is restored from the trusted commit too (and its changes are flagged like the config's). Paths outside the repository (absolute, or with `..`) fail the job.
-- `audit-node` runs `pnpm audit`, `npm audit` or `bun audit` depending on the detected package manager, without installing the project: the audit reads the lockfile, so no dependency lifecycle script runs in this job.
+- `audit-node` runs `pnpm audit`, `npm audit` or `bun audit` depending on the detected package manager, without installing the project or restoring its dependency cache: the audit reads the lockfile, so no dependency lifecycle script runs in this job.
 - CodeQL analyses interpreted languages with `build-mode: none`; compiled ones (`go`, `c-cpp`, `swift`) use `autobuild`.
 - Gitleaks SARIF results are uploaded to the Security tab on failure, unless `secret-scan-upload-sarif: false`. On a private repository without GitHub Code Security, code scanning is unavailable and the upload fails; the step is `continue-on-error`, so only its error annotations show it. Turn the upload off there: the findings stay in the job log.
 - CodeQL runs in a matrix — add multiple languages to scan them in parallel.

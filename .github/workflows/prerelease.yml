@@ -49,10 +49,10 @@ on:
         required: false
         default: ""
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '["self-hosted","linux","k3s"]'
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '["self-hosted","linux","k3s"]'
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
     outputs:
       releasable:
         description: true when a feat, fix, perf, revert or breaking change landed since the last final tag

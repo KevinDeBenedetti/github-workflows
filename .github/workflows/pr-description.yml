@@ -41,10 +41,10 @@ on:
         required: false
         default: 100000
       runner:
-        description: Runner labels as JSON — '"ubuntu-latest"' or '["self-hosted","linux"]' (Linux x64 or arm64 with glibc, curl, git, jq and python3)
+        description: Runner labels as JSON — '"ubuntu-26.04"' or '["self-hosted","linux"]' (Linux x64 or arm64 with glibc, curl, git, jq and python3)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
     secrets:
       CLAUDE_CODE_OAUTH_TOKEN:
         description: >

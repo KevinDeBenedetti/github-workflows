@@ -1,3 +1,7 @@
+---
+title: CI — prek hooks
+---
+
 # CI — prek hooks
 
 Runs the calling repository's [prek](https://prek.j178.dev) (pre-commit) hooks in
@@ -15,7 +19,7 @@ jobs:
   prek:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-prek.yml@main
     with:
-      runner: '"ubuntu-latest"'
+      runner: '"ubuntu-26.04"'
 ```
 
 Run a single hook instead of the whole suite:
@@ -33,7 +37,7 @@ Run a single hook instead of the whole suite:
 | `working-directory` | string  | `.`                 | Directory holding the prek config                             |
 | `prek-version`      | string  | `0.4.12`            | prek release to install, without the leading `v` (or `latest`) |
 | `cache`             | boolean | `true`              | Cache the prek hook environments between runs                 |
-| `runner`            | string  | `'"ubuntu-latest"'` | Runner labels as JSON — `'"ubuntu-latest"'` or a label array  |
+| `runner`            | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array   |
 
 ## Steps
 

@@ -19,7 +19,7 @@ jobs:
   # ── Detect changed apps ───────────────────────────────────────────────────
   detect:
     name: Detect changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       changed-api:    ${{ steps.detect.outputs.changed-api }}
       changed-web:    ${{ steps.detect.outputs.changed-web }}

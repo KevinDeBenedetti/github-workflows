@@ -63,7 +63,7 @@ jobs:
 | `config`       | string | `""`                | Lighthouse CI config in the caller repository; empty measures without assertions    |
 | `version-url`  | string | `""`                | JSON document whose `version` is the release tag the site runs; empty: run's commit |
 | `lhci-version` | string | `<version>`         | `@lhci/cli` version, bumped by Renovate                                             |
-| `runner`       | string | `'"ubuntu-latest"'` | Runner labels as JSON                                                               |
+| `runner`       | string | `'"ubuntu-26.04"'`  | Runner labels as JSON                                                               |
 
 ## Notes
 

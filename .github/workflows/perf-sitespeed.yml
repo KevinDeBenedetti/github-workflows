@@ -54,10 +54,10 @@ on:
         default: perf-history
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew LCP/TTFB)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew LCP/TTFB)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   # `device` is a plain string in both: workflow_call has no `choice` type.
@@ -90,10 +90,10 @@ on:
         default: perf-history
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew LCP/TTFB)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew LCP/TTFB)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}

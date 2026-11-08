@@ -123,7 +123,7 @@ template.
 | `effort`         | string | `medium`                    | Claude Code effort level (`low` to `max`); empty for Claude Code's default      |
 | `language`       | string | `English`                   | Language of the text; the section headings stay in English                      |
 | `max-diff-bytes` | number | `100000`                    | Size cap of each block sent to Claude (commits, diffstat, diff), max `3000000`  |
-| `runner`         | string | `'"ubuntu-latest"'`         | Runner labels as JSON: Linux x64 or arm64 with glibc, curl, git, jq, python3    |
+| `runner`         | string | `'"ubuntu-26.04"'`          | Runner labels as JSON: Linux x64 or arm64 with glibc, curl, git, jq, python3    |
 
 ## Secrets
 

@@ -115,7 +115,7 @@ actions.
 | `app-client-id` | string  | required            | Client ID of the GitHub App                                             |
 | `auto-merge`    | boolean | `true`              | Turn on auto-merge on each pull request                                 |
 | `dry-run`       | boolean | `false`             | Log what would move, write nothing                                      |
-| `runner`        | string  | `'"ubuntu-latest"'` | Runner labels as JSON; Linux with bash, curl, jq and python3            |
+| `runner`        | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON; Linux with bash, curl, jq and python3            |
 
 ## Secrets
 

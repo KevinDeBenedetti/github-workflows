@@ -16,10 +16,10 @@ on:
         required: false
         default: true
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}

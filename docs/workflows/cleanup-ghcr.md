@@ -81,7 +81,7 @@ The policy is set once, in this workflow, for every caller:
 | `older-than`     | string  | `30 days`                         | Only versions older than this are touched (`8 weeks`, `6 months`…)   |
 | `keep-n-tagged`  | number  | `10`                              | Most recent tagged images kept among those older than `older-than`   |
 | `dry-run`        | boolean | `false`                           | Log what would be deleted, delete nothing                            |
-| `runner`         | string  | `'"ubuntu-latest"'`               | Runner labels as JSON                                                |
+| `runner`         | string  | `'"ubuntu-26.04"'`                | Runner labels as JSON                                                |
 
 `packages` defaults to the repository name, the name [`cd-docker`](./cd-docker.md)
 and [`cd-buildkit`](./cd-buildkit.md) give the image when their `image-name`

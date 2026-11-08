@@ -1,3 +1,7 @@
+---
+title: CI — Node.js
+---
+
 # CI — Node.js
 
 Runs **lint → typecheck → test → build** for a Node.js application.
@@ -31,7 +35,7 @@ jobs:
 | `build-artifact-name` | string  | `build` | Name of the uploaded artifact                                                    |
 | `run-link-check`      | boolean | `false` | Check markdown files for broken relative links (offline, no HTTP requests)       |
 | `link-check-paths`    | string  | `docs/` | Space-separated paths or directories of markdown files to check                  |
-| `runner`              | string  | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
+| `runner`              | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set)  |
 | `timeout-minutes`     | number  | `30`    | Minutes before the job is cancelled (GitHub's default is 360) — raise it for a slow build |
 
 ## Secrets
@@ -49,7 +53,7 @@ jobs:
 5. Test (with `test-args`, default `--passWithNoTests`, for pnpm/npm)
 6. Build
 7. Upload artifact *(only when `upload-build: true`)*
-8. Link check *(only when `run-link-check: true`)*
+8. Link check *(only when `run-link-check: true`)*; Markdown without any link passes
 
 ## Notes
 

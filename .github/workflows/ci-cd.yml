@@ -78,7 +78,7 @@ jobs:
   # uses), so a PR that changes an action tests its own version of it.
   ci-actions:
     name: CI — Local actions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     permissions:
       contents: read
@@ -159,7 +159,7 @@ jobs:
   # pins, known-vulnerable action versions) use the read-only job token.
   ci-zizmor:
     name: CI — zizmor
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -230,7 +230,7 @@ jobs:
   # creates a branch has no `before` and is left to the PR check.
   ci-commits:
     name: CI — Commit messages
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -287,7 +287,7 @@ jobs:
     name: CI — Gate
     needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-commits, security]
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     permissions: {}
     steps:

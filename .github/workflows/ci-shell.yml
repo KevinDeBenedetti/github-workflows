@@ -101,10 +101,10 @@ on:
         required: false
         default: docs
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
     secrets:
       token:
         description: >
@@ -193,10 +193,10 @@ on:
         default: docs
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # The group carries the path input(s) so that one caller invoking this workflow
 # several times in the same run (e.g. one call per directory) gets one group per

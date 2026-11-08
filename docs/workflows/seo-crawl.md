@@ -1,3 +1,7 @@
+---
+title: SEO — Crawl
+---
+
 # SEO — Crawl
 
 SEO crawl of a live site, in one job:
@@ -5,8 +9,8 @@ SEO crawl of a live site, in one job:
 1. **Broken links and redirects** — [linkinator](https://github.com/JustinBeckwith/linkinator)
    crawls the site recursively. Broken links **fail the job** (GitHub's failure
    email is the alert).
-2. **On-page tags** — a small built-in crawler (sitemap + internal links)
-   reports, per page: missing or duplicate `<title>`, missing or duplicate meta
+2. **On-page tags** — a small built-in crawler (sitemap + internal links,
+   five pages at a time) reports, per page: missing or duplicate `<title>`, missing or duplicate meta
    description, missing or multiple `<h1>`, missing canonical. These are
    **warnings** in the step summary unless `fail-on-tag-issues` is `true`.
 
@@ -41,7 +45,7 @@ jobs:
 | `redirects`          | string  | `warn`              | `allow`, `warn` (log them) or `error` (treat as broken)        |
 | `fail-on-tag-issues` | boolean | `false`             | Fail on missing/duplicate tags instead of warning              |
 | `linkinator-version` | string  | `<version>`         | linkinator version, bumped by Renovate                         |
-| `runner`             | string  | `'"ubuntu-latest"'` | Runner labels as JSON                                          |
+| `runner`             | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON                                          |
 
 ## Notes
 

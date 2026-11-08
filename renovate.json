@@ -41,6 +41,26 @@
     },
     {
       "customType": "regex",
+      "description": "GitHub-hosted runner labels written as JSON strings ('\"ubuntu-26.04\"'): the `runner` input defaults and descriptions of the reusable workflows, and the docs that repeat them. The github-actions manager only reads literal `runs-on` values — never `fromJson(inputs.runner)` — so without this the defaults would stay behind every image bump.",
+      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^docs/.+\\.md$/"],
+      "datasourceTemplate": "github-runners",
+      "versioningTemplate": "docker",
+      "matchStrings": [
+        "'\"(?<depName>ubuntu)-(?<currentValue>\\d+\\.\\d+(?:-arm)?)\"'"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "Literal `runs-on: ubuntu-…` labels outside .github/ — the examples copied into other repositories and the docs' snippets — which the github-actions manager does not scan.",
+      "managerFilePatterns": ["/^examples/.+\\.ya?ml$/", "/^docs/.+\\.md$/"],
+      "datasourceTemplate": "github-runners",
+      "versioningTemplate": "docker",
+      "matchStrings": [
+        "runs-on: (?<depName>ubuntu)-(?<currentValue>\\d+\\.\\d+(?:-arm)?)"
+      ]
+    },
+    {
+      "customType": "regex",
       "description": "prek hook revs (prek.toml) — inline renovate comments (datasource=github-tags). No manager understands prek/pre-commit TOML, so without this the hook pins only move when someone remembers to run `prek autoupdate`.",
       "managerFilePatterns": ["/^prek\\.toml$/"],
       "matchStrings": [
@@ -85,6 +105,13 @@
       "description": "Label GitHub Actions updates",
       "matchManagers": ["github-actions"],
       "addLabels": ["dependencies", "github-actions"]
+    },
+    {
+      "description": "A runner image bump moves every label at once — the literal `runs-on` (github-actions manager), the `runner` input defaults and the docs (custom managers above) — in one pull request, since callers get the image of the release they pin.",
+      "matchDatasources": ["github-runners"],
+      "groupName": "GitHub-hosted runner image",
+      "addLabels": ["dependencies", "github-actions"],
+      "prBodyNotes": ["⚠️ New runner image: read its announcement in actions/runner-images (removed tools, changed defaults) before merging."]
     }
   ]
 }

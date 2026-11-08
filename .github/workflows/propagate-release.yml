@@ -43,10 +43,10 @@ on:
         required: false
         default: false
       runner:
-        description: Runner labels as JSON — '"ubuntu-latest"' or '["self-hosted","linux"]' (Linux with bash, curl, jq and python3)
+        description: Runner labels as JSON — '"ubuntu-26.04"' or '["self-hosted","linux"]' (Linux with bash, curl, jq and python3)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
     secrets:
       APP_PRIVATE_KEY:
         description: Private key of the GitHub App

@@ -50,10 +50,10 @@ on:
         # renovate: datasource=npm depName=@unlighthouse/cli
         default: 0.19.1
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew scores)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -88,10 +88,10 @@ on:
         # renovate: datasource=npm depName=@unlighthouse/cli
         default: 0.19.1
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew scores)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}

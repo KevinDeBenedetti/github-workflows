@@ -4,14 +4,20 @@ on:
   workflow_call:
     inputs:
       release-type:
-        description: release-please release type (node, python, simple…). Ignored when config-file is provided.
+        description: >
+          release-please release type (node, python, simple…) for a repository
+          without a release-please config. When set, release-please builds its
+          config from the inputs and ignores config-file and manifest-file.
         type: string
         required: false
         default: ''
       initial-version:
         description: >
-          Initial version for new releases (e.g., '0.1.0', '1.0.0').
-          Only used if manifest file doesn't exist. Customize per repository needs.
+          First version to release (e.g. '0.1.0', '1.0.0'), named in the warning
+          printed when the manifest is not committed. release-please reads the
+          manifest from the branch, never from this checkout, so the workflow
+          cannot create it: commit it as {} and set "initial-version" in the
+          release-please config.
         type: string
         required: false
         default: '1.0.0'
@@ -53,10 +59,10 @@ on:
         required: false
         default: ''
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
       notify-reviewers:
         description: >
           Comma-separated GitHub usernames to request a review from on the
@@ -160,7 +166,6 @@ jobs:
         env:
           INPUT_CONFIG_FILE: ${{ inputs.config-file }}
           INPUT_MANIFEST_FILE: ${{ inputs.manifest-file }}
-          INPUT_INITIAL_VERSION: ${{ inputs.initial-version }}
         shell: bash
         run: |
           # Determine config file path
@@ -184,23 +189,25 @@ jobs:
           {
             echo "config-file=$CONFIG_FILE"
             echo "manifest-file=$MANIFEST_FILE"
-            echo "initial-version=$INPUT_INITIAL_VERSION"
           } >> "$GITHUB_OUTPUT"
           echo "ℹ️ Using config: $CONFIG_FILE"
           echo "ℹ️ Using manifest: $MANIFEST_FILE"
-          echo "ℹ️ Initial version: $INPUT_INITIAL_VERSION"
 
-      - name: Initialize manifest with custom version
+      - name: Check the manifest is committed
+        # release-please reads its config and manifest from the branch through
+        # the API, never from this checkout: a manifest written here would be
+        # ignored, and a missing one fails the release ("Missing required
+        # manifest versions"). This step used to write one, to no effect.
+        # Skipped with release-type, where no manifest is read at all.
+        if: inputs.release-type == ''
         env:
+          CONFIG_FILE: ${{ steps.detect-paths.outputs.config-file }}
           MANIFEST_FILE: ${{ steps.detect-paths.outputs.manifest-file }}
-          INITIAL_VERSION: ${{ steps.detect-paths.outputs.initial-version }}
+          INITIAL_VERSION: ${{ inputs.initial-version }}
         shell: bash
         run: |
           if [ ! -f "$MANIFEST_FILE" ]; then
-            mkdir -p "$(dirname "$MANIFEST_FILE")"
-            # printf %s keeps the version a literal value (never shell-expanded)
-            printf '{\n  ".": "%s"\n}\n' "$INITIAL_VERSION" > "$MANIFEST_FILE"
-            echo "✅ Created manifest with initial version: $INITIAL_VERSION"
+            echo "::warning::${MANIFEST_FILE} is not committed, and release-please only reads it from the branch. To start the releases at ${INITIAL_VERSION}, commit ${MANIFEST_FILE} containing {} and set \"initial-version\": \"${INITIAL_VERSION}\" in ${CONFIG_FILE}."
           fi
 
       - name: Warn about deprecated token inputs

@@ -1,3 +1,7 @@
+---
+title: CI — Helm
+---
+
 # CI — Helm
 
 Runs **helm lint** and an optional **helm template dry-run** across one or more charts.
@@ -25,7 +29,7 @@ jobs:
 | `run-template`            | boolean | `false`       | Run `helm template` dry-run on all charts to catch render errors         |
 | `template-values`         | string  | `''`          | Optional path to a values file used during `helm template`              |
 | `template-exclude-paths`  | string  | `''`          | Space-separated chart paths to skip during the template dry-run only (lint still covers them) |
-| `runner`                  | string  | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
+| `runner`                  | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set)  |
 
 ## Steps
 
