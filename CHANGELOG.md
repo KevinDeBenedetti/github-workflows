@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.39.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.39.0...v0.39.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* **security:** scan a force-pushed branch from its fork point on the default branch ([3964d95](https://github.com/KevinDeBenedetti/github-workflows/commit/3964d95f7301577dfa1df004c44437e36d50148f))
+
 ## [0.39.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.38.0...v0.39.0) (2026-11-03)
 
 
