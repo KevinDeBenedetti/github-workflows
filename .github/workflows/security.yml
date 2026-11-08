@@ -280,6 +280,7 @@ jobs:
       - name: Gitleaks
         env:
           EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
           BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
@@ -309,6 +310,17 @@ jobs:
             && has_commit "$BEFORE"; then
             RANGE="${BEFORE}..HEAD"
             TRUSTED="$BEFORE"
+          elif [ "$EVENT" = "push" ] && [ -n "$DEFAULT_BRANCH" ] \
+            && [ "$REF" != "refs/heads/${DEFAULT_BRANCH}" ] \
+            && has_commit "refs/remotes/origin/${DEFAULT_BRANCH}" \
+            && BASE=$(git merge-base "refs/remotes/origin/${DEFAULT_BRANCH}" HEAD); then
+            # BEFORE is not in the clone: a force push rewrote it away, or the
+            # branch is new. Scan what the branch holds beyond the default
+            # branch, whose own pushes scan the rest, with the config of the
+            # commit it forks from. A full-history scan here would run without
+            # any ignore list, and fail on every finding already triaged.
+            RANGE="${BASE}..HEAD"
+            TRUSTED="$BASE"
           elif [ "$EVENT" = "workflow_dispatch" ] && [ -n "$DEFAULT_BRANCH" ] \
             && has_commit "refs/remotes/origin/${DEFAULT_BRANCH}"; then
             # Manual run: no range, so scan everything that was fetched, with
@@ -321,11 +333,14 @@ jobs:
             RANGE=""
             TRUSTED="HEAD"
           else
-            # First push of a branch, or the range fell outside a shallow
-            # clone: scan everything that was fetched. No commit predates the
-            # range, so the scan falls back to the default rules.
+            # No trusted commit to start from: the range fell outside a shallow
+            # clone (which lacks the default branch), or the default branch
+            # itself was force-pushed or pushed for the first time. Scan
+            # everything that was fetched, with the default rules.
             if [ "$EVENT" = "workflow_dispatch" ]; then
               echo "::warning::The default branch (${DEFAULT_BRANCH:-unknown}) is not in this clone: a finite secret-scan-fetch-depth fetches the triggering branch only. Gitleaks' default rules apply, without the repository's ignore list."
+            elif [ "$EVENT" = "push" ]; then
+              echo "::warning::No trusted commit to start the scan from: the commit before this push (${BEFORE:0:7}) is not in this clone, and the default branch cannot stand in for it. All fetched history is scanned with gitleaks' default rules, without the repository's ignore list — findings already triaged there are reported again."
             fi
             RANGE=""
             TRUSTED=""
