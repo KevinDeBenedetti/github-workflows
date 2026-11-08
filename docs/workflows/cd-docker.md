@@ -1,3 +1,7 @@
+---
+title: Deploy — Docker
+---
+
 # Deploy — Docker
 
 Builds a multi-platform Docker image and pushes it to **GitHub Container Registry (GHCR)**.
@@ -58,7 +62,7 @@ jobs:
 
 - Uses `docker/metadata-action` for automatic tag and label generation.
 - Build cache is scoped per `context` using GitHub Actions cache (`type=gha`).
-- QEMU is registered only when `platforms` names something other than `linux/amd64`, the runner's own architecture. An `arm64` image built this way runs under emulation, several times slower than a native build: for a large image, build each platform on its own runner (GitHub's `ubuntu-24.04-arm` label for the arm64 half) and merge the manifests, as Docker documents, or drop `linux/arm64` from `platforms` when nothing deploys on it.
+- QEMU is registered only when `platforms` names something other than `linux/amd64`, the runner's own architecture. An `arm64` image built this way runs under emulation, several times slower than a native build: for a large image, build each platform on its own runner (GitHub's `ubuntu-26.04-arm` label for the arm64 half) and merge the manifests, as Docker documents, or drop `linux/arm64` from `platforms` when nothing deploys on it.
 - `timeout-minutes` cuts off a build stuck on a pull or an emulated step: without it the job holds the runner (and bills the minutes) for up to 6 hours.
 - Each build adds a `sha-*` tag, and each platform image and attestation is an untagged version in GHCR: [`cleanup-ghcr`](./cleanup-ghcr.md) deletes the old ones on a schedule without breaking multi-arch images.
 - The job runs in the `production` environment on `main`, otherwise `preview`.

@@ -85,10 +85,10 @@ on:
         required: false
         default: true
       runner:
-        description: Runner labels as JSON — a GitHub-hosted ubuntu-… label (e.g. '"ubuntu-latest"') runs Docker Buildx, any other label (the name of an ARC runner scale set set up for image builds) runs rootless BuildKit
+        description: Runner labels as JSON — a GitHub-hosted ubuntu-… label (e.g. '"ubuntu-26.04"') runs Docker Buildx, any other label (the name of an ARC runner scale set set up for image builds) runs rootless BuildKit
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
       timeout-minutes:
         description: >
           Minutes before the build job is cancelled (GitHub's default is 360):
@@ -157,7 +157,7 @@ on:
       runner:
         description: Runner labels as JSON
         type: string
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
       timeout-minutes:
         description: Minutes before the build job is cancelled (GitHub's default is 360)
         type: number

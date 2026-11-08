@@ -44,7 +44,7 @@ perf/budget.json  # {"budget": {"googleWebVitals": {"largestContentfulPaint": 25
 | `device`          | string  | `desktop`                                  | `desktop`, `mobile`, or `both` (matrix of the two)                  |
 | `sitespeed-image` | string  | `sitespeedio/sitespeed.io:<tag>@sha256:…`  | Image pinned by tag + digest, bumped by Renovate                    |
 | `history-branch`  | string  | `perf-history`                             | Branch receiving `history.csv` (orphan if missing). Empty disables  |
-| `runner`          | string  | `'"ubuntu-latest"'`                        | Runner labels as JSON                                               |
+| `runner`          | string  | `'"ubuntu-26.04"'`                         | Runner labels as JSON                                               |
 
 ## Jobs
 

@@ -92,10 +92,10 @@ on:
         default: '["javascript-typescript"]'
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -150,10 +150,10 @@ on:
         default: '["javascript-typescript"]'
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
@@ -178,12 +178,15 @@ jobs:
       # No install: pnpm, npm and bun audit the lockfile against the advisory
       # database, so installing the project would be wasted time — and would
       # run the lifecycle scripts of every dependency in this job for nothing.
+      # No dependency cache either: with nothing installed, restoring the
+      # package store would only download it.
       - name: Setup Node.js
         id: setup
         uses: $/.github/actions/setup-node
         with:
           working-directory: ${{ inputs.node-working-directory }}
           install: 'false'
+          cache: 'false'
 
       - name: Audit dependencies
         working-directory: ${{ inputs.node-working-directory }}
@@ -268,7 +271,9 @@ jobs:
           esac
           INSTALL_DIR="$RUNNER_TEMP/gitleaks"
           mkdir -p "$INSTALL_DIR"
-          curl --retry 3 --retry-delay 5 -sSfL \
+          # Same retries as the composite actions' tool installs: without
+          # --retry-all-errors, a refused or reset connection is not retried.
+          curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${ARCH}.tar.gz" \
             -o "$RUNNER_TEMP/gitleaks.tar.gz"
           if [ "$KEY" = amd64 ]; then WANT="$GITLEAKS_SHA256_amd64"; else WANT="$GITLEAKS_SHA256_arm64"; fi

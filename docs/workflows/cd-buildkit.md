@@ -1,3 +1,7 @@
+---
+title: CD — BuildKit
+---
+
 # CD — BuildKit
 
 Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless inside the job container on a self-hosted Kubernetes (ARC) runner, or through **Docker Buildx** on a GitHub-hosted runner. The `runner` input picks the path, and the caller changes nothing else: tags, provenance, SBOM and the registry layer cache are the same on both.
@@ -21,7 +25,7 @@ jobs:
       context: apps/api
       version: ${{ needs.release.outputs.version }}
       tag-latest: true
-      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-latest
+      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-26.04
     secrets:
       BUILD_SECRETS: |
         npm_token=${{ secrets.NPM_TOKEN }}
@@ -31,7 +35,7 @@ jobs:
 
 | `runner` input                                                         | Job        | Builder                                                                                             |
 | ---------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| A GitHub-hosted label starting with `ubuntu-`, e.g. `'"ubuntu-latest"'` (the default) | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
+| A GitHub-hosted label starting with `ubuntu-`, e.g. `'"ubuntu-26.04"'` (the default)  | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
 | Any other label, the ARC scale set set up for image builds               | `buildkit` | Rootless BuildKit in the job container: needs the [cluster prerequisites](#cluster-prerequisites) |
 
 Both paths build for the runner's native platform: use an x86_64 runner for an x86_64 cluster. One repository variable can then move every job, image builds included:
@@ -55,7 +59,7 @@ Both paths build for the runner's native platform: use an x86_64 runner for an x
 | `build-args` | string  | `''`                                       | Build args, one per line, `KEY=VALUE`. **Never secrets** — use `BUILD_SECRETS`       |
 | `provenance` | string  | `mode=max`                                 | SLSA provenance (`mode=max`, `mode=min`, `false`). `mode=max` records the build-args |
 | `sbom`       | boolean | `true`                                     | Attach an SBOM attestation                                                           |
-| `runner`     | string  | `'"ubuntu-latest"'`                        | Runner labels as JSON; picks the path (see [Runners](#runners))                      |
+| `runner`     | string  | `'"ubuntu-26.04"'`                         | Runner labels as JSON; picks the path (see [Runners](#runners))                      |
 | `timeout-minutes` | number | `60`                                  | Minutes before the build job is cancelled (GitHub's default is 360)                  |
 
 ## Secrets

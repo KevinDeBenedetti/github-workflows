@@ -38,6 +38,13 @@ inputs:
     description: Run install after setup
     required: false
     default: 'true'
+  cache:
+    description: >
+      Restore and save the package manager's download cache. Set 'false' in a
+      job that installs nothing, such as a lockfile audit: it would download
+      the whole store for nothing.
+    required: false
+    default: 'true'
 
 outputs:
   package-manager:
@@ -164,14 +171,14 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - name: Get pnpm store path
-      if: steps.resolve.outputs.pm == 'pnpm'
+      if: steps.resolve.outputs.pm == 'pnpm' && inputs.cache == 'true'
       id: pnpm-store
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
     - name: Restore pnpm cache
-      if: steps.resolve.outputs.pm == 'pnpm'
+      if: steps.resolve.outputs.pm == 'pnpm' && inputs.cache == 'true'
       id: cache-pnpm
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
@@ -197,7 +204,7 @@ runs:
         node-version: ${{ inputs.node-version }}
 
     - name: Restore bun cache
-      if: steps.resolve.outputs.pm == 'bun'
+      if: steps.resolve.outputs.pm == 'bun' && inputs.cache == 'true'
       id: cache-bun
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
@@ -214,7 +221,10 @@ runs:
       uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
       with:
         node-version: ${{ inputs.node-version }}
-        cache: npm
+        cache: ${{ inputs.cache == 'true' && 'npm' || '' }}
+        # Off with the cache input: setup-node otherwise caches npm by itself
+        # when package.json names npm in packageManager or devEngines.
+        package-manager-cache: ${{ inputs.cache == 'true' }}
         cache-dependency-path: ${{ steps.resolve.outputs.npm-lockfile }}
 
     # ── 3. Install dependencies ───────────────────────────────────────────────

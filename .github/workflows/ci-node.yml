@@ -74,10 +74,10 @@ on:
         required: false
         default: 'docs/'
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
       timeout-minutes:
         description: >
           Minutes before the job is cancelled (GitHub's default is 360): a hung
@@ -147,9 +147,9 @@ on:
         type: string
         default: 'docs/'
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
       timeout-minutes:
         description: Minutes before the job is cancelled (GitHub's default is 360)
         type: number
@@ -236,6 +236,9 @@ jobs:
         with:
           args: --offline --no-progress ${{ inputs.link-check-paths }}
           fail: true
+          # Markdown without a single link is not an error: lychee-action fails
+          # on "no links found" by default, which ci-shell.yml opts out of too.
+          failIfEmpty: false
 
       # Next.js keeps an incremental compiler cache in .next/cache. Deps are
       # already cached by setup-node; this restores the build cache so unchanged

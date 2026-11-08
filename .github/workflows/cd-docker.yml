@@ -107,7 +107,7 @@ concurrency:
 jobs:
   docker:
     name: Docker build & push (${{ inputs.context }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: ${{ inputs.timeout-minutes }}
     environment: ${{ inputs.push && (github.ref == 'refs/heads/main' && 'production' || 'preview') || '' }}
     permissions:
@@ -215,7 +215,7 @@ jobs:
     name: Attest image provenance
     needs: docker
     if: inputs.push && inputs.attest
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 10
     permissions:
       id-token: write      # OIDC token for the Sigstore signing certificate

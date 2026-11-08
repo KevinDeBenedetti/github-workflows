@@ -52,10 +52,10 @@ on:
         # renovate: datasource=npm depName=linkinator
         default: 8.1.0
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -90,10 +90,10 @@ on:
         # renovate: datasource=npm depName=linkinator
         default: 8.1.0
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"'. Avoid cluster-internal runners
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
@@ -230,11 +230,22 @@ jobs:
             }
           }
 
+          // A worker that finds the queue empty waits while a page is still being
+          // fetched (it may queue more) and stops only once none is. Stopping at
+          // the first empty queue left one worker crawling a site with no
+          // sitemap: its queue starts with the home page alone.
+          let inFlight = 0;
           const workers = Array.from({ length: 5 }, async () => {
             while (pages.length < max) {
               const next = queue.shift();
-              if (!next) { await new Promise((r) => setTimeout(r, 200)); if (!queue.length) return; continue; }
-              await visit(next);
+              if (!next) {
+                if (inFlight === 0) return;
+                await new Promise((r) => setTimeout(r, 50));
+                continue;
+              }
+              inFlight++;
+              // A body cut off mid-read skips the page, as a failed fetch does.
+              try { await visit(next); } catch {} finally { inFlight--; }
             }
           });
           await Promise.all(workers);

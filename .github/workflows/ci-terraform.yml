@@ -29,10 +29,10 @@ on:
         default: 1.17.0
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -56,10 +56,10 @@ on:
         default: 1.17.0
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-latest"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
         type: string
         required: false
-        default: '"ubuntu-latest"'
+        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
@@ -98,13 +98,16 @@ jobs:
           # here consumes the wrapper's stdout/exitcode outputs.
           terraform_wrapper: false
 
+      # Keyed on the runner's OS and CPU: provider binaries are built per
+      # platform, and an arm64 job that hit the amd64 entry would download its
+      # providers on every run (an exact hit is never saved again).
       - name: Cache Terraform providers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ inputs.tf-dir }}/.terraform
-          key: terraform-${{ inputs.tf-dir }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.tf-dir)) }}
+          key: terraform-${{ runner.os }}-${{ runner.arch }}-${{ inputs.tf-dir }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.tf-dir)) }}
           restore-keys: |
-            terraform-${{ inputs.tf-dir }}-
+            terraform-${{ runner.os }}-${{ runner.arch }}-${{ inputs.tf-dir }}-
 
       - name: Terraform init (no backend)
         # Retry: provider downloads from registry.terraform.io intermittently

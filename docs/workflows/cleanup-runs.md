@@ -84,7 +84,7 @@ Every other run is deleted, oldest first, with its logs and artifacts.
 | `older-than-days` | number  | `30`                | Age, in days, before a run can be deleted (1 or more)             |
 | `max-deletions`   | number  | `500`               | Runs deleted at most in one run (1 to 1000)                       |
 | `dry-run`         | boolean | `false`             | Log what would be deleted, delete nothing                         |
-| `runner`          | string  | `'"ubuntu-latest"'` | Runner labels as JSON; a Linux runner with bash, curl and jq      |
+| `runner`          | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON; a Linux runner with bash, curl and jq      |
 
 ## Permissions
 

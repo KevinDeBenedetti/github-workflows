@@ -1,3 +1,7 @@
+---
+title: CI — Ansible
+---
+
 # CI — Ansible
 
 Runs **ansible-lint** and an optional **syntax check** over a directory of Ansible playbooks/roles.
@@ -25,7 +29,7 @@ jobs:
 | `fail-on-error`        | boolean | `true`             | Fail the job on lint violations; `false` runs in advisory mode (warnings)   |
 | `run-syntax-check`     | boolean | `false`            | Run `ansible-playbook --syntax-check` on matching playbooks                 |
 | `playbook-glob`        | string  | `'*.yml'`          | Glob (relative to `ansible-dir`) for playbooks to syntax-check              |
-| `runner`               | string  | `'"ubuntu-latest"'`| Runner labels as JSON — `'"ubuntu-latest"'` or a label array                |
+| `runner`               | string  | `'"ubuntu-26.04"'` | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array                 |
 
 ## Steps
 

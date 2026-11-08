@@ -45,13 +45,13 @@ publish.
 
 ## Inputs
 
-| Input             | Type    | Default           | Description                                                                                          |
-| ----------------- | ------- | ----------------- | ---------------------------------------------------------------------------------------------------- |
-| `publish`         | boolean | `false`           | Create the tag and the GitHub pre-release; `false` only computes it                                  |
-| `tag`             | string  | `''`              | With `publish`, the tag an earlier call computed, checked against this run's                         |
-| `prerelease-type` | string  | `rc`              | Pre-release identifier                                                                               |
-| `config-file`     | string  | `''`              | release-please config holding the bump rules; empty looks in `.github/release/`, then the repo root |
-| `runner`          | string  | `"ubuntu-latest"` | Runner labels as JSON                                                                                |
+| Input             | Type    | Default            | Description                                                                                          |
+| ----------------- | ------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `publish`         | boolean | `false`            | Create the tag and the GitHub pre-release; `false` only computes it                                  |
+| `tag`             | string  | `''`               | With `publish`, the tag an earlier call computed, checked against this run's                         |
+| `prerelease-type` | string  | `rc`               | Pre-release identifier                                                                               |
+| `config-file`     | string  | `''`               | release-please config holding the bump rules; empty looks in `.github/release/`, then the repo root |
+| `runner`          | string  | `'"ubuntu-26.04"'` | Runner labels as JSON                                                                                |
 
 ## Outputs
 

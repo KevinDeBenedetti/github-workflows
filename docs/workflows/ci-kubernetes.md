@@ -1,3 +1,7 @@
+---
+title: CI — Kubernetes
+---
+
 # CI — Kubernetes
 
 Validates Kubernetes manifests with **kubeconform** and optionally checks **`.env.example`** completeness.
@@ -26,7 +30,7 @@ jobs:
 | `run-env-example`                    | boolean | `false`              | Check that `.env.example` contains all required keys                        |
 | `env-example-required-keys`          | string  | `''`                 | Space-separated list of keys that must be present in `.env.example`         |
 | `env-example-file`                   | string  | `.env.example`       | Path to the `.env.example` file                                             |
-| `runner`                             | string  | `'"ubuntu-latest"'`  | Runner labels as JSON — `'"ubuntu-latest"'` or a label array                |
+| `runner`                             | string  | `'"ubuntu-26.04"'`   | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array                 |
 
 ## Steps
 

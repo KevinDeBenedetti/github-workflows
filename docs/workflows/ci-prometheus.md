@@ -1,3 +1,7 @@
+---
+title: CI — Prometheus rules
+---
+
 # CI — Prometheus rules
 
 Validates `PrometheusRule` CRDs: **PromQL parsing** (`promtool check rules`) and
@@ -16,7 +20,7 @@ jobs:
   prometheus-rules:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-prometheus.yml@main
     with:
-      runner: '"ubuntu-latest"'
+      runner: '"ubuntu-26.04"'
 ```
 
 ## Inputs
@@ -29,7 +33,7 @@ jobs:
 | `test-script`      | string  | `scripts/promtool-test.sh`  | Path to the unit-test script in the calling repo             |
 | `promtool-version` | string  | `3.13.2`                    | Prometheus release providing promtool (no leading `v`)       |
 | `yq-version`       | string  | `v4.53.3`                   | `mikefarah/yq` release tag (with leading `v`)                |
-| `runner`           | string  | `'"ubuntu-latest"'`         | Runner labels as JSON — `'"ubuntu-latest"'` or a label array |
+| `runner`           | string  | `'"ubuntu-26.04"'`          | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array  |
 
 ## Steps
 

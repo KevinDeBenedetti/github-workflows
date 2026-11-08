@@ -1,3 +1,7 @@
+---
+title: Action — actionlint
+---
+
 # Action — actionlint
 
 Validates GitHub Actions workflow files with [actionlint](https://github.com/rhysd/actionlint).
@@ -31,3 +35,11 @@ steps:
 - When `paths` points to a directory, all `.yml` and `.yaml` files within it are collected recursively.
 - Use `flags: '-ignore SC2086'` to suppress specific ShellCheck rules that actionlint embeds.
 - actionlint is downloaded fresh each run; no system-wide install is required.
+- actionlint does not know the `ubuntu-26.04` and `ubuntu-26.04-arm` runner labels yet, and fails a literal `runs-on: ubuntu-26.04` as an unknown label. List them in the repository's `.github/actionlint.yaml`, which actionlint reads by itself, as this repository does:
+
+  ```yaml
+  self-hosted-runner:
+    labels:
+      - ubuntu-26.04
+      - ubuntu-26.04-arm
+  ```

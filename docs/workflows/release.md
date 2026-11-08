@@ -28,14 +28,14 @@ jobs:
 
 | Input             | Type   | Default            | Description                                                                                                                           |
 | ----------------- | ------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `release-type`    | string | `''`               | release-please release type (e.g. `node`, `python`, `simple`). Ignored when `config-file` is provided.                              |
-| `initial-version` | string | `'1.0.0'`          | Initial version for new releases (e.g. `0.1.0`, `1.0.0`). Only used if the manifest file doesn't exist.                             |
+| `release-type`    | string | `''`               | release-please release type (e.g. `node`, `python`, `simple`) for a repo without a release-please config. When set, `config-file` and `manifest-file` are ignored. |
+| `initial-version` | string | `'1.0.0'`          | First version to release, named in the warning printed while the manifest is not committed (see [First release](#first-release)). |
 | `config-file`     | string | `''`               | Path to `release-please-config.json`. If empty, checks `.github/release/release-please-config.json` then `release-please-config.json`. |
 | `manifest-file`   | string | `''`               | Path to `.release-please-manifest.json`. If empty, checks `.github/release/.release-please-manifest.json` then `.release-please-manifest.json`. |
 | `target-branch`   | string | `''`               | Branch the release PR targets and releases are cut from, e.g. `dev` for [pre-releases from a second branch](#pre-releases-from-a-second-branch). Empty: the repository's default branch. |
 | `git-user-name`   | string | `''`               | Name for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_NAME` repo variable, then `github-actions[bot]`. |
 | `git-user-email`  | string | `''`               | Email for the git tagger identity when moving the major version tag. Falls back to the `GIT_USER_EMAIL` repo variable, then the Actions noreply address. |
-| `runner`          | string | `'"ubuntu-latest"'` | Runner labels as JSON — e.g. `'"ubuntu-latest"'` or `'"my-scale-set"'` (the name of an ARC runner scale set).                                     |
+| `runner`          | string | `'"ubuntu-26.04"'` | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set).                                      |
 | `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to request a review from when a release PR is opened, so each gets one GitHub notification. A user already asked to review that PR (by an earlier run, or by GitHub through CODEOWNERS) is skipped. Leave empty to disable. |
 | `release-pending-label` | string | `'autorelease: pending'` | Label used to find the open release PR on runs where release-please didn't create/update it (the fallback path for `notify-reviewers`). Override only if you customized `pull-request-label` in your release-please config. |
 | `pre-major-alias` | string | `both`             | Alias tag(s) moved while at 0.x: `both` (`v0` + `v0.<minor>`), `minor` (`v0.<minor>` only) or `major` (`v0` only). Ignored from 1.0. |
@@ -74,6 +74,23 @@ jobs:
 - Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.
 - Only a review request is sent — no @mention comment — so each user gets a single notification per release PR. When a listed user owns the release PR's files through CODEOWNERS, GitHub requests their review itself as the PR opens, and the workflow leaves them alone.
 - That fallback only looks at release PRs into `target-branch` (else the default branch): with a pre-release branch, both release PRs carry the pending label.
+
+## First release
+
+release-please reads its config and its manifest from the branch through the GitHub API, never from the workflow's checkout, and fails without a manifest (`Missing required manifest versions`). Before the first run, commit an empty manifest, `{}`, at the path `manifest-file` resolves to (`.github/release/.release-please-manifest.json` by default), and the first version in the config:
+
+```json
+{
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "initial-version": "0.1.0"
+    }
+  }
+}
+```
+
+Without `initial-version`, the first release is `1.0.0`. While the manifest is missing, the `release` job prints a warning naming both files. With `release-type` instead of a config, release-please reads neither.
 
 ## Pre-releases from a second branch
 

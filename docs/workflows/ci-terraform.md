@@ -1,3 +1,7 @@
+---
+title: CI — Terraform
+---
+
 # CI — Terraform
 
 Runs **terraform validate** and **terraform fmt -check** against a Terraform root module.
@@ -22,13 +26,13 @@ jobs:
 | `run-fmt-check`     | boolean | `true`               | Run `terraform fmt -check -diff` to enforce formatting       |
 | `tf-dir`            | string  | `terraform`          | Path to the Terraform root module directory                  |
 | `terraform-version` | string  | pinned (Renovate)    | Terraform version to install (`latest` still accepted)       |
-| `runner`            | string  | `'"ubuntu-latest"'`  | Runner labels as JSON — `'"ubuntu-latest"'` or a label array |
+| `runner`            | string  | `'"ubuntu-26.04"'`   | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array  |
 
 ## Steps
 
 1. Checkout
 2. Setup Terraform (`hashicorp/setup-terraform`, wrapper disabled)
-3. Cache Terraform providers (`.terraform`, keyed on `.terraform.lock.hcl`)
+3. Cache Terraform providers (`.terraform`, keyed on the runner's OS and CPU and on `.terraform.lock.hcl`)
 4. `terraform init -backend=false`
 5. _(if `run-validate`)_ `terraform validate`
 6. _(if `run-fmt-check`)_ `terraform fmt -check -diff`

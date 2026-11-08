@@ -1,6 +1,13 @@
-# No self-hosted labels listed: every `runs-on` here is an expression over the
-# `runner` input (actionlint does not check those), and the names of the ARC
-# scale sets stay out of this public repository.
+# Not self-hosted: GitHub-hosted labels that actionlint does not know yet
+# (1.7.12 and main stop at 24.04, checked 2026-11-08), so the literal
+# `runs-on: ubuntu-26.04` jobs pass the runner-label check. Drop once actionlint
+# lists them. The names of the ARC scale sets stay out of this public
+# repository: the `runs-on` that use them are expressions over the `runner`
+# input, which actionlint does not check.
+self-hosted-runner:
+  labels:
+    - ubuntu-26.04
+    - ubuntu-26.04-arm
 
 # `uses: $/…` (GitHub's self-repository syntax, 2026-07) is unknown to
 # actionlint (1.7.12 and main, checked 2026-10-24): it reports both forms as

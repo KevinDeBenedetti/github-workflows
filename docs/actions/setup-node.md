@@ -1,3 +1,7 @@
+---
+title: Action — setup-node
+---
+
 # Action — setup-node
 
 Installs Node.js and the correct package manager (**pnpm**, **bun** or **npm**), restoring the
@@ -24,6 +28,7 @@ steps:
 | `pnpm-version` | string | `''` | pnpm version. Empty → the `packageManager` field of `package.json` (working directory, then repo root), else a pinned release (bumped by Renovate) |
 | `bun-version` | string | pinned | Bun version installed when the package manager resolves to bun |
 | `install` | boolean | `true` | Run install after setup |
+| `cache` | boolean | `true` | Restore and save the dependency cache. `'false'` skips it, for a job that installs nothing (the Node.js audit of [security.yml](../workflows/security.md)) |
 
 ## Outputs
 
@@ -37,7 +42,7 @@ steps:
 
 1. Resolve package manager from the nearest lockfile — `working-directory` first, then the repository root, so workspace members work (`bun.lockb` / `bun.lock` → bun, `package-lock.json` → npm, otherwise → pnpm)
 2. Setup pnpm, bun or npm (with Node.js)
-3. Restore cache (pnpm store, `~/.bun/install/cache`, or `~/.npm` via setup-node), keyed on the hash of the resolved lockfile — the repository root's for a workspace member, so a monorepo app's cache follows its dependency set instead of sharing one never-refreshed entry
+3. Restore cache (pnpm store, `~/.bun/install/cache`, or `~/.npm` via setup-node), keyed on the hash of the resolved lockfile — the repository root's for a workspace member, so a monorepo app's cache follows its dependency set instead of sharing one never-refreshed entry. Skipped with `cache: 'false'`
 4. Install dependencies (`pnpm install --frozen-lockfile`, `bun install --frozen-lockfile` or `npm ci`, the latter run where `package-lock.json` lives)
 
 ## Notes

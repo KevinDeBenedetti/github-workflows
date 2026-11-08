@@ -1,3 +1,7 @@
+---
+title: Getting Started
+---
+
 # Getting Started
 
 `KevinDeBenedetti/github-workflows` is a library of reusable GitHub Actions workflows
@@ -21,6 +25,8 @@ jobs:
 Pass a workflow only the secrets it declares (a `secrets:` block naming each one) and grant the calling job only the permissions its page lists — never `secrets: inherit`. A reusable workflow gets at most what its caller grants. See the [security policy](https://github.com/KevinDeBenedetti/github-workflows/blob/main/SECURITY.md).
 
 > **Production tip:** Pin to a release tag (`@vX.Y.Z`) or the minor alias (`@v0.<minor>`) instead of `@main`. The workflows call their composite actions with `uses: $/…`, resolved to the workflow's own commit, so a pin covers the actions too.
+
+GitHub-hosted jobs run on `ubuntu-26.04`, a pinned image rather than `ubuntu-latest`: when GitHub moves `ubuntu-latest` to a new Ubuntu release, your jobs only change image with a release of these workflows, like any other change. A workflow with a `runner` input runs on any other label — another image (`runner: '["ubuntu-24.04"]'`), an arm64 runner or a self-hosted scale set.
 
 > **Important:** All workflow files must live at the flat root of `.github/workflows/`.
 > GitHub Actions does not support reusable workflows in subdirectories.
@@ -183,7 +189,7 @@ jobs:
       packages: write  # push the image and its layer cache to GHCR
     with:
       image-name: my-app
-      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-latest
+      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-26.04
 ```
 
 Builds and pushes an image to GHCR with rootless BuildKit inside the job container on a self-hosted runner (no Docker daemon), or with Docker Buildx on a GitHub-hosted one.
