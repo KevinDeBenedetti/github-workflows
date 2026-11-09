@@ -37,6 +37,7 @@ Run a single hook instead of the whole suite:
 | `working-directory` | string  | `.`                 | Directory holding the prek config                             |
 | `prek-version`      | string  | `0.4.12`            | prek release to install, without the leading `v` (or `latest`) |
 | `cache`             | boolean | `true`              | Cache the prek hook environments between runs                 |
+| `timeout-minutes`   | number  | `20`                | Minutes before the job is cancelled                           |
 | `runner`            | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array   |
 
 ## Steps
@@ -63,6 +64,12 @@ Run a single hook instead of the whole suite:
   package registry reachable.
 - `cache: true` reuses hook environments across runs; disable it when debugging a
   hook that appears to run against a stale environment.
+- **Cold runs take the longest.** The cache key is a hash of the prek config,
+  with no fallback to an older entry, so the first run after a config change
+  installs every hook environment from scratch, then uploads the cache, even
+  when a hook failed. On a small self-hosted runner that run can outlast the
+  default 20 minutes: raise `timeout-minutes` rather than turning the cache off,
+  since every later run with the same config restores it.
 - The action is pinned by commit SHA rather than by tag: some callers run it on
   write-capable self-hosted runners, where a mutable tag is a supply-chain risk.
   Renovate bumps it via the trailing `# v3.0.0` comment.

@@ -42,6 +42,16 @@ on:
         type: boolean
         required: false
         default: true
+      timeout-minutes:
+        description: >
+          Minutes before the job is cancelled. A cold run, the first after a
+          change to the prek config (its hash keys the cache, with no fallback),
+          installs every hook environment and then uploads the cache, even when
+          a hook failed: on a small self-hosted runner it can outlast the
+          default.
+        type: number
+        required: false
+        default: 20
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
@@ -69,6 +79,10 @@ on:
         description: Cache the prek hook environments between runs
         type: boolean
         default: true
+      timeout-minutes:
+        description: Minutes before the job is cancelled
+        type: number
+        default: 20
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
@@ -90,7 +104,7 @@ jobs:
   prek:
     name: prek hooks
     runs-on: ${{ fromJson(inputs.runner) }}
-    timeout-minutes: 20
+    timeout-minutes: ${{ inputs.timeout-minutes }}
     permissions:
       contents: read
 
