@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.41.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.40.0...v0.41.0) (2026-11-09)
+
+
+### Features
+
+* **seo-crawl:** add retries for link checks and update documentation ([e98a391](https://github.com/KevinDeBenedetti/github-workflows/commit/e98a3918cffb858d6cd9e8b0782e3b6b1f4f1fdd))
+
 ## [0.40.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.39.1...v0.40.0) (2026-11-09)
 
 
