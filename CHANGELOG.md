@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.40.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.39.1...v0.40.0) (2026-11-09)
+
+
+### Features
+
+* **ci-prek:** timeout-minutes input ([6e0f5d3](https://github.com/KevinDeBenedetti/github-workflows/commit/6e0f5d3b458c0a008014d0153a741767087f1e15))
+
 ## [0.39.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.39.0...v0.39.1) (2026-11-08)
 
 
