@@ -43,6 +43,7 @@ jobs:
 | `check-external`     | boolean | `true`              | Also check links to other domains                              |
 | `skip`               | string  | `""`                | Comma-separated regexes of URLs linkinator skips               |
 | `redirects`          | string  | `warn`              | `allow`, `warn` (log them) or `error` (treat as broken)        |
+| `retries`            | number  | `3`                 | Retries of a timed-out, failed, 5xx or 429 link; `0` disables  |
 | `fail-on-tag-issues` | boolean | `false`             | Fail on missing/duplicate tags instead of warning              |
 | `linkinator-version` | string  | `<version>`         | linkinator version, bumped by Renovate                         |
 | `runner`             | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON                                          |
@@ -53,8 +54,12 @@ jobs:
   what search engines see.
 - Both checks always run, then the job fails if either failed, so the reports
   and the artifact (`seo-crawl-result`, 30 days) exist even on failure.
-- External links are the main source of noise (rate limits, bot blocking).
-  Use `skip` for known offenders or `check-external: false`.
+- External links are the main source of noise (rate limits, bot blocking,
+  hosts briefly down). Each request times out after 30 s, and a link that
+  times out, fails to connect or answers a 5xx or a 429 is retried `retries`
+  times, with backoff (2 s, 4 s, 8 s… plus up to 3 s of jitter), before it
+  counts as broken. Other errors such as a 403 are not retried: use `skip` for
+  hosts that always block crawlers, or `check-external: false`.
 - Duplicates are computed on indexable pages only (`noindex` pages and error
   pages are ignored). `/` and `/index.html` both being linked is reported as a
   duplicate — that is a real duplicate-content signal, fix it with a canonical
@@ -67,5 +72,6 @@ jobs:
 ## Run locally
 
 ```bash
-npm exec --package=linkinator -- linkinator https://example.com --recurse --redirects warn
+npm exec --package=linkinator -- linkinator https://example.com --recurse --redirects warn \
+  --timeout 30000 --retry-errors --retry-errors-count 3
 ```

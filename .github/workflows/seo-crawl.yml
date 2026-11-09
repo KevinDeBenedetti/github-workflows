@@ -5,8 +5,10 @@ name: SEO — Crawl
 #   2. On-page tags per page: missing/duplicate <title> and meta description,
 #      missing or multiple <h1>, missing canonical (small built-in crawler).
 #
-# Broken links fail the job (GitHub's failure email is the alert). Tag issues
-# are warnings in the step summary unless `fail-on-tag-issues` is true.
+# Broken links fail the job (GitHub's failure email is the alert). A link that
+# times out or answers a 5xx or a 429 is retried first (`retries`), so a host
+# that is briefly down or throttling the runner does not fail the run. Tag
+# issues are warnings in the step summary unless `fail-on-tag-issues` is true.
 # Complements perf-unlighthouse.yml, which scores pages but does not detect
 # broken links or duplicate tags.
 #
@@ -40,6 +42,11 @@ on:
         type: string
         required: false
         default: warn
+      retries:
+        description: Retries for a link that times out, fails to connect or answers a 5xx or a 429 (0 disables)
+        type: number
+        required: false
+        default: 3
       fail-on-tag-issues:
         description: Fail the job on missing/duplicate tags (default is warning only)
         type: boolean
@@ -80,6 +87,10 @@ on:
         description: "How linkinator treats redirects: allow | warn | error"
         type: string
         default: warn
+      retries:
+        description: Retries for a link that times out, fails to connect or answers a 5xx or a 429 (0 disables)
+        type: number
+        default: 3
       fail-on-tag-issues:
         description: Fail the job on missing/duplicate tags (default is warning only)
         type: boolean
@@ -116,6 +127,7 @@ jobs:
         env:
           SITE: ${{ inputs.site }}
           REDIRECTS: ${{ inputs.redirects }}
+          RETRIES: ${{ inputs.retries }}
         run: |
           set -euo pipefail
           [[ "$SITE" =~ ^https?:// ]] || { echo "::error::site must start with http:// or https:// (got '${SITE}')"; exit 1; }
@@ -123,6 +135,7 @@ jobs:
             allow|warn|error) ;;
             *) echo "::error::redirects must be allow, warn or error (got '${REDIRECTS}')"; exit 1 ;;
           esac
+          [[ "$RETRIES" =~ ^[0-9]+$ ]] || { echo "::error::retries must be a whole number, 0 or more (got '${RETRIES}')"; exit 1; }
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -131,6 +144,12 @@ jobs:
 
       # Exit code is captured by the final gate so the tag check and the
       # reports still run when links are broken.
+      # linkinator has no request timeout and no retry by default, so one host
+      # down for a few seconds failed the weekly run. Each request now times out
+      # after 30 s, and --retry-errors retries a timeout, a failed connection, a
+      # 5xx or a 429 with backoff (2 s, 4 s, 8 s… plus up to 3 s of jitter).
+      # --retry is left out: it waits out any retry-after a host sends, however
+      # long, which the job timeout would cut short.
       - name: Check links and redirects
         id: links
         continue-on-error: true
@@ -139,11 +158,15 @@ jobs:
           CHECK_EXTERNAL: ${{ inputs.check-external }}
           SKIP: ${{ inputs.skip }}
           REDIRECTS: ${{ inputs.redirects }}
+          RETRIES: ${{ inputs.retries }}
           VERSION: ${{ inputs.linkinator-version }}
         run: |
           set -euo pipefail
           mkdir -p seo-result
-          args=("$SITE" --recurse --redirects "$REDIRECTS" --format json)
+          args=("$SITE" --recurse --redirects "$REDIRECTS" --format json --timeout 30000)
+          if (( RETRIES > 0 )); then
+            args+=(--retry-errors --retry-errors-count "$RETRIES")
+          fi
           if [[ "$CHECK_EXTERNAL" != "true" ]]; then
             origin="$(printf '%s' "$SITE" | sed -E 's#^(https?://[^/]+).*#\1#')"
             escaped="$(printf '%s' "$origin" | sed -e 's/[][\.*^$+?(){}|/]/\\&/g')"
