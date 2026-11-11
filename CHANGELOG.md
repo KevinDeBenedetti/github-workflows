@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.42.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.41.0...v0.42.0) (2026-11-11)
+
+
+### Features
+
+* **cleanup-runs:** delete old artifacts on their own with artifacts-older-than-days ([d82cb9d](https://github.com/KevinDeBenedetti/github-workflows/commit/d82cb9dc66e77ba17e0b2ad847f39b14d57a0726))
+* **workflows:** add artifact-retention-days to the perf and SEO workflows, 7 days by default ([4fb5d28](https://github.com/KevinDeBenedetti/github-workflows/commit/4fb5d28ae24ce5ee87e15efc5f5c8072be49f68e))
+
 ## [0.41.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.40.0...v0.41.0) (2026-11-09)
 
 
