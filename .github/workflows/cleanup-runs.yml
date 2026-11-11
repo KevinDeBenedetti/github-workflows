@@ -1,6 +1,7 @@
 # Retention for the workflow runs of a repository, meant to run on a weekly
 # schedule: the old runs are deleted with their logs and artifacts, the recent
-# ones stay.
+# ones stay. Optionally, the old artifacts of the runs kept go too: artifacts
+# count against the account's Actions storage for every hour they exist.
 #
 # Call it from the repository whose runs to clean: its GITHUB_TOKEN can delete
 # them. No PAT and no GitHub App; a GITHUB_TOKEN reaches only its own
@@ -15,8 +16,12 @@
 #   deleted        every other run, oldest first, at most max-deletions per
 #                  run. A workflow whose file was deleted keeps no run: once
 #                  its last run is old enough, it leaves the Actions sidebar.
+#   artifacts      with artifacts-older-than-days above 0 (off by default),
+#                  every artifact older than that, not yet expired, of a
+#                  completed run, kept or not: the run and its logs stay. They
+#                  go before the runs, within the same max-deletions.
 #
-# A deleted run cannot be restored.
+# A deleted run or artifact cannot be restored.
 name: Cleanup workflow runs
 
 on:
@@ -32,11 +37,18 @@ on:
         type: number
         required: false
         default: 30
+      artifacts-older-than-days:
+        description: >
+          Age, in days, before an artifact is deleted on its own, even when its
+          run is kept, the run and its logs staying (0 to 36500). 0 turns it off.
+        type: number
+        required: false
+        default: 0
       max-deletions:
         description: >
-          Runs deleted at most in one run (1 to 1000), one a second: the
-          GITHUB_TOKEN may send 1,000 REST requests an hour per repository. A
-          larger backlog goes over the next runs.
+          Deletions at most in one run, artifacts first and then runs (1 to
+          1000), one a second: the GITHUB_TOKEN may send 1,000 REST requests an
+          hour per repository. A larger backlog goes over the next runs.
         type: number
         required: false
         default: 500
@@ -65,7 +77,7 @@ jobs:
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 30
     permissions:
-      actions: write          # list and delete the workflow runs
+      actions: write          # list and delete the workflow runs and their artifacts
       pull-requests: read     # keep the runs of the open pull requests
     steps:
       - name: Delete old workflow runs
@@ -73,5 +85,6 @@ jobs:
         with:
           keep-runs: ${{ inputs.keep-runs }}
           older-than-days: ${{ inputs.older-than-days }}
+          artifacts-older-than-days: ${{ inputs.artifacts-older-than-days }}
           max-deletions: ${{ inputs.max-deletions }}
           dry-run: ${{ inputs.dry-run }}

@@ -5,7 +5,9 @@ description: >
   older-than-days, the keep-runs most recent runs of each workflow, and the
   runs of the head commit of an open pull request or of the run's own commit.
   A workflow whose file was deleted keeps no run, so it leaves the Actions
-  sidebar. Runs on any Linux runner with bash, curl and jq: no GitHub CLI
+  sidebar. With artifacts-older-than-days, the old artifacts of every
+  completed run go too, those of the runs kept included, which keep their
+  logs. Runs on any Linux runner with bash, curl and jq: no GitHub CLI
   needed. The rules are documented at the top of cleanup-runs.sh.
 
 inputs:
@@ -17,11 +19,17 @@ inputs:
     description: Age, in days, before a run can be deleted (1 or more)
     required: false
     default: '30'
+  artifacts-older-than-days:
+    description: >
+      Age, in days, before an artifact is deleted on its own, even when its
+      run is kept, the run and its logs staying (0 to 36500). 0 turns it off.
+    required: false
+    default: '0'
   max-deletions:
     description: >
-      Runs deleted at most in one run (1 to 1000), one a second: the
-      GITHUB_TOKEN may send 1,000 REST requests an hour per repository. A
-      larger backlog goes over the next runs.
+      Deletions at most in one run, artifacts first and then runs (1 to 1000),
+      one a second: the GITHUB_TOKEN may send 1,000 REST requests an hour per
+      repository. A larger backlog goes over the next runs.
     required: false
     default: '500'
   dry-run:
@@ -40,6 +48,12 @@ outputs:
   remaining:
     description: Runs left for a later run by max-deletions
     value: ${{ steps.cleanup.outputs.remaining }}
+  artifacts-deleted:
+    description: Artifacts deleted on their own by this run (in a dry run, the artifacts that would be)
+    value: ${{ steps.cleanup.outputs.artifacts-deleted }}
+  artifacts-bytes-freed:
+    description: Total size, in bytes, of those artifacts
+    value: ${{ steps.cleanup.outputs.artifacts-bytes-freed }}
 
 runs:
   using: composite
@@ -50,6 +64,7 @@ runs:
       env:
         KEEP_RUNS: ${{ inputs.keep-runs }}
         OLDER_THAN_DAYS: ${{ inputs.older-than-days }}
+        ARTIFACTS_OLDER_THAN_DAYS: ${{ inputs.artifacts-older-than-days }}
         MAX_DELETIONS: ${{ inputs.max-deletions }}
         DRY_RUN: ${{ inputs.dry-run }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
