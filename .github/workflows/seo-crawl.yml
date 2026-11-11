@@ -9,6 +9,8 @@ name: SEO — Crawl
 # times out or answers a 5xx or a 429 is retried first (`retries`), so a host
 # that is briefly down or throttling the runner does not fail the run. Tag
 # issues are warnings in the step summary unless `fail-on-tag-issues` is true.
+# The reports are kept as an artifact for `artifact-retention-days` (7 by
+# default).
 # Complements perf-unlighthouse.yml, which scores pages but does not detect
 # broken links or duplicate tags.
 #
@@ -58,6 +60,11 @@ on:
         required: false
         # renovate: datasource=npm depName=linkinator
         default: 8.1.0
+      artifact-retention-days:
+        description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
+        type: number
+        required: false
+        default: 7
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners
         type: string
@@ -100,6 +107,10 @@ on:
         type: string
         # renovate: datasource=npm depName=linkinator
         default: 8.1.0
+      artifact-retention-days:
+        description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
+        type: number
+        default: 7
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners
         type: string
@@ -128,6 +139,7 @@ jobs:
           SITE: ${{ inputs.site }}
           REDIRECTS: ${{ inputs.redirects }}
           RETRIES: ${{ inputs.retries }}
+          RETENTION_DAYS: ${{ inputs.artifact-retention-days }}
         run: |
           set -euo pipefail
           [[ "$SITE" =~ ^https?:// ]] || { echo "::error::site must start with http:// or https:// (got '${SITE}')"; exit 1; }
@@ -136,6 +148,10 @@ jobs:
             *) echo "::error::redirects must be allow, warn or error (got '${REDIRECTS}')"; exit 1 ;;
           esac
           [[ "$RETRIES" =~ ^[0-9]+$ ]] || { echo "::error::retries must be a whole number, 0 or more (got '${RETRIES}')"; exit 1; }
+          if [[ ! "$RETENTION_DAYS" =~ ^[0-9]{1,2}$ ]] || (( 10#$RETENTION_DAYS < 1 || 10#$RETENTION_DAYS > 90 )); then
+            echo "::error::artifact-retention-days must be a whole number from 1 to 90 (got '${RETENTION_DAYS}')"
+            exit 1
+          fi
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -324,7 +340,7 @@ jobs:
         with:
           name: seo-crawl-result
           path: seo-result
-          retention-days: 30
+          retention-days: ${{ inputs.artifact-retention-days }}
           if-no-files-found: warn
 
       # Fail only now, so both checks and both reports always run.

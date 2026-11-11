@@ -14,3 +14,4 @@ jobs:
       contents: read
     with:
       site: https://example.com
+      artifact-retention-days: 7 # days the reports are kept (1 to 90)

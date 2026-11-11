@@ -30,16 +30,17 @@ jobs:
 
 ## Inputs
 
-| Input                  | Type   | Default            | Description                                                      |
-| ---------------------- | ------ | ------------------ | ---------------------------------------------------------------- |
-| `site`                 | string | — (required)       | Site to audit, `http(s)://…`                                     |
-| `budget`               | number | `75`               | Minimum score (1-100) every page must reach on every category    |
-| `device`               | string | `desktop`          | `desktop` or `mobile`                                            |
-| `samples`              | number | `1`                | Lighthouse runs per page (averaged)                              |
-| `urls`                 | string | `""`               | Comma-separated paths to audit instead of crawling               |
-| `exclude-urls`         | string | `""`               | Comma-separated paths or regexes to skip                         |
-| `unlighthouse-version` | string | `<version>`        | `@unlighthouse/cli` version, bumped by Renovate                  |
-| `runner`               | string | `'"ubuntu-26.04"'`  | Runner labels as JSON                                           |
+| Input                     | Type   | Default            | Description                                                                    |
+| ------------------------- | ------ | ------------------ | ------------------------------------------------------------------------------ |
+| `site`                    | string | — (required)       | Site to audit, `http(s)://…`                                                   |
+| `budget`                  | number | `75`               | Minimum score (1-100) every page must reach on every category                  |
+| `device`                  | string | `desktop`          | `desktop` or `mobile`                                                          |
+| `samples`                 | number | `1`                | Lighthouse runs per page (averaged)                                            |
+| `urls`                    | string | `""`               | Comma-separated paths to audit instead of crawling                             |
+| `exclude-urls`            | string | `""`               | Comma-separated paths or regexes to skip                                       |
+| `unlighthouse-version`    | string | `<version>`        | `@unlighthouse/cli` version, bumped by Renovate                                |
+| `artifact-retention-days` | number | `7`                | Days the artifact is kept, 1 to 90; the repository's retention setting caps it |
+| `runner`                  | string | `'"ubuntu-26.04"'` | Runner labels as JSON                                                          |
 
 ## Notes
 
@@ -50,7 +51,9 @@ jobs:
 - For both devices, call the workflow twice (one job per `device`).
 - Lighthouse scores vary run to run; raise `samples` or lower `budget` if the
   alert is noisy. Start loose and tighten after a few weeks.
-- Artifact: `unlighthouse-report-<device>` (30 days) — open `index.html`.
+- Artifact: `unlighthouse-report-<device>`, kept `artifact-retention-days` (7
+  days by default) — open `index.html`. Artifacts count against the account's
+  GitHub Actions storage for every hour they exist.
 
 ## Run locally
 

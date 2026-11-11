@@ -56,14 +56,15 @@ jobs:
 
 ## Inputs
 
-| Input          | Type   | Default             | Description                                                                         |
-| -------------- | ------ | ------------------- | ----------------------------------------------------------------------------------- |
-| `site`         | string | — (required)        | Site to audit, `http(s)://…`                                                        |
-| `urls`         | string | `/`                 | Comma-separated paths to audit, each starting with `/`                              |
-| `config`       | string | `""`                | Lighthouse CI config in the caller repository; empty measures without assertions    |
-| `version-url`  | string | `""`                | JSON document whose `version` is the release tag the site runs; empty: run's commit |
-| `lhci-version` | string | `<version>`         | `@lhci/cli` version, bumped by Renovate                                             |
-| `runner`       | string | `'"ubuntu-26.04"'`  | Runner labels as JSON                                                               |
+| Input                     | Type   | Default            | Description                                                                         |
+| ------------------------- | ------ | ------------------ | ----------------------------------------------------------------------------------- |
+| `site`                    | string | — (required)       | Site to audit, `http(s)://…`                                                        |
+| `urls`                    | string | `/`                | Comma-separated paths to audit, each starting with `/`                              |
+| `config`                  | string | `""`               | Lighthouse CI config in the caller repository; empty measures without assertions    |
+| `version-url`             | string | `""`               | JSON document whose `version` is the release tag the site runs; empty: run's commit |
+| `lhci-version`            | string | `<version>`        | `@lhci/cli` version, bumped by Renovate                                             |
+| `artifact-retention-days` | number | `7`                | Days the artifact is kept, 1 to 90; the repository's retention setting caps it      |
+| `runner`                  | string | `'"ubuntu-26.04"'` | Runner labels as JSON                                                               |
 
 ## Notes
 
@@ -87,8 +88,11 @@ jobs:
 - Lighthouse scores vary run to run: `numberOfRuns` (3 by default) runs each page
   several times and keeps the median one. Start loose and tighten after a few
   weeks.
-- Artifact: `lighthouse-report` (30 days), one HTML and one JSON report per run,
-  with `manifest.json`.
+- Artifact: `lighthouse-report`, kept `artifact-retention-days` (7 days by
+  default), one HTML and one JSON report per run, with `manifest.json`. The
+  statuses link to it, so the link of an older status leads to an expired
+  artifact. Artifacts count against the account's GitHub Actions storage for
+  every hour they exist.
 
 ## Run locally
 

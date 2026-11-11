@@ -15,3 +15,4 @@ jobs:
     with:
       site: https://example.com
       budget: 80
+      artifact-retention-days: 7 # days the HTML report is kept (1 to 90)
