@@ -11,8 +11,9 @@
 - CD workflows for Docker/GHCR, BuildKit (rootless on self-hosted runners, Buildx on GitHub-hosted ones), GitHub Pages, and centralized docs sync
 - Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, hash-locked ansible installs, and a checksum-pinned Claude Code setup
 - Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
+- Short artifact retention by default (7 days, `artifact-retention-days`) in the performance and SEO workflows: the sitespeed.io metrics stay on a history branch
 - Scheduled GHCR cleanup that keeps releases and recent images, safe for multi-arch images and attestations
-- Scheduled workflow-run cleanup that keeps recent runs and the last runs of each workflow, and clears deleted workflows from the Actions sidebar
+- Scheduled workflow-run cleanup that keeps recent runs and the last runs of each workflow, clears deleted workflows from the Actions sidebar, and can delete old artifacts on their own, the runs kept included, to save Actions storage
 - Automated releases via release-please, and release propagation: each release opens a pull request in every consumer repository that moves its pins, merged once its checks pass
 - Security scanning: dependency audit, CodeQL, and secret detection
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
@@ -80,7 +81,7 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](docs/workflows/pr-description.md) |
 | `cleanup-ghcr.yml` | Scheduled GHCR retention: keeps releases and recent images, deletes the rest and old layer caches | [→](docs/workflows/cleanup-ghcr.md) |
-| `cleanup-runs.yml` | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest | [→](docs/workflows/cleanup-runs.md) |
+| `cleanup-runs.yml` | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest, and optionally old artifacts | [→](docs/workflows/cleanup-runs.md) |
 
 ## Documentation
 

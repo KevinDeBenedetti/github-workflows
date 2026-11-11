@@ -5,8 +5,9 @@ name: Perf — sitespeed.io
 # Measures the URLs listed in the CALLER's `urls-file` against the CALLER's
 # `budget-file`, so the thresholds live next to the code they guard. The job
 # fails when the budget is exceeded (GitHub's failure email is the alert).
-# Results are kept as artifacts and, optionally, appended as one CSV row per
-# URL/device to a `history-branch` of the calling repo.
+# Results are kept as artifacts for `artifact-retention-days` (7 by default)
+# and, optionally, appended as one CSV row per URL/device to a
+# `history-branch` of the calling repo, which keeps the metrics for good.
 #
 # Do NOT run it on a cluster-internal runner: measuring from the same
 # network as the site skews LCP and TTFB. Keep the default GitHub-hosted runner.
@@ -52,6 +53,11 @@ on:
         type: string
         required: false
         default: perf-history
+      artifact-retention-days:
+        description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
+        type: number
+        required: false
+        default: 7
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew LCP/TTFB)
@@ -88,6 +94,10 @@ on:
         description: Branch receiving history.csv (created as orphan if missing). Empty disables the history
         type: string
         default: perf-history
+      artifact-retention-days:
+        description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
+        type: number
+        default: 7
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew LCP/TTFB)
@@ -127,6 +137,7 @@ jobs:
           URLS_FILE: ${{ inputs.urls-file }}
           BUDGET_FILE: ${{ inputs.budget-file }}
           DEVICE: ${{ matrix.device }}
+          RETENTION_DAYS: ${{ inputs.artifact-retention-days }}
         run: |
           set -euo pipefail
           for f in "$URLS_FILE" "$BUDGET_FILE"; do
@@ -139,6 +150,10 @@ jobs:
             desktop|mobile) ;;
             *) echo "::error::device must be desktop, mobile or both (got '${DEVICE}')"; exit 1 ;;
           esac
+          if [[ ! "$RETENTION_DAYS" =~ ^[0-9]{1,2}$ ]] || (( 10#$RETENTION_DAYS < 1 || 10#$RETENTION_DAYS > 90 )); then
+            echo "::error::artifact-retention-days must be a whole number from 1 to 90 (got '${RETENTION_DAYS}')"
+            exit 1
+          fi
 
       # Non-zero exit when the budget is exceeded — this step is what fails the job.
       # analysisstorer, off by default, writes the JSON the next step reads: without
@@ -198,13 +213,15 @@ jobs:
             echo "::warning::no browsertime.pageSummary.json under sitespeed-result — no metrics extracted"
           fi
 
+      # The history job reads these in the same run, and history.csv keeps the
+      # metrics: the videos, screenshots and HARs need not stay long.
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sitespeed-result-${{ matrix.device }}
           path: sitespeed-result
-          retention-days: 90
+          retention-days: ${{ inputs.artifact-retention-days }}
           if-no-files-found: warn
 
   # Single writer, after the matrix: avoids concurrent pushes to the history branch.

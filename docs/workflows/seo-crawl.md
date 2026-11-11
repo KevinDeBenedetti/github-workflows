@@ -36,24 +36,26 @@ jobs:
 
 ## Inputs
 
-| Input                | Type    | Default             | Description                                                    |
-| -------------------- | ------- | ------------------- | -------------------------------------------------------------- |
-| `site`               | string  | — (required)        | Site to crawl, `http(s)://…`                                   |
-| `max-pages`          | number  | `500`               | Maximum pages visited by the tag crawler                       |
-| `check-external`     | boolean | `true`              | Also check links to other domains                              |
-| `skip`               | string  | `""`                | Comma-separated regexes of URLs linkinator skips               |
-| `redirects`          | string  | `warn`              | `allow`, `warn` (log them) or `error` (treat as broken)        |
-| `retries`            | number  | `3`                 | Retries of a timed-out, failed, 5xx or 429 link; `0` disables  |
-| `fail-on-tag-issues` | boolean | `false`             | Fail on missing/duplicate tags instead of warning              |
-| `linkinator-version` | string  | `<version>`         | linkinator version, bumped by Renovate                         |
-| `runner`             | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON                                          |
+| Input                     | Type    | Default            | Description                                                                    |
+| ------------------------- | ------- | ------------------ | ------------------------------------------------------------------------------ |
+| `site`                    | string  | — (required)       | Site to crawl, `http(s)://…`                                                   |
+| `max-pages`               | number  | `500`              | Maximum pages visited by the tag crawler                                       |
+| `check-external`          | boolean | `true`             | Also check links to other domains                                              |
+| `skip`                    | string  | `""`               | Comma-separated regexes of URLs linkinator skips                               |
+| `redirects`               | string  | `warn`             | `allow`, `warn` (log them) or `error` (treat as broken)                        |
+| `retries`                 | number  | `3`                | Retries of a timed-out, failed, 5xx or 429 link; `0` disables                  |
+| `fail-on-tag-issues`      | boolean | `false`            | Fail on missing/duplicate tags instead of warning                              |
+| `linkinator-version`      | string  | `<version>`        | linkinator version, bumped by Renovate                                         |
+| `artifact-retention-days` | number  | `7`                | Days the artifact is kept, 1 to 90; the repository's retention setting caps it |
+| `runner`                  | string  | `'"ubuntu-26.04"'` | Runner labels as JSON                                                          |
 
 ## Notes
 
 - **Do not use a cluster-internal runner**: crawl from outside so the result matches
   what search engines see.
 - Both checks always run, then the job fails if either failed, so the reports
-  and the artifact (`seo-crawl-result`, 30 days) exist even on failure.
+  and the artifact (`seo-crawl-result`, kept `artifact-retention-days`, 7 days
+  by default) exist even on failure.
 - External links are the main source of noise (rate limits, bot blocking,
   hosts briefly down). Each request times out after 30 s, and a link that
   times out, fails to connect or answers a 5xx or a 429 is retried `retries`

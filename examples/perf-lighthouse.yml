@@ -18,3 +18,4 @@ jobs:
       site: https://example.com
       urls: /,/about
       config: lighthouserc.json
+      artifact-retention-days: 7 # days the reports are kept (1 to 90)
