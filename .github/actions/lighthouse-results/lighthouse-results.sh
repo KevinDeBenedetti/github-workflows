@@ -16,8 +16,16 @@
 #   $ASSERTIONS_FILE           results of `lhci assert`, keyed by each report's
 #                              final URL (absent when nothing was asserted)
 #
+# The results of each page, one JSON line, are also written as the `pages`
+# output. Given back as PAGES, in another job, they are posted as they are:
+# the reports are not read again and no summary is written. A job that runs
+# Chrome without its sandbox can so summarize, while a later job, on a fresh
+# runner, holds the token that posts the statuses.
+#
 # Env: REPORT_DIR       lhci filesystem output (default .lighthouse)
 #      ASSERTIONS_FILE  default .lighthouseci/assertion-results.json
+#      PAGES            the `pages` output of an earlier run (default: none,
+#                       read the reports)
 #      POST_STATUSES    true | false (default true)
 #      SHA              commit the statuses go on (default $GITHUB_SHA)
 #      VERSION_URL      optional URL of a JSON document whose `version` is the
@@ -29,75 +37,101 @@
 #      GITHUB_TOKEN     statuses: write, plus contents: read for VERSION_URL
 #                       (required to post)
 #      GITHUB_REPOSITORY, GITHUB_API_URL, GITHUB_SERVER_URL, GITHUB_RUN_ID,
-#      GITHUB_STEP_SUMMARY  set by the runner
+#      GITHUB_STEP_SUMMARY, GITHUB_OUTPUT  set by the runner
 set -euo pipefail
 
 REPORT_DIR="${REPORT_DIR:-.lighthouse}"
 ASSERTIONS_FILE="${ASSERTIONS_FILE:-.lighthouseci/assertion-results.json}"
+PAGES="${PAGES:-}"
 POST_STATUSES="${POST_STATUSES:-true}"
 CONTEXT_PREFIX="${CONTEXT_PREFIX:-lighthouse}"
 summary="${GITHUB_STEP_SUMMARY:-/dev/null}"
 manifest="$REPORT_DIR/manifest.json"
 
-if [[ ! -f "$manifest" ]]; then
-  echo "No ${manifest}: Lighthouse produced no report, nothing to summarize."
-  printf '### Lighthouse CI\n\n_No report produced._\n' >> "$summary"
-  exit 0
-fi
-if ! jq -e 'type == "array"' "$manifest" > /dev/null; then
-  echo "${manifest} is not a Lighthouse CI manifest (a JSON array)." >&2
-  exit 1
+if [[ -z "$PAGES" ]]; then
+  if [[ ! -f "$manifest" ]]; then
+    echo "No ${manifest}: Lighthouse produced no report, nothing to summarize."
+    printf '### Lighthouse CI\n\n_No report produced._\n' >> "$summary"
+    exit 0
+  fi
+  if ! jq -e 'type == "array"' "$manifest" > /dev/null; then
+    echo "${manifest} is not a Lighthouse CI manifest (a JSON array)." >&2
+    exit 1
+  fi
 fi
 
 work="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/lighthouse-results.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
-if [[ -f "$ASSERTIONS_FILE" ]]; then
-  cp "$ASSERTIONS_FILE" "$work/assertions.json"
+if [[ -n "$PAGES" ]]; then
+  # The pages of an earlier run: each line is checked for the shape this
+  # script writes, then posted as is.
+  if ! printf '%s\n' "$PAGES" | jq -c '
+    if type == "object" and (.path | type) == "string" and (.failed | type) == "number"
+      and (.scores | type) == "array" then . else error("not a page") end' \
+    > "$work/pages.jsonl" 2> /dev/null; then
+    echo "PAGES is not the pages output of this action (one JSON object per page)." >&2
+    exit 1
+  fi
+  echo "$(wc -l < "$work/pages.jsonl" | tr -d ' ') page(s) given by an earlier run: no report read, no summary written."
 else
-  echo '[]' > "$work/assertions.json"
+  if [[ -f "$ASSERTIONS_FILE" ]]; then
+    cp "$ASSERTIONS_FILE" "$work/assertions.json"
+  else
+    echo '[]' > "$work/assertions.json"
+  fi
+
+  # One JSON line per page: its path, its failed assertions and its scores.
+  : > "$work/pages.jsonl"
+  while IFS=$'\t' read -r url json_path; do
+    report="$json_path"
+    # jsonPath is absolute on the machine that ran lhci: a report downloaded
+    # elsewhere sits next to its manifest.
+    [[ -f "$report" ]] || report="$REPORT_DIR/$(basename "$json_path")"
+    jq -c --arg url "$url" --slurpfile assertions "$work/assertions.json" '
+      # The assert step keys its results by the URL the page ended on, which a
+      # redirect makes differ from the one requested.
+      (.finalUrl // $url) as $final
+      | [$assertions[0][] | select(.url == $final and .level == "error" and (.passed | not))] as $failed
+      | {
+          path: ($url | sub("^[a-z]+://[^/]+"; "") | if . == "" then "/" else . end),
+          failed: ($failed | length),
+          failedCategories: [$failed[] | select(.auditId == "categories") | .auditProperty],
+          scores: [.categories | to_entries[] | {
+            id: .key,
+            title: .value.title,
+            score: (if .value.score == null then null else .value.score * 100 | round end)
+          }]
+        }' "$report" >> "$work/pages.jsonl"
+  done < <(jq -r '.[] | select(.isRepresentativeRun) | [.url, .jsonPath] | @tsv' "$manifest")
+
+  {
+    echo '### Lighthouse CI'
+    echo
+    jq -rs '
+      if length == 0 then "_No representative run in the manifest._" else
+        (.[0].scores | map(.title)) as $titles
+        | "| Page | \($titles | join(" | ")) | Result |",
+          "| --- | \($titles | map("---") | join(" | ")) | --- |",
+          (.[] | .failedCategories as $failedCategories
+            | "| \(.path) | \(.scores | map(
+                  (.score // "n/a" | tostring) as $score
+                  | .id as $id
+                  | if any($failedCategories[]; . == $id) then "❌ \($score)" else $score end
+                ) | join(" | ")) | \(if .failed > 0 then "❌ \(.failed) failed" else "✅" end) |")
+      end' "$work/pages.jsonl"
+  } >> "$summary"
+
+  # The pages, for a run of this action in another job (PAGES).
+  if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+    delimiter="PAGES_${RANDOM}${RANDOM}${RANDOM}"
+    {
+      echo "pages<<${delimiter}"
+      cat "$work/pages.jsonl"
+      echo "$delimiter"
+    } >> "$GITHUB_OUTPUT"
+  fi
 fi
-
-# One JSON line per page: its path, its failed assertions and its scores.
-: > "$work/pages.jsonl"
-while IFS=$'\t' read -r url json_path; do
-  report="$json_path"
-  # jsonPath is absolute on the machine that ran lhci: a report downloaded
-  # elsewhere sits next to its manifest.
-  [[ -f "$report" ]] || report="$REPORT_DIR/$(basename "$json_path")"
-  jq -c --arg url "$url" --slurpfile assertions "$work/assertions.json" '
-    # The assert step keys its results by the URL the page ended on, which a
-    # redirect makes differ from the one requested.
-    (.finalUrl // $url) as $final
-    | [$assertions[0][] | select(.url == $final and .level == "error" and (.passed | not))] as $failed
-    | {
-        path: ($url | sub("^[a-z]+://[^/]+"; "") | if . == "" then "/" else . end),
-        failed: ($failed | length),
-        failedCategories: [$failed[] | select(.auditId == "categories") | .auditProperty],
-        scores: [.categories | to_entries[] | {
-          id: .key,
-          title: .value.title,
-          score: (if .value.score == null then null else .value.score * 100 | round end)
-        }]
-      }' "$report" >> "$work/pages.jsonl"
-done < <(jq -r '.[] | select(.isRepresentativeRun) | [.url, .jsonPath] | @tsv' "$manifest")
-
-{
-  echo '### Lighthouse CI'
-  echo
-  jq -rs '
-    if length == 0 then "_No representative run in the manifest._" else
-      (.[0].scores | map(.title)) as $titles
-      | "| Page | \($titles | join(" | ")) | Result |",
-        "| --- | \($titles | map("---") | join(" | ")) | --- |",
-        (.[] | .failedCategories as $failedCategories
-          | "| \(.path) | \(.scores | map(
-                (.score // "n/a" | tostring) as $score
-                | .id as $id
-                | if any($failedCategories[]; . == $id) then "❌ \($score)" else $score end
-              ) | join(" | ")) | \(if .failed > 0 then "❌ \(.failed) failed" else "✅" end) |")
-    end' "$work/pages.jsonl"
-} >> "$summary"
 
 if [[ "$POST_STATUSES" != true ]]; then
   echo "Summary written; no status posted (post-statuses: ${POST_STATUSES})."

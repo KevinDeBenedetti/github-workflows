@@ -32,18 +32,58 @@ steps:
     uses: KevinDeBenedetti/github-workflows/.github/actions/lighthouse-results@main
 ```
 
+### Summary in one job, statuses in another
+
+The job that runs Chrome need not hold the token that posts: it writes the
+summary and the `pages` output, and a later job, on a fresh runner, posts the
+statuses from them. [`perf-lighthouse.yml`](../workflows/perf-lighthouse.md)
+does so, its Chrome running without its sandbox in a container.
+
+```yaml
+jobs:
+  audit:
+    permissions:
+      contents: read
+    outputs:
+      pages: ${{ steps.summary.outputs.pages }}
+    steps:
+      # … lhci collect, assert and upload, as above
+      - id: summary
+        if: ${{ !cancelled() }}
+        uses: KevinDeBenedetti/github-workflows/.github/actions/lighthouse-results@main
+        with:
+          post-statuses: 'false'
+
+  statuses:
+    needs: audit
+    if: ${{ !cancelled() && needs.audit.outputs.pages != '' }}
+    permissions:
+      statuses: write
+    steps:
+      - uses: KevinDeBenedetti/github-workflows/.github/actions/lighthouse-results@main
+        with:
+          pages: ${{ needs.audit.outputs.pages }}
+```
+
 ## Inputs
 
-| Input             | Default                                | Description                                                                |
-| ----------------- | -------------------------------------- | -------------------------------------------------------------------------- |
-| `report-dir`      | `.lighthouse`                          | Directory written by `lhci upload --target=filesystem`                     |
-| `assertions-file` | `.lighthouseci/assertion-results.json` | Results of `lhci assert` (no file when nothing was asserted)               |
-| `post-statuses`   | `true`                                 | `false` writes the summary only                                            |
-| `sha`             | the run's commit                       | Commit the statuses go on                                                  |
-| `version-url`     | `''`                                   | JSON document whose `version` is the release tag the site runs (see below) |
-| `target-url`      | `''`                                   | Link of every status, e.g. the report artifact; empty links the run        |
-| `context-prefix`  | `lighthouse`                           | Status context before the page path: `lighthouse/en`                       |
-| `github-token`    | the job's `GITHUB_TOKEN`               | Token with `statuses: write`, plus `contents: read` for `version-url`      |
+| Input             | Default                                | Description                                                                          |
+| ----------------- | -------------------------------------- | ------------------------------------------------------------------------------------ |
+| `report-dir`      | `.lighthouse`                          | Directory written by `lhci upload --target=filesystem`                               |
+| `assertions-file` | `.lighthouseci/assertion-results.json` | Results of `lhci assert` (no file when nothing was asserted)                         |
+| `pages`           | `''`                                   | The `pages` output of an earlier run: post from it, read no report, write no summary |
+| `post-statuses`   | `true`                                 | `false` writes the summary only                                                      |
+| `sha`             | the run's commit                       | Commit the statuses go on                                                            |
+| `version-url`     | `''`                                   | JSON document whose `version` is the release tag the site runs (see below)           |
+| `target-url`      | `''`                                   | Link of every status, e.g. the report artifact; empty links the run                  |
+| `context-prefix`  | `lighthouse`                           | Status context before the page path: `lighthouse/en`                                 |
+| `github-token`    | the job's `GITHUB_TOKEN`               | Token with `statuses: write`, plus `contents: read` for `version-url`                |
+
+## Outputs
+
+| Output  | Description                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------ |
+| `pages` | The results of each page, one JSON line: its path, failed assertions and scores, for the `pages` input |
 
 ## Notes
 
