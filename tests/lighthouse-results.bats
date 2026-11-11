@@ -215,3 +215,41 @@ status_of() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"GITHUB_TOKEN is required"* ]]
 }
+
+# pages_output FILE: the value of the `pages` output written to FILE.
+pages_output() {
+  awk '/^pages<<PAGES_[0-9]+$/ { delim = substr($0, 8); inside = 1; next }
+       inside && $0 == delim { exit }
+       inside { print }' "$1"
+}
+
+@test "the results of each page go to the pages output, one JSON line per page" {
+  run results POST_STATUSES=false GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output"
+  [ "$status" -eq 0 ]
+  pages_output output > pages.jsonl
+  [ "$(jq -r .path pages.jsonl | paste -sd' ' -)" = "/en /fr" ]
+  [ "$(jq -r 'select(.path == "/fr") | .failed' pages.jsonl)" -eq 1 ]
+  # The delimiter closes the value.
+  [ "$(grep -cE '^PAGES_[0-9]+$' output)" -eq 1 ]
+}
+
+@test "given pages, the statuses are posted from them: no report read, no summary written" {
+  run results POST_STATUSES=false GITHUB_OUTPUT="$BATS_TEST_TMPDIR/output"
+  pages="$(pages_output output)"
+  rm -rf .lighthouse .lighthouseci summary.md
+  run results PAGES="$pages"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"2 page(s) given by an earlier run"* ]]
+  [ "$(grep -c '^POST https://api.github.com/repos/o/r/statuses/abc123$' curl.log)" -eq 2 ]
+  [ "$(status_of lighthouse/fr state)" = failure ]
+  [ ! -e summary.md ]
+}
+
+@test "pages that are not this action's output are refused before any request" {
+  for pages in '{"path":"/en"}' 'not json' '[1]'; do
+    run results PAGES="$pages"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"PAGES is not the pages output of this action"* ]]
+  done
+  [ ! -e curl.log ]
+}

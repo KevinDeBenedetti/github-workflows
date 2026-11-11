@@ -4,8 +4,9 @@ description: >
   one commit status per page through the GitHub REST API, from what
   `lhci assert` and `lhci upload --target=filesystem` left on disk. No
   third-party service: Lighthouse CI's own statuses go through its GitHub App
-  or its public report storage. Runs on any Linux runner with bash, curl and
-  jq: no GitHub CLI needed.
+  or its public report storage. Its `pages` output lets a later job, on
+  another runner, post the statuses. Runs on any Linux runner with bash, curl
+  and jq: no GitHub CLI needed.
 
 inputs:
   report-dir:
@@ -16,6 +17,14 @@ inputs:
     description: Results of `lhci assert` (no file when nothing was asserted)
     required: false
     default: .lighthouseci/assertion-results.json
+  pages:
+    description: >
+      The `pages` output of an earlier run of this action, in another job: the
+      statuses are posted from it, with no report read and no summary
+      written. Lets the job that runs Chrome summarize without holding the
+      token that posts.
+    required: false
+    default: ''
   post-statuses:
     description: Post one commit status per page (needs statuses write). `false` writes the summary only.
     required: false
@@ -45,14 +54,21 @@ inputs:
     required: false
     default: ${{ github.token }}
 
+outputs:
+  pages:
+    description: The results of each page, one JSON line, for the `pages` input of a later run
+    value: ${{ steps.results.outputs.pages }}
+
 runs:
   using: composite
   steps:
     - name: Summarize and post statuses
+      id: results
       shell: bash
       env:
         REPORT_DIR: ${{ inputs.report-dir }}
         ASSERTIONS_FILE: ${{ inputs.assertions-file }}
+        PAGES: ${{ inputs.pages }}
         POST_STATUSES: ${{ inputs.post-statuses }}
         SHA: ${{ inputs.sha }}
         VERSION_URL: ${{ inputs.version-url }}

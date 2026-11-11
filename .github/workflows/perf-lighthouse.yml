@@ -5,8 +5,9 @@ name: Perf — Lighthouse CI
 # per page (`lighthouse/<path>`) posted through the GitHub API by the
 # lighthouse-results action. No third-party service: Lighthouse CI's own
 # statuses go through its GitHub App or its public report storage. Scores go
-# to the step summary, the HTML and JSON reports to an artifact, kept for
-# `artifact-retention-days` (7 by default).
+# to the step summary, the HTML and JSON reports to an artifact kept
+# `artifact-retention-days` (7 by default; `upload-artifact: false` uploads
+# none) and, with `report-s3-bucket`, to S3-compatible storage.
 #
 # The job fails when an `error` assertion fails (GitHub's failure email is the
 # alert); the statuses say which page.
@@ -15,9 +16,14 @@ name: Perf — Lighthouse CI
 # deployed after the commit that runs this (GitOps, a manual merge) reports
 # its release tag there, and the statuses go on that tag's commit.
 #
+# Two jobs. `lighthouse` runs Chrome inside the pinned `browser-image` as the
+# job's container (no Docker daemon, no Chrome on the runner) and holds a
+# read-only token. `statuses` posts on the runner itself, the only job with
+# statuses: write: the token never enters the container where Chrome runs
+# pages without its sandbox.
+#
 # Intended to be called from a `schedule:` or `workflow_dispatch:` caller.
-# Do NOT run it on a cluster-internal runner: auditing from the site's
-# own network skews the scores. Keep the default GitHub-hosted runner.
+# Audit from outside the site's own network: from inside, the scores are skewed.
 
 on:
   workflow_call:
@@ -53,16 +59,49 @@ on:
         required: false
         # renovate: datasource=npm depName=@lhci/cli
         default: 0.15.1
+      browser-image:
+        description: Image the audit runs in, with Node and Chrome, pinned by tag and digest (sitespeed.io's by default)
+        type: string
+        required: false
+        # renovate: datasource=docker depName=sitespeedio/sitespeed.io
+        default: sitespeedio/sitespeed.io:42.9.0@sha256:83aa64fde9b780f139ffa34eddbf722f23706bfd88819acf27bbd06f851cc301
       artifact-retention-days:
         description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
         type: number
         required: false
         default: 7
+      upload-artifact:
+        description: Upload the reports as an artifact. false uploads nothing to GitHub, for a check that only gates on the assertions
+        type: boolean
+        required: false
+        default: true
+      report-s3-endpoint:
+        description: https:// URL of an S3-compatible API for a copy of the reports (e.g. https://s3.eu-central-003.backblazeb2.com)
+        type: string
+        required: false
+        default: ""
+      report-s3-bucket:
+        description: Bucket of the S3 copy of the reports (private, with a lifecycle rule). Empty, no copy
+        type: string
+        required: false
+        default: ""
+      report-s3-prefix:
+        description: Key prefix of the S3 copy, before <owner>/<repo>/
+        type: string
+        required: false
+        default: ""
       runner:
-        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews the scores)
         type: string
         required: false
         default: '"ubuntu-26.04"'
+    secrets:
+      report-s3-access-key-id:
+        description: Access key ID of the S3 copy (a Backblaze B2 application key ID), required with report-s3-bucket
+        required: false
+      report-s3-secret-access-key:
+        description: Secret access key of the S3 copy (the B2 application key), required with report-s3-bucket
+        required: false
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -88,12 +127,33 @@ on:
         type: string
         # renovate: datasource=npm depName=@lhci/cli
         default: 0.15.1
+      browser-image:
+        description: Image the audit runs in, with Node and Chrome, pinned by tag and digest (sitespeed.io's by default)
+        type: string
+        # renovate: datasource=docker depName=sitespeedio/sitespeed.io
+        default: sitespeedio/sitespeed.io:42.9.0@sha256:83aa64fde9b780f139ffa34eddbf722f23706bfd88819acf27bbd06f851cc301
       artifact-retention-days:
         description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
         type: number
         default: 7
+      upload-artifact:
+        description: Upload the reports as an artifact. false uploads nothing to GitHub, for a check that only gates on the assertions
+        type: boolean
+        default: true
+      report-s3-endpoint:
+        description: https:// URL of an S3-compatible API for a copy of the reports (e.g. https://s3.eu-central-003.backblazeb2.com)
+        type: string
+        default: ""
+      report-s3-bucket:
+        description: Bucket of the S3 copy of the reports (private, with a lifecycle rule). Empty, no copy
+        type: string
+        default: ""
+      report-s3-prefix:
+        description: Key prefix of the S3 copy, before <owner>/<repo>/
+        type: string
+        default: ""
       runner:
-        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews the scores)
         type: string
         required: false
         default: '"ubuntu-26.04"'
@@ -112,17 +172,41 @@ jobs:
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 30
     permissions:
-      contents: read # the caller's config, and the commit behind version-url
-      statuses: write # one status per page
+      contents: read # the caller's config
+    # The image is the job's container: Node and Chrome come with it. Under
+    # Docker (GitHub-hosted runners) the job runs as the runner's UID, never
+    # root, with a 1 GiB /dev/shm for Chrome. Kubernetes ignores container
+    # options: there the runner's hook template sets the user and /dev/shm
+    # (docs/workflows/perf-lighthouse.md).
+    container:
+      image: ${{ inputs.browser-image }} # zizmor: ignore[unpinned-images] -- the input defaults to a tag + digest pin (Renovate); a caller passing another image owns its pin
+      options: --user 1001 --shm-size=1g
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      pages: ${{ steps.summary.outputs.pages }}
+      report-url: ${{ steps.report.outputs.artifact-url }}
 
     steps:
+      - name: Check report inputs
+        uses: $/.github/actions/check-report-inputs
+        with:
+          artifact-retention-days: ${{ inputs.artifact-retention-days }}
+          upload-artifact: ${{ inputs.upload-artifact }}
+          s3-endpoint: ${{ inputs.report-s3-endpoint }}
+          s3-bucket: ${{ inputs.report-s3-bucket }}
+          s3-prefix: ${{ inputs.report-s3-prefix }}
+          s3-access-key-id: ${{ secrets.report-s3-access-key-id }}
+          s3-secret-access-key: ${{ secrets.report-s3-secret-access-key }}
+
       - name: Validate inputs
+        id: validate
         env:
           SITE: ${{ inputs.site }}
           URLS: ${{ inputs.urls }}
           CONFIG: ${{ inputs.config }}
           VERSION_URL: ${{ inputs.version-url }}
-          RETENTION_DAYS: ${{ inputs.artifact-retention-days }}
         run: |
           set -euo pipefail
           [[ "$SITE" =~ ^https?://[^/]+ ]] || { echo "::error::site must start with http:// or https:// (got '${SITE}')"; exit 1; }
@@ -140,12 +224,10 @@ jobs:
             echo "::error::version-url must start with http:// or https:// (got '${VERSION_URL}')"
             exit 1
           fi
-          if [[ ! "$RETENTION_DAYS" =~ ^[0-9]{1,2}$ ]] || (( 10#$RETENTION_DAYS < 1 || 10#$RETENTION_DAYS > 90 )); then
-            echo "::error::artifact-retention-days must be a whole number from 1 to 90 (got '${RETENTION_DAYS}')"
-            exit 1
-          fi
 
-      # The config file only: the audit needs nothing else from the repository.
+      # The config file only, where the image has git; without git (the
+      # sitespeed.io image) the checkout downloads the repository through the
+      # REST API instead.
       - name: Checkout the config
         if: inputs.config != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -154,10 +236,9 @@ jobs:
           sparse-checkout: ${{ inputs.config }}
           sparse-checkout-cone-mode: false
 
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
+      # The image has no jq; the summary below needs it.
+      - name: Setup jq
+        uses: $/.github/actions/setup-jq
 
       # Non-zero exit when an assertion fails — this step is what fails the job.
       # The upload runs anyway: the report and the statuses say which page.
@@ -169,9 +250,16 @@ jobs:
           VERSION: ${{ inputs.lhci-version }}
         run: |
           set -euo pipefail
-          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
-          if [[ -n "$CHROME_PATH" ]]; then
-            export CHROME_PATH
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [[ -z "$CHROME_PATH" ]]; then
+            echo "::error::no google-chrome or chromium on the PATH of browser-image"
+            exit 1
+          fi
+          export CHROME_PATH
+          # npm keeps its cache in HOME, which a pod's user may lack.
+          if [[ -z "${HOME:-}" || ! -w "$HOME" ]]; then
+            export HOME="$RUNNER_TEMP/home"
+            mkdir -p "$HOME"
           fi
           lhci() { npm exec --yes --package="@lhci/cli@${VERSION}" -- lhci "$@"; }
           rc=(--no-lighthouserc)
@@ -186,9 +274,29 @@ jobs:
               urls+=("--url=${SITE%/}${path}")
             fi
           done
+          # Chrome in a container: its sandbox needs user namespaces or a
+          # setuid helper, which an unprivileged container (no CAP_SYS_ADMIN,
+          # no privilege escalation) cannot offer, so it runs with
+          # --no-sandbox, the container being the boundary. Its shared memory
+          # moves from /dev/shm to /tmp when /dev/shm is under 512 MiB (a pod
+          # without a memory emptyDir there); lhci adds --headless=new itself.
+          flags="--no-sandbox"
+          shm_kib="$(df -Pk /dev/shm 2>/dev/null | awk 'NR == 2 { print $2 }')"
+          [[ "$shm_kib" =~ ^[0-9]+$ ]] || shm_kib=0
+          if (( shm_kib < 524288 )); then
+            echo "::notice::/dev/shm holds $(( shm_kib / 1024 )) MiB: Chrome runs with --disable-dev-shm-usage"
+            flags+=" --disable-dev-shm-usage"
+          fi
+          # These flags replace the config's ci.collect.settings.chromeFlags:
+          # a JSON config's own flags are kept, in front.
+          if [[ "$CONFIG" == *.json && -f "$CONFIG" ]]; then
+            own="$(node -e 'const c = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+              process.stdout.write(String(c?.ci?.collect?.settings?.chromeFlags ?? ""))' "$CONFIG")"
+            flags="${own:+${own} }${flags}"
+          fi
           # The deployed pages: the URLs and the server a config names for local
           # runs are overridden.
-          lhci collect "${rc[@]}" "${urls[@]}" --startServerCommand=
+          lhci collect "${rc[@]}" "${urls[@]}" --startServerCommand= "--settings.chromeFlags=${flags}"
           status=0
           if [[ -n "$CONFIG" ]]; then
             lhci assert "${rc[@]}" || status=$?
@@ -198,7 +306,7 @@ jobs:
 
       - name: Upload report
         id: report
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && inputs.upload-artifact }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lighthouse-report
@@ -209,12 +317,46 @@ jobs:
           # told to (v4.4.0+). It holds the Lighthouse reports of public pages, no secret.
           include-hidden-files: true
 
-      # A status GitHub refuses (the caller did not grant statuses: write) must
-      # not hide the audit's own result: the job keeps the Lighthouse step's.
-      - name: Summarize and post statuses
-        if: ${{ !cancelled() }}
+      # Requested by report-s3-bucket, so a failed copy fails the job.
+      - name: Copy report to S3
+        if: ${{ !cancelled() && inputs.report-s3-bucket != '' && steps.validate.outcome == 'success' }}
+        uses: $/.github/actions/upload-report-s3
+        with:
+          path: .lighthouse
+          name: lighthouse-report
+          workflow: perf-lighthouse
+          endpoint: ${{ inputs.report-s3-endpoint }}
+          bucket: ${{ inputs.report-s3-bucket }}
+          prefix: ${{ inputs.report-s3-prefix }}
+          access-key-id: ${{ secrets.report-s3-access-key-id }}
+          secret-access-key: ${{ secrets.report-s3-secret-access-key }}
+
+      # The summary here, the statuses in the next job (the `pages` output).
+      - name: Summarize
+        id: summary
+        if: ${{ !cancelled() && steps.validate.outcome == 'success' }}
         continue-on-error: true
         uses: $/.github/actions/lighthouse-results
         with:
+          post-statuses: 'false'
+
+  # On the runner: curl and the statuses: write token, no browser.
+  # A status GitHub refuses (the caller did not grant statuses: write) must
+  # not hide the audit's own result: the run keeps the Lighthouse job's.
+  statuses:
+    name: Commit statuses
+    needs: lighthouse
+    if: ${{ !cancelled() && needs.lighthouse.outputs.pages != '' }}
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 10
+    permissions:
+      contents: read # the commit behind version-url
+      statuses: write # one status per page
+    steps:
+      - name: Post statuses
+        continue-on-error: true
+        uses: $/.github/actions/lighthouse-results
+        with:
+          pages: ${{ needs.lighthouse.outputs.pages }}
           version-url: ${{ inputs.version-url }}
-          target-url: ${{ steps.report.outputs.artifact-url }}
+          target-url: ${{ needs.lighthouse.outputs.report-url }}

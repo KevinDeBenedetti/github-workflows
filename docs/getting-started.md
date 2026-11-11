@@ -11,6 +11,8 @@ and composite actions. Callers stay minimal — CI steps run consistently across
 
 - A GitHub repository
 - Appropriate secrets set in your repo/org (see each workflow's docs)
+- For the perf and SEO workflows on a Kubernetes scale set (ARC):
+  [Running on self-hosted ARC runners](self-hosted-arc-runners.md)
 
 ## How it works
 
@@ -418,6 +420,9 @@ steps:
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
 | [`lighthouse-results`](actions/lighthouse-results.md) | Summarize a Lighthouse CI run and post one commit status per page |
+| [`check-report-inputs`](actions/check-report-inputs.md) | Check the artifact and S3 report settings of the perf and SEO workflows |
+| [`upload-report-s3`](actions/upload-report-s3.md) | Copy a report to S3-compatible storage (Backblaze B2, AWS S3) with a pinned rclone |
+| [`setup-jq`](actions/setup-jq.md) | Install jq, pinned and checked against a SHA-256, for a job container without it |
 | [`prerelease`](actions/prerelease.md) | Compute the next pre-release of a branch and publish it as a GitHub pre-release |
 | [`cleanup-runs`](actions/cleanup-runs.md) | Delete the old workflow runs of the repository, keeping the recent ones |
 | [`propagate-release`](actions/propagate-release.md) | Open a pull request in each consumer repository that moves its pins to a release |

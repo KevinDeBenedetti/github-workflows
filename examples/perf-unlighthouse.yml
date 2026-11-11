@@ -16,3 +16,11 @@ jobs:
       site: https://example.com
       budget: 80
       artifact-retention-days: 7 # days the HTML report is kept (1 to 90)
+      # Or no GitHub artifact at all, the report in a private B2 bucket with a
+      # lifecycle rule:
+      # upload-artifact: false
+      # report-s3-endpoint: https://s3.eu-central-003.backblazeb2.com
+      # report-s3-bucket: my-perf-reports
+    # secrets:
+    #   report-s3-access-key-id: ${{ secrets.B2_KEY_ID }}
+    #   report-s3-secret-access-key: ${{ secrets.B2_APPLICATION_KEY }}

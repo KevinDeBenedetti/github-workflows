@@ -5,12 +5,15 @@ name: Perf — Unlighthouse
 #
 # The job fails when any page scores below `budget` (GitHub's failure email is
 # the alert). The per-page scores are written to the step summary and the full
-# static HTML report is kept as an artifact for `artifact-retention-days` (7 by
-# default).
+# static HTML report goes to an artifact kept `artifact-retention-days` (7 by
+# default; `upload-artifact: false` uploads none) and, with
+# `report-s3-bucket`, to S3-compatible storage.
 #
-# Intended to be called from a `schedule:` caller. Do NOT run it on a
-# cluster-internal runner: auditing from the site's own network skews
-# the scores. Keep the default GitHub-hosted runner.
+# Unlighthouse and its Chrome run inside the pinned `browser-image` as the
+# job's container: the runner needs neither Chrome nor a Docker daemon.
+#
+# Intended to be called from a `schedule:` caller. Audit from outside the
+# site's own network: from inside, the scores are skewed.
 
 on:
   workflow_call:
@@ -50,16 +53,49 @@ on:
         required: false
         # renovate: datasource=npm depName=@unlighthouse/cli
         default: 0.19.1
+      browser-image:
+        description: Image the audit runs in, with Node and Chrome, pinned by tag and digest (sitespeed.io's by default)
+        type: string
+        required: false
+        # renovate: datasource=docker depName=sitespeedio/sitespeed.io
+        default: sitespeedio/sitespeed.io:42.9.0@sha256:83aa64fde9b780f139ffa34eddbf722f23706bfd88819acf27bbd06f851cc301
       artifact-retention-days:
         description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
         type: number
         required: false
         default: 7
+      upload-artifact:
+        description: Upload the report as an artifact. false uploads nothing to GitHub, for a check that only gates on the budget
+        type: boolean
+        required: false
+        default: true
+      report-s3-endpoint:
+        description: https:// URL of an S3-compatible API for a copy of the report (e.g. https://s3.eu-central-003.backblazeb2.com)
+        type: string
+        required: false
+        default: ""
+      report-s3-bucket:
+        description: Bucket of the S3 copy of the report (private, with a lifecycle rule). Empty, no copy
+        type: string
+        required: false
+        default: ""
+      report-s3-prefix:
+        description: Key prefix of the S3 copy, before <owner>/<repo>/
+        type: string
+        required: false
+        default: ""
       runner:
-        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews the scores)
         type: string
         required: false
         default: '"ubuntu-26.04"'
+    secrets:
+      report-s3-access-key-id:
+        description: Access key ID of the S3 copy (a Backblaze B2 application key ID), required with report-s3-bucket
+        required: false
+      report-s3-secret-access-key:
+        description: Secret access key of the S3 copy (the B2 application key), required with report-s3-bucket
+        required: false
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -93,12 +129,33 @@ on:
         type: string
         # renovate: datasource=npm depName=@unlighthouse/cli
         default: 0.19.1
+      browser-image:
+        description: Image the audit runs in, with Node and Chrome, pinned by tag and digest (sitespeed.io's by default)
+        type: string
+        # renovate: datasource=docker depName=sitespeedio/sitespeed.io
+        default: sitespeedio/sitespeed.io:42.9.0@sha256:83aa64fde9b780f139ffa34eddbf722f23706bfd88819acf27bbd06f851cc301
       artifact-retention-days:
         description: Days the uploaded artifacts are kept, 1 to 90 (the repository's artifact retention setting caps it)
         type: number
         default: 7
+      upload-artifact:
+        description: Upload the report as an artifact. false uploads nothing to GitHub, for a check that only gates on the budget
+        type: boolean
+        default: true
+      report-s3-endpoint:
+        description: https:// URL of an S3-compatible API for a copy of the report (e.g. https://s3.eu-central-003.backblazeb2.com)
+        type: string
+        default: ""
+      report-s3-bucket:
+        description: Bucket of the S3 copy of the report (private, with a lifecycle rule). Empty, no copy
+        type: string
+        default: ""
+      report-s3-prefix:
+        description: Key prefix of the S3 copy, before <owner>/<repo>/
+        type: string
+        default: ""
       runner:
-        description: Runner labels as JSON — use '"ubuntu-26.04"'. Avoid cluster-internal runners (they skew scores)
+        description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews the scores)
         type: string
         required: false
         default: '"ubuntu-26.04"'
@@ -118,14 +175,36 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
+    # The image is the job's container: Node and Chrome come with it. Under
+    # Docker (GitHub-hosted runners) the job runs as the runner's UID, never
+    # root, with a 1 GiB /dev/shm for Chrome. Kubernetes ignores container
+    # options: there the runner's hook template sets the user and /dev/shm
+    # (docs/workflows/perf-unlighthouse.md).
+    container:
+      image: ${{ inputs.browser-image }} # zizmor: ignore[unpinned-images] -- the input defaults to a tag + digest pin (Renovate); a caller passing another image owns its pin
+      options: --user 1001 --shm-size=1g
+    defaults:
+      run:
+        shell: bash
 
     steps:
+      - name: Check report inputs
+        uses: $/.github/actions/check-report-inputs
+        with:
+          artifact-retention-days: ${{ inputs.artifact-retention-days }}
+          upload-artifact: ${{ inputs.upload-artifact }}
+          s3-endpoint: ${{ inputs.report-s3-endpoint }}
+          s3-bucket: ${{ inputs.report-s3-bucket }}
+          s3-prefix: ${{ inputs.report-s3-prefix }}
+          s3-access-key-id: ${{ secrets.report-s3-access-key-id }}
+          s3-secret-access-key: ${{ secrets.report-s3-secret-access-key }}
+
       - name: Validate inputs
+        id: validate
         env:
           SITE: ${{ inputs.site }}
           DEVICE: ${{ inputs.device }}
           BUDGET: ${{ inputs.budget }}
-          RETENTION_DAYS: ${{ inputs.artifact-retention-days }}
         run: |
           set -euo pipefail
           [[ "$SITE" =~ ^https?:// ]] || { echo "::error::site must start with http:// or https:// (got '${SITE}')"; exit 1; }
@@ -137,15 +216,10 @@ jobs:
             echo "::error::budget must be an integer between 1 and 100 (got '${BUDGET}')"
             exit 1
           fi
-          if [[ ! "$RETENTION_DAYS" =~ ^[0-9]{1,2}$ ]] || (( 10#$RETENTION_DAYS < 1 || 10#$RETENTION_DAYS > 90 )); then
-            echo "::error::artifact-retention-days must be a whole number from 1 to 90 (got '${RETENTION_DAYS}')"
-            exit 1
-          fi
 
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 22
+      # The image has no jq; the summary below needs it.
+      - name: Setup jq
+        uses: $/.github/actions/setup-jq
 
       # Non-zero exit when a page is under budget — this step is what fails the job.
       - name: Run Unlighthouse
@@ -159,10 +233,35 @@ jobs:
           VERSION: ${{ inputs.unlighthouse-version }}
         run: |
           set -euo pipefail
-          CHROME_PATH="$(command -v google-chrome || command -v chromium)"
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [[ -z "$CHROME_PATH" ]]; then
+            echo "::error::no google-chrome or chromium on the PATH of browser-image"
+            exit 1
+          fi
           export CHROME_PATH
+          # npm and Unlighthouse keep their caches in HOME, which a pod's user may lack.
+          if [[ -z "${HOME:-}" || ! -w "$HOME" ]]; then
+            export HOME="$RUNNER_TEMP/home"
+            mkdir -p "$HOME"
+          fi
+          # Chrome in a container: its sandbox needs user namespaces or a
+          # setuid helper, which an unprivileged container (no CAP_SYS_ADMIN,
+          # no privilege escalation) cannot offer, so it runs with
+          # --no-sandbox, the container being the boundary. Unlighthouse adds
+          # it only for root, and takes Chrome flags from a config file only.
+          # Shared memory moves from /dev/shm to /tmp when /dev/shm is under
+          # 512 MiB (a pod without a memory emptyDir there).
+          chrome_args='"--no-sandbox", "--disable-setuid-sandbox"'
+          shm_kib="$(df -Pk /dev/shm 2>/dev/null | awk 'NR == 2 { print $2 }')"
+          [[ "$shm_kib" =~ ^[0-9]+$ ]] || shm_kib=0
+          if (( shm_kib < 524288 )); then
+            echo "::notice::/dev/shm holds $(( shm_kib / 1024 )) MiB: Chrome runs with --disable-dev-shm-usage"
+            chrome_args+=', "--disable-dev-shm-usage"'
+          fi
+          config="$RUNNER_TEMP/unlighthouse.config.json"
+          printf '{"puppeteerOptions": {"args": [%s]}}\n' "$chrome_args" > "$config"
           args=(--site "$SITE" --budget "$BUDGET" "--${DEVICE}" --samples "$SAMPLES"
-                --build-static --output-path .unlighthouse)
+                --build-static --output-path .unlighthouse --config-file "$config")
           [[ -n "$URLS" ]] && args+=(--urls "$URLS")
           [[ -n "$EXCLUDE_URLS" ]] && args+=(--exclude-urls "$EXCLUDE_URLS")
           npm exec --yes --package="@unlighthouse/cli@${VERSION}" -- unlighthouse-ci "${args[@]}"
@@ -197,7 +296,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload report
-        if: always()
+        if: ${{ always() && inputs.upload-artifact }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: unlighthouse-report-${{ inputs.device }}
@@ -207,3 +306,17 @@ jobs:
           # `.unlighthouse` is a dot-folder: upload-artifact skips hidden paths unless
           # told to (v4.4.0+). It holds the Unlighthouse report of public pages, no secret.
           include-hidden-files: true
+
+      # Requested by report-s3-bucket, so a failed copy fails the job.
+      - name: Copy report to S3
+        if: ${{ !cancelled() && inputs.report-s3-bucket != '' && steps.validate.outcome == 'success' }}
+        uses: $/.github/actions/upload-report-s3
+        with:
+          path: .unlighthouse
+          name: unlighthouse-report-${{ inputs.device }}
+          workflow: perf-unlighthouse
+          endpoint: ${{ inputs.report-s3-endpoint }}
+          bucket: ${{ inputs.report-s3-bucket }}
+          prefix: ${{ inputs.report-s3-prefix }}
+          access-key-id: ${{ secrets.report-s3-access-key-id }}
+          secret-access-key: ${{ secrets.report-s3-secret-access-key }}
