@@ -1,7 +1,8 @@
 # Weekly retention for this repository's workflow runs — drop this file in
 # .github/workflows/. The retention policy lives in github-workflows
 # (cleanup-runs.yml): old runs go with their logs and artifacts, the recent
-# ones and the last runs of each workflow stay.
+# ones and the last runs of each workflow stay, and artifacts-older-than-days
+# deletes the old artifacts of those too.
 # Start in dry-run: run it once by hand from the Actions tab, read what the log
 # says it would delete, then remove the dry-run line.
 name: Cleanup workflow runs
@@ -22,4 +23,7 @@ jobs:
       actions: write
       pull-requests: read
     with:
+      # Artifacts count against the account's Actions storage for every hour
+      # they exist: the runs kept lose theirs after three days too.
+      artifacts-older-than-days: 3
       dry-run: true

@@ -340,6 +340,8 @@ jobs:
 Deletes old workflow runs, with their logs and artifacts, every week. Runs younger
 than 30 days, the 10 most recent runs of each workflow and the runs of open pull
 requests are never deleted; a deleted workflow file leaves the Actions sidebar.
+`artifacts-older-than-days` also deletes the old artifacts of the runs kept, which
+count against the account's Actions storage.
 
 ```yaml
 on:
@@ -354,6 +356,7 @@ jobs:
       actions: write
       pull-requests: read
     with:
+      artifacts-older-than-days: 3 # the runs kept lose their old artifacts too
       dry-run: true      # remove once a manual run's log looks right
 ```
 
@@ -382,7 +385,7 @@ jobs:
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](workflows/pr-description.md) |
 | `cleanup-ghcr.yml` | Scheduled GHCR retention: keeps releases and recent images, deletes the rest and old layer caches | [→](workflows/cleanup-ghcr.md) |
-| `cleanup-runs.yml` | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest | [→](workflows/cleanup-runs.md) |
+| `cleanup-runs.yml` | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest, and optionally old artifacts | [→](workflows/cleanup-runs.md) |
 
 ---
 
