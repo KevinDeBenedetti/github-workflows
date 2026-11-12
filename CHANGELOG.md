@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.43.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.42.0...v0.43.0) (2026-11-12)
+
+
+### Features
+
+* **workflows:** add S3-compatible storage support for reports ([206819d](https://github.com/KevinDeBenedetti/github-workflows/commit/206819d74efc0ba35ca3df1ce0731ba2caac1b68))
+
 ## [0.42.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.41.0...v0.42.0) (2026-11-11)
 
 
