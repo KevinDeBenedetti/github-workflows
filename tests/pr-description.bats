@@ -447,6 +447,82 @@ update() {
   [[ "$output" == *"empty description"* ]]
 }
 
+@test "write: UPDATE_TITLE adds the title rules and splits off a valid title" {
+  stub_claude '{"is_error":false,"result":"Title: feat(api)!: drop the v1 routes\n\n## Summary\n\nDrops v1."}'
+  run describe_with UPDATE_TITLE=true TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 0 ]
+  [ "$(cat title.txt)" = "feat(api)!: drop the v1 routes" ]
+  [ "$(head -1 description.md)" = "## Summary" ]
+  [ "$(grep -c 'Title:' description.md)" -eq 0 ]
+  [ "$(mode title.txt)" = "0o600" ]
+  log="$BATS_TEST_TMPDIR/claude.log"
+  grep -A1 -xF 'arg=[-p]' "$log" | grep -qxF 'arg=[Write the pull request title and description.]'
+}
+
+@test "write: without UPDATE_TITLE the prompt has no title rules and no title is written" {
+  # The script runs claude under env -i: the log path is written in here.
+  cat > bin/claude <<EOF
+#!/usr/bin/env bash
+while [ \$# -gt 0 ]; do
+  [ "\$1" = --system-prompt-file ] && cp "\$2" "$BATS_TEST_TMPDIR/prompt.md"
+  shift
+done
+cat > /dev/null
+printf '%s\n' '{"is_error":false,"result":"Adds b."}'
+EOF
+  chmod +x bin/claude
+  run describe_with TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 0 ]
+  [ ! -e title.txt ]
+  [ "$(grep -c 'Conventional Commit' "$BATS_TEST_TMPDIR/prompt.md")" -eq 0 ]
+}
+
+@test "write: a title that fails the checks is dropped with a warning, the description kept" {
+  for title in 'Refactor everything' 'refactor: move code' 'feat: add b.' 'fix: close #12' \
+    'feat: thanks @someone' 'docs: see https://evil.example' 'feat: `code` title' \
+    "feat: $(printf 'x%.0s' $(seq 1 100))"; do
+    rm -f title.txt
+    stub_claude "$(jq -cn --arg t "$title" '{is_error: false, result: ("Title: " + $t + "\n\n## Summary\n\nAdds b.")}')"
+    run describe_with UPDATE_TITLE=true TITLE_FILE="$PWD/title.txt"
+    [ "$status" -eq 0 ] || { echo "failed on: $title"; return 1; }
+    [ ! -e title.txt ] || { echo "accepted: $title"; return 1; }
+    [[ "$output" == *"::warning::Title not used"* ]]
+    [ "$(head -1 description.md)" = "## Summary" ]
+  done
+}
+
+@test "write: a hidden character in the title fails the check" {
+  stub_claude "$(python3 -c 'import json; print(json.dumps({"is_error": False, "result": "Title: feat: add‮b\n\nAdds b."}))')"
+  run describe_with UPDATE_TITLE=true TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 0 ]
+  [ ! -e title.txt ]
+  # The warning shows the rejected title without the hidden character.
+  printf '%s' "$output" > output.txt
+  [ "$(unsafe_chars output.txt)" -eq 0 ]
+}
+
+@test "write: an answer with no Title line is all description" {
+  stub_claude '{"is_error":false,"result":"## Summary\n\nAdds b."}'
+  run describe_with UPDATE_TITLE=true TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 0 ]
+  [ ! -e title.txt ]
+  [[ "$output" == *"no 'Title:' line"* ]]
+  [ "$(head -1 description.md)" = "## Summary" ]
+}
+
+@test "write: a title with no description fails" {
+  stub_claude '{"is_error":false,"result":"Title: feat: add b\n\n  "}'
+  run describe_with UPDATE_TITLE=true TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"empty description"* ]]
+}
+
+@test "write: rejects an UPDATE_TITLE that is not true or false" {
+  stub_claude '{"is_error":false,"result":"Adds b."}'
+  run describe_with UPDATE_TITLE=yes TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 2 ]
+}
+
 # ── update-body.sh ───────────────────────────────────────────────────────────
 
 @test "update: saves the merged body and keeps the existing text" {
@@ -494,6 +570,50 @@ update() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"already up to date"* ]]
   [ "$(grep -c '^PATCH' "$BATS_TEST_TMPDIR/curl.log")" -eq 0 ]
+}
+
+@test "update: a new title goes in the same PATCH as the body" {
+  stub_curl '{"number":7,"title":"wip","body":"Closes #12"}'
+  printf 'Adds b.\n' > description.md
+  printf 'feat: add b' > title.txt
+  run update TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 0 ]
+  [ "$(jq -r .title "$BATS_TEST_TMPDIR/patched.json")" = "feat: add b" ]
+  [[ "$(jq -r .body "$BATS_TEST_TMPDIR/patched.json")" == *"Adds b."* ]]
+  [[ "$output" == *"Updated the title of #7: feat: add b"* ]]
+}
+
+@test "update: only the title is sent when the body is already up to date" {
+  printf 'Adds b.\n' > description.md
+  : > current.md
+  python3 "$ACTION/merge-body.py" current.md description.md merged.md
+  stub_curl "$(jq -cn --rawfile b merged.md '{number: 7, title: "wip", body: $b}')"
+  printf 'feat: add b' > title.txt
+  run update TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 0 ]
+  [ "$(jq -c 'keys' "$BATS_TEST_TMPDIR/patched.json")" = '["title"]' ]
+}
+
+@test "update: a title and body already up to date make no call" {
+  printf 'Adds b.\n' > description.md
+  : > current.md
+  python3 "$ACTION/merge-body.py" current.md description.md merged.md
+  stub_curl "$(jq -cn --rawfile b merged.md '{number: 7, title: "feat: add b", body: $b}')"
+  printf 'feat: add b' > title.txt
+  run update TITLE_FILE="$PWD/title.txt"
+  [ "$status" -eq 0 ]
+  [ "$(grep -c '^PATCH' "$BATS_TEST_TMPDIR/curl.log")" -eq 0 ]
+}
+
+@test "update: an absent or empty title file leaves the title alone" {
+  stub_curl '{"number":7,"title":"wip","body":""}'
+  printf 'Adds b.\n' > description.md
+  : > empty.txt
+  for file in "$PWD/missing.txt" "$PWD/empty.txt"; do
+    run update TITLE_FILE="$file"
+    [ "$status" -eq 0 ]
+    [ "$(jq -c 'has("title")' "$BATS_TEST_TMPDIR/patched.json")" = false ]
+  done
 }
 
 @test "update: an API error fails and shows GitHub's answer" {

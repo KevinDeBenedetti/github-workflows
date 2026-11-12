@@ -61,6 +61,30 @@ jobs:
 `model` takes a Claude Code alias (`opus`, `sonnet`, `haiku`, `fable`) or a full
 model name.
 
+### Rewrite the title too
+
+With `update-title: true`, Claude also rewrites the title on every push, as a
+Conventional Commit header such as `feat(api)!: drop the v1 routes`. When the
+repository squash-merges with the pull request title as the commit message, that
+title is the commit release-please reads to pick the next version and write the
+changelog, so the prompt asks for the narrowest true type and never `refactor`.
+
+```yaml
+jobs:
+  describe:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@main
+    with:
+      update-title: true
+```
+
+The title is checked before it is saved: a known type, an optional lowercase
+scope, an optional `!`, no final period, at most 100 characters, and no mention,
+issue reference, URL, markup or hidden character. A title that fails is not used
+and the run prints a warning: the pull request keeps its title, and the
+description is still updated. A title you edit by hand is rewritten on the next
+push; Claude keeps it when it already describes the whole pull request and
+follows the rules.
+
 ### Use it in all your repositories
 
 Everything is configured here, in `pr-description.yml`: the model, the effort, the
@@ -123,6 +147,7 @@ template.
 | `effort`         | string | `medium`                    | Claude Code effort level (`low` to `max`); empty for Claude Code's default      |
 | `language`       | string | `English`                   | Language of the text; the section headings stay in English                      |
 | `max-diff-bytes` | number | `100000`                    | Size cap of each block sent to Claude (commits, diffstat, diff), max `3000000`  |
+| `update-title`   | bool   | `false`                     | Also rewrite the title as a Conventional Commit header (see above)              |
 | `runner`         | string | `'"ubuntu-26.04"'`          | Runner labels as JSON: Linux x64 or arm64 with glibc, curl, git, jq, python3    |
 
 ## Secrets
