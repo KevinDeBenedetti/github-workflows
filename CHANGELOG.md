@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.44.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.43.0...v0.44.0) (2026-11-12)
+
+
+### Features
+
+* **pr-description:** add support for rewriting pull request titles as Conventional Commits ([ef5d292](https://github.com/KevinDeBenedetti/github-workflows/commit/ef5d29297ca4f7c4f8cd5e022894b2dafc94df97))
+
 ## [0.43.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.42.0...v0.43.0) (2026-11-12)
 
 
