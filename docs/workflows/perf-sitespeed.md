@@ -8,7 +8,7 @@ Core Web Vitals monitoring with [sitespeed.io](https://www.sitespeed.io/) (real
 Chrome, official Docker image). The job **fails when the performance budget is
 exceeded**, so GitHub's failure email is the alert. By default the metrics are
 appended to a CSV on a history branch, and the raw results are kept as
-artifacts for a few days, or copied to S3-compatible storage instead.
+artifacts for a few days, or not uploaded at all.
 sitespeed.io runs inside its pinned image as the job's container: the runner
 needs no Docker daemon and no Chrome.
 
@@ -37,20 +37,6 @@ perf/budget.json  # {"budget": {"googleWebVitals": {"largestContentfulPaint": 25
                   #   "cumulativeLayoutShift": 0.1, "totalBlockingTime": 300}}}
 ```
 
-With the raw results in a private Backblaze B2 bucket and no GitHub artifact:
-
-```yaml
-    with:
-      device: both
-      upload-artifact: false
-      report-s3-endpoint: https://s3.eu-central-003.backblazeb2.com
-      report-s3-bucket: my-perf-reports
-      report-s3-prefix: perf
-    secrets:
-      report-s3-access-key-id: ${{ secrets.B2_KEY_ID }}
-      report-s3-secret-access-key: ${{ secrets.B2_APPLICATION_KEY }}
-```
-
 ## Inputs
 
 | Input                     | Type    | Default                                   | Description                                                                      |
@@ -63,15 +49,7 @@ With the raw results in a private Backblaze B2 bucket and no GitHub artifact:
 | `history-branch`          | string  | `perf-history`                            | Branch receiving `history.csv` (orphan if missing). Empty disables               |
 | `artifact-retention-days` | number  | `7`                                       | Days the artifacts are kept, 1 to 90; the repository's retention setting caps it |
 | `upload-artifact`         | boolean | `true`                                    | `false` uploads nothing to GitHub: a check that only gates on the budget         |
-| `report-s3-endpoint`      | string  | `""`                                      | `https://` URL of an S3-compatible API, for a copy of the results                |
-| `report-s3-bucket`        | string  | `""`                                      | Bucket of the copy (private, with a lifecycle rule). Empty: no copy              |
-| `report-s3-prefix`        | string  | `""`                                      | Key prefix of the copy, before `<owner>/<repo>/`                                 |
 | `runner`                  | string  | `'"ubuntu-26.04"'`                        | Runner labels as JSON                                                            |
-
-| Secret                        | Description                                                           |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `report-s3-access-key-id`     | Access key ID of the copy (a B2 application key ID), with a bucket    |
-| `report-s3-secret-access-key` | Secret access key of the copy (the B2 application key), with a bucket |
 
 ## Jobs
 
@@ -80,7 +58,7 @@ With the raw results in a private Backblaze B2 bucket and no GitHub artifact:
    REST API: the image has no git), validates the inputs, runs sitespeed.io
    (`--mobile` for mobile) with the `analysisstorer` plugin, extracts the median
    LCP/CLS/TBT, writes a step summary, then uploads `sitespeed-result-<device>`
-   (`artifact-retention-days`, 7 days by default) and copies it to S3 when asked.
+   (`artifact-retention-days`, 7 days by default).
    Extraction and uploads run even when the budget failed. The medians come from
    the `pages/<host>/<path>/data/browsertime.pageSummary.json` file that
    `analysisstorer` writes for each URL: sitespeed.io writes no JSON without that
@@ -104,8 +82,8 @@ metrics live elsewhere:
 
 Keep the artifacts longer only to look into an old run's videos or HAR files, or
 set `upload-artifact: false` and keep none: the history does not need them. With
-the history disabled (`history-branch: ''`) and no S3 copy, the artifacts are the
-only record of the metrics.
+the history disabled (`history-branch: ''`), the artifacts are the only record of
+the metrics.
 
 Artifacts count against the account's GitHub Actions storage for every hour
 they exist, a branch does not. The repository's retention setting
@@ -113,27 +91,12 @@ they exist, a branch does not. The repository's retention setting
 in a repository set to 3 days, the artifacts are kept 3 days and
 `actions/upload-artifact` warns that it lowered the value.
 
-## Reports in S3
-
-With `report-s3-bucket`, the results go to S3-compatible storage (Backblaze B2,
-AWS S3, MinIO), whether or not an artifact is uploaded, under:
-
-```text
-<prefix>/<owner>/<repo>/perf-sitespeed/<run id>-<run attempt>/sitespeed-result-<device>/
-```
-
-The job summary gives that path. A failed copy fails the job, since it was asked
-for.
-
-::: warning Keep the bucket private, with a lifecycle rule
+::: warning The HAR files are in the artifacts
 The HAR files record every request and response of the measured pages, headers
-included: cookies, tokens in URLs, whatever a page sets. Make the bucket
-**private**, give it a **lifecycle rule** that deletes the reports after a few
-days or weeks (nothing else does), and use a key restricted to that bucket with
-write access only.
+included: cookies, tokens in URLs, whatever a page sets. Anyone who can read the
+repository can download the artifacts: measure pages that set no secret, or set
+`upload-artifact: false`.
 :::
-
-Details: [`upload-report-s3`](../actions/upload-report-s3.md).
 
 ## Running on self-hosted ARC runners
 
@@ -169,7 +132,7 @@ The whole list (Pod Security, egress, hook template):
 - The budget file must wrap the thresholds in a top-level `"budget"` key.
 - Start with loose thresholds and tighten them after a week of data.
 - No dashboard: alerting is the failure email, history is the CSV; the
-  artifacts, or the S3 copies, hold the raw results of the recent runs.
+  artifacts hold the raw results of the recent runs.
 
 ## Run locally
 

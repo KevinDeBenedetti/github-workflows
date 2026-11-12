@@ -104,8 +104,7 @@ artifacts too.
   at upload time saves more than any cleanup. The workflows of this repository that
   upload reports take an `artifact-retention-days` input, 7 days by default, such as
   [`perf-sitespeed`](./perf-sitespeed.md). They can also upload no artifact at all
-  (`upload-artifact: false`) and copy their reports to S3-compatible storage instead
-  (`report-s3-bucket`), which costs no Actions storage.
+  (`upload-artifact: false`), which costs no Actions storage.
 
 ## Inputs
 

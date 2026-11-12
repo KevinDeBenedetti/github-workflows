@@ -8,8 +8,7 @@ title: Perf — Unlighthouse
 Lighthouse (crawl + sitemap) and scores performance, accessibility, best
 practices and SEO page by page. The job **fails when any page is under
 `budget`**, so GitHub's failure email is the alert. Scores are printed in the
-step summary and the full static HTML report is kept as an artifact, or copied
-to S3-compatible storage. Unlighthouse and its Chrome run inside a pinned image
+step summary and the full static HTML report is kept as an artifact. Unlighthouse and its Chrome run inside a pinned image
 as the job's container: the runner needs neither Chrome nor a Docker daemon.
 
 ## Usage
@@ -44,25 +43,7 @@ jobs:
 | `browser-image`           | string  | `sitespeedio/sitespeed.io:<tag>@sha256:…` | Image the audit runs in, with Node and Chrome, pinned by tag + digest, bumped by Renovate |
 | `artifact-retention-days` | number  | `7`                                       | Days the artifact is kept, 1 to 90; the repository's retention setting caps it            |
 | `upload-artifact`         | boolean | `true`                                    | `false` uploads nothing to GitHub: a check that only gates on the budget                  |
-| `report-s3-endpoint`      | string  | `""`                                      | `https://` URL of an S3-compatible API, for a copy of the report                          |
-| `report-s3-bucket`        | string  | `""`                                      | Bucket of the copy (private, with a lifecycle rule). Empty: no copy                       |
-| `report-s3-prefix`        | string  | `""`                                      | Key prefix of the copy, before `<owner>/<repo>/`                                          |
 | `runner`                  | string  | `'"ubuntu-26.04"'`                        | Runner labels as JSON                                                                     |
-
-| Secret                        | Description                                                           |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `report-s3-access-key-id`     | Access key ID of the copy (a B2 application key ID), with a bucket    |
-| `report-s3-secret-access-key` | Secret access key of the copy (the B2 application key), with a bucket |
-
-## Reports in S3
-
-With `report-s3-bucket`, the report goes to S3-compatible storage (Backblaze B2,
-AWS S3, MinIO), whether or not an artifact is uploaded, under
-`<prefix>/<owner>/<repo>/perf-unlighthouse/<run id>-<run attempt>/unlighthouse-report-<device>/`:
-two calls of one run, one per device, never write over each other. The job
-summary gives the path, and a failed copy fails the job. Make the bucket
-**private** with a **lifecycle rule** that deletes the reports after a few days or
-weeks: see [`upload-report-s3`](../actions/upload-report-s3.md).
 
 ## Running on self-hosted ARC runners
 

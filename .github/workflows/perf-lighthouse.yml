@@ -7,7 +7,7 @@ name: Perf — Lighthouse CI
 # statuses go through its GitHub App or its public report storage. Scores go
 # to the step summary, the HTML and JSON reports to an artifact kept
 # `artifact-retention-days` (7 by default; `upload-artifact: false` uploads
-# none) and, with `report-s3-bucket`, to S3-compatible storage.
+# none).
 #
 # The job fails when an `error` assertion fails (GitHub's failure email is the
 # alert); the statuses say which page.
@@ -75,33 +75,11 @@ on:
         type: boolean
         required: false
         default: true
-      report-s3-endpoint:
-        description: https:// URL of an S3-compatible API for a copy of the reports (e.g. https://s3.eu-central-003.backblazeb2.com)
-        type: string
-        required: false
-        default: ""
-      report-s3-bucket:
-        description: Bucket of the S3 copy of the reports (private, with a lifecycle rule). Empty, no copy
-        type: string
-        required: false
-        default: ""
-      report-s3-prefix:
-        description: Key prefix of the S3 copy, before <owner>/<repo>/
-        type: string
-        required: false
-        default: ""
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews the scores)
         type: string
         required: false
         default: '"ubuntu-26.04"'
-    secrets:
-      report-s3-access-key-id:
-        description: Access key ID of the S3 copy (a Backblaze B2 application key ID), required with report-s3-bucket
-        required: false
-      report-s3-secret-access-key:
-        description: Secret access key of the S3 copy (the B2 application key), required with report-s3-bucket
-        required: false
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   workflow_dispatch:
@@ -140,18 +118,6 @@ on:
         description: Upload the reports as an artifact. false uploads nothing to GitHub, for a check that only gates on the assertions
         type: boolean
         default: true
-      report-s3-endpoint:
-        description: https:// URL of an S3-compatible API for a copy of the reports (e.g. https://s3.eu-central-003.backblazeb2.com)
-        type: string
-        default: ""
-      report-s3-bucket:
-        description: Bucket of the S3 copy of the reports (private, with a lifecycle rule). Empty, no copy
-        type: string
-        default: ""
-      report-s3-prefix:
-        description: Key prefix of the S3 copy, before <owner>/<repo>/
-        type: string
-        default: ""
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews the scores)
         type: string
@@ -194,11 +160,6 @@ jobs:
         with:
           artifact-retention-days: ${{ inputs.artifact-retention-days }}
           upload-artifact: ${{ inputs.upload-artifact }}
-          s3-endpoint: ${{ inputs.report-s3-endpoint }}
-          s3-bucket: ${{ inputs.report-s3-bucket }}
-          s3-prefix: ${{ inputs.report-s3-prefix }}
-          s3-access-key-id: ${{ secrets.report-s3-access-key-id }}
-          s3-secret-access-key: ${{ secrets.report-s3-secret-access-key }}
 
       - name: Validate inputs
         id: validate
@@ -316,20 +277,6 @@ jobs:
           # `.lighthouse` is a dot-folder: upload-artifact skips hidden paths unless
           # told to (v4.4.0+). It holds the Lighthouse reports of public pages, no secret.
           include-hidden-files: true
-
-      # Requested by report-s3-bucket, so a failed copy fails the job.
-      - name: Copy report to S3
-        if: ${{ !cancelled() && inputs.report-s3-bucket != '' && steps.validate.outcome == 'success' }}
-        uses: $/.github/actions/upload-report-s3
-        with:
-          path: .lighthouse
-          name: lighthouse-report
-          workflow: perf-lighthouse
-          endpoint: ${{ inputs.report-s3-endpoint }}
-          bucket: ${{ inputs.report-s3-bucket }}
-          prefix: ${{ inputs.report-s3-prefix }}
-          access-key-id: ${{ secrets.report-s3-access-key-id }}
-          secret-access-key: ${{ secrets.report-s3-secret-access-key }}
 
       # The summary here, the statuses in the next job (the `pages` output).
       - name: Summarize

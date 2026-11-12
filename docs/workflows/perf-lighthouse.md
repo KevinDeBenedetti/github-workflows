@@ -66,38 +66,21 @@ jobs:
 | `browser-image`           | string  | `sitespeedio/sitespeed.io:<tag>@sha256:…` | Image the audit runs in, with Node and Chrome, pinned by tag + digest, bumped by Renovate |
 | `artifact-retention-days` | number  | `7`                                       | Days the artifact is kept, 1 to 90; the repository's retention setting caps it            |
 | `upload-artifact`         | boolean | `true`                                    | `false` uploads nothing to GitHub: a check that only gates on the assertions              |
-| `report-s3-endpoint`      | string  | `""`                                      | `https://` URL of an S3-compatible API, for a copy of the reports                         |
-| `report-s3-bucket`        | string  | `""`                                      | Bucket of the copy (private, with a lifecycle rule). Empty: no copy                       |
-| `report-s3-prefix`        | string  | `""`                                      | Key prefix of the copy, before `<owner>/<repo>/`                                          |
 | `runner`                  | string  | `'"ubuntu-26.04"'`                        | Runner labels as JSON                                                                     |
-
-| Secret                        | Description                                                           |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `report-s3-access-key-id`     | Access key ID of the copy (a B2 application key ID), with a bucket    |
-| `report-s3-secret-access-key` | Secret access key of the copy (the B2 application key), with a bucket |
 
 ## Jobs
 
 1. **`lighthouse`** — runs inside `browser-image` as the job's container, with a
    read-only token: checks the report inputs and the other inputs, checks out the
    config, runs `lhci collect`, `assert` and `upload --target=filesystem`, uploads
-   the `lighthouse-report` artifact and copies it to S3 when asked, then writes the
+   the `lighthouse-report` artifact, then writes the
    scores to the step summary. An `error` assertion that fails fails this job.
 2. **`statuses`** — on the runner itself, posts one commit status per page from the
    results of the first job (the `pages` output of
    [`lighthouse-results`](../actions/lighthouse-results.md)). It is the only job
    with `statuses: write`: that token never enters the container where Chrome runs
-   pages without its sandbox.
-
-## Reports in S3
-
-With `report-s3-bucket`, the reports go to S3-compatible storage (Backblaze B2,
-AWS S3, MinIO), whether or not an artifact is uploaded, under
-`<prefix>/<owner>/<repo>/perf-lighthouse/<run id>-<run attempt>/lighthouse-report/`;
-the job summary gives the path, and a failed copy fails the job. Make the bucket
-**private** with a **lifecycle rule** that deletes the reports after a few days or
-weeks: see [`upload-report-s3`](../actions/upload-report-s3.md). The statuses
-link to the artifact when there is one, to the run otherwise.
+   pages without its sandbox. The statuses link to the artifact when there is one,
+   to the run otherwise.
 
 ## Running on self-hosted ARC runners
 
