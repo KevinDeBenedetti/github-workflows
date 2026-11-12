@@ -40,6 +40,14 @@ on:
         type: number
         required: false
         default: 100000
+      update-title:
+        description: >
+          Also rewrite the pull request title on every push, as a Conventional
+          Commit header: with squash merges it becomes the commit that
+          release-please reads. A title that fails the checks is not used.
+        type: boolean
+        required: false
+        default: false
       runner:
         description: Runner labels as JSON — '"ubuntu-26.04"' or '["self-hosted","linux"]' (Linux x64 or arm64 with glibc, curl, git, jq and python3)
         type: string
@@ -76,7 +84,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read          # check out the pull request history
-      pull-requests: write    # rewrite the managed block of the PR body
+      pull-requests: write    # rewrite the managed block of the PR body (and the title)
     steps:
       - name: Check for the Claude Code token
         id: token
@@ -111,3 +119,4 @@ jobs:
           effort: ${{ inputs.effort }}
           language: ${{ inputs.language }}
           max-diff-bytes: ${{ inputs.max-diff-bytes }}
+          update-title: ${{ inputs.update-title }}

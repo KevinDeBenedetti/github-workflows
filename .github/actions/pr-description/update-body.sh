@@ -10,6 +10,8 @@
 #      REPO              owner/name (required)
 #      PR_NUMBER         pull request number (required)
 #      DESCRIPTION_FILE  Markdown written by write-description.sh (required)
+#      TITLE_FILE        title checked by split-title.py (optional: when the
+#                        file is absent or empty, the title is left as it is)
 #      GITHUB_API_URL    REST API root, set by the runner
 #                        (default: https://api.github.com)
 set -euo pipefail
@@ -66,14 +68,35 @@ jq -j '.body // ""' "$work/pr.json" > "$work/current.md"
 
 python3 "$here/merge-body.py" "$work/current.md" "$DESCRIPTION_FILE" "$work/new.md"
 
-if cmp -s "$work/current.md" "$work/new.md"; then
+# Only the fields that changed go in the PATCH; nothing changed, no call.
+jq -j '.title // ""' "$work/pr.json" > "$work/current-title"
+: > "$work/new-title"
+if [ -n "${TITLE_FILE:-}" ] && [ -s "$TITLE_FILE" ]; then
+  cp "$TITLE_FILE" "$work/new-title"
+fi
+body_changed=false
+title_changed=false
+cmp -s "$work/current.md" "$work/new.md" || body_changed=true
+if [ -s "$work/new-title" ] && ! cmp -s "$work/current-title" "$work/new-title"; then
+  title_changed=true
+fi
+
+if [ "$body_changed" = false ] && [ "$title_changed" = false ]; then
   echo "The description of #${PR_NUMBER} is already up to date."
   exit 0
 fi
-jq -n --rawfile body "$work/new.md" '{body: $body}' > "$work/payload.json"
+jq -n --rawfile body "$work/new.md" --rawfile title "$work/new-title" \
+  --argjson set_body "$body_changed" --argjson set_title "$title_changed" \
+  '(if $set_body then {body: $body} else {} end) + (if $set_title then {title: $title} else {} end)' \
+  > "$work/payload.json"
 if ! api "$work/patched.json" -X PATCH --data-binary @"$work/payload.json" "$url"; then
   echo "Could not update pull request #${PR_NUMBER} (does the caller grant pull-requests: write?). GitHub answered:" >&2
   cat "$work/patched.json" >&2 2> /dev/null || true
   exit 1
 fi
-echo "Updated the description of #${PR_NUMBER}."
+if [ "$title_changed" = true ]; then
+  echo "Updated the title of #${PR_NUMBER}: $(tr -d '\r\n' < "$work/new-title")"
+fi
+if [ "$body_changed" = true ]; then
+  echo "Updated the description of #${PR_NUMBER}."
+fi

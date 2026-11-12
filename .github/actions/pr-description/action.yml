@@ -51,6 +51,13 @@ inputs:
     description: Pull request title (default the event's title)
     required: false
     default: ${{ github.event.pull_request.title }}
+  update-title:
+    description: >
+      "true": Claude also rewrites the title, as a Conventional Commit header
+      (it becomes the squash commit that release-please reads). A title that
+      fails the checks is not used, and the pull request keeps its own.
+    required: false
+    default: 'false'
 
 runs:
   using: composite
@@ -79,14 +86,17 @@ runs:
         EFFORT: ${{ inputs.effort }}
         CONTEXT_FILE: ${{ runner.temp }}/pr-description/context.md
         DESCRIPTION_FILE: ${{ runner.temp }}/pr-description/description.md
+        UPDATE_TITLE: ${{ inputs.update-title }}
+        TITLE_FILE: ${{ runner.temp }}/pr-description/title.txt
       run: bash "$GITHUB_ACTION_PATH/write-description.sh"
 
     # The GitHub token only: this step never runs Claude.
-    - name: Update the pull request body
+    - name: Update the pull request
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         REPO: ${{ github.repository }}
         PR_NUMBER: ${{ inputs.pr-number }}
         DESCRIPTION_FILE: ${{ runner.temp }}/pr-description/description.md
+        TITLE_FILE: ${{ runner.temp }}/pr-description/title.txt
       run: bash "$GITHUB_ACTION_PATH/update-body.sh"

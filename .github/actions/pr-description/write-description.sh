@@ -16,12 +16,25 @@
 #      EFFORT                   effort level (optional, empty: Claude Code's default)
 #      CONTEXT_FILE             input, printed by collect-context.sh (required)
 #      DESCRIPTION_FILE         output, the Markdown description (required)
+#      UPDATE_TITLE             "true": Claude writes the title too (default: false)
+#      TITLE_FILE               output, the checked title (required with
+#                               UPDATE_TITLE; left absent when the title fails
+#                               the checks of split-title.py)
 set -euo pipefail
 
 : "${CLAUDE_CODE_OAUTH_TOKEN:?CLAUDE_CODE_OAUTH_TOKEN is required}"
 : "${MODEL:?MODEL is required}"
 : "${CONTEXT_FILE:?CONTEXT_FILE is required}"
 : "${DESCRIPTION_FILE:?DESCRIPTION_FILE is required}"
+UPDATE_TITLE="${UPDATE_TITLE:-false}"
+case "$UPDATE_TITLE" in
+  true) : "${TITLE_FILE:?TITLE_FILE is required with UPDATE_TITLE=true}" ;;
+  false) ;;
+  *)
+    echo "UPDATE_TITLE must be true or false, got '${UPDATE_TITLE}'" >&2
+    exit 2
+    ;;
+esac
 
 # Private files: the description is written for the next step only.
 umask 077
@@ -31,10 +44,19 @@ work="$(mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/pr-description.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 mkdir "$work/cwd" "$work/config" "$work/home" "$work/tmp"
 
+# The title rules are appended to the description prompt only when asked for.
+task="Write the pull request description."
+cp "$here/system-prompt.md" "$work/system-prompt.md"
+if [ "$UPDATE_TITLE" = true ]; then
+  task="Write the pull request title and description."
+  cat "$here/title-prompt.md" >> "$work/system-prompt.md"
+  rm -f "$TITLE_FILE"
+fi
+
 args=(
-  -p "Write the pull request description."
+  -p "$task"
   --model "$MODEL"
-  --system-prompt-file "$here/system-prompt.md"
+  --system-prompt-file "$work/system-prompt.md"
   --output-format json
   --max-turns 1
   --no-session-persistence
@@ -82,6 +104,17 @@ if [ "$status" -ne 0 ] || ! jq -e '.is_error == false and (.result | type) == "s
   reason="$(jq -r '.result // .subtype // "unknown error"' "$work/result.json" | tr '\r\n' '  ' | cut -c1-300)"
   echo "::error::Claude Code failed (exit ${status}): ${reason//::/: :}"
   exit 1
+fi
+
+if [ "$UPDATE_TITLE" = true ]; then
+  jq -r '.result' "$work/result.json" > "$work/answer.md"
+  python3 "$here/split-title.py" "$work/answer.md" "$DESCRIPTION_FILE" "$TITLE_FILE"
+  if [ -s "$TITLE_FILE" ]; then
+    echo "Title and description written with ${MODEL}."
+  else
+    echo "Description written with ${MODEL}; the title is left as it is."
+  fi
+  exit 0
 fi
 
 jq -r '.result' "$work/result.json" > "$DESCRIPTION_FILE"

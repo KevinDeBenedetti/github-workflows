@@ -45,6 +45,7 @@ steps:
 | `base-sha`                | string | from the `pull_request` event | Base commit of the diff                                     |
 | `head-sha`                | string | from the `pull_request` event | Head commit of the diff                                     |
 | `title`                   | string | from the `pull_request` event | Pull request title                                          |
+| `update-title`            | string | `'false'`                     | `'true'`: rewrite the title too, as a Conventional Commit   |
 
 ## Steps
 
@@ -58,11 +59,15 @@ steps:
    working, configuration and home directories. Claude Code gets the Claude token
    and the runner's `PATH`, locale, time zone, proxy and CA certificate variables,
    nothing else from the job: no `GITHUB_TOKEN`, cloud credential or
-   `ANTHROPIC_API_KEY`. Only this step gets the Claude token
+   `ANTHROPIC_API_KEY`. Only this step gets the Claude token. With
+   `update-title: 'true'`, the rules of `title-prompt.md` are added to the prompt,
+   and `split-title.py` splits the `Title:` line off the answer and keeps it only
+   when it passes the checks (see
+   [Rewrite the title too](../workflows/pr-description.md#rewrite-the-title-too))
 3. `update-body.sh` reads the current body through the REST API with `curl`,
    `merge-body.py` filters the description (see [Filtered text](#filtered-text)),
-   then replaces the managed block or puts one on top, and the body is saved only
-   when it changed. Only this step gets the GitHub token, through a header file
+   then replaces the managed block or puts one on top. The body and the title are
+   saved in one call, each only when it changed. Only this step gets the GitHub token, through a header file
    rather than a command line, and only for an `https://` `GITHUB_API_URL`
 
 ## The managed block
