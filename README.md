@@ -11,7 +11,7 @@
 - CD workflows for Docker/GHCR, BuildKit (rootless on self-hosted runners, Buildx on GitHub-hosted ones), GitHub Pages, and centralized docs sync
 - Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, hash-locked ansible installs, and a checksum-pinned Claude Code setup
 - Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
-- Performance and SEO workflows (sitespeed.io, Lighthouse CI, Unlighthouse, link and tag crawl) whose browser runs in a pinned image, on GitHub-hosted runners or a Kubernetes ARC scale set with no Docker daemon or Chrome; artifacts kept 7 days by default, or none, with the reports copied to S3-compatible storage such as Backblaze B2
+- Performance and SEO workflows (sitespeed.io, Lighthouse CI, Unlighthouse, link and tag crawl) whose browser runs in a pinned image, on GitHub-hosted runners or a Kubernetes ARC scale set with no Docker daemon or Chrome; artifacts kept 7 days by default, or none
 - Scheduled GHCR cleanup that keeps releases and recent images, safe for multi-arch images and attestations
 - Scheduled workflow-run cleanup that keeps recent runs and the last runs of each workflow, clears deleted workflows from the Actions sidebar, and can delete old artifacts on their own, the runs kept included, to save Actions storage
 - Automated releases via release-please, and release propagation: each release opens a pull request in every consumer repository that moves its pins, merged once its checks pass

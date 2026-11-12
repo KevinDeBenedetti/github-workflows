@@ -76,7 +76,7 @@
     },
     {
       "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work. Scoped to .github/: prek.toml pins rhysd/actionlint WITH the v.",
-      "matchPackageNames": ["prometheus/prometheus", "gitleaks/gitleaks", "j178/prek", "rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "hashicorp/terraform", "rclone/rclone"],
+      "matchPackageNames": ["prometheus/prometheus", "gitleaks/gitleaks", "j178/prek", "rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "hashicorp/terraform"],
       "matchFileNames": [".github/**"],
       "extractVersion": "^v(?<version>.+)$"
     },
@@ -92,7 +92,7 @@
     },
     {
       "description": "These tools are downloaded and verified against a SHA-256 (or commit) pinned next to the version: Renovate bumps the version only, so the job fails closed until the pins are refreshed.",
-      "matchPackageNames": ["rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "lycheeverse/lychee", "gitleaks/gitleaks", "bats-core/bats-core", "@anthropic-ai/claude-code", "jqlang/jq", "rclone/rclone"],
+      "matchPackageNames": ["rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "lycheeverse/lychee", "gitleaks/gitleaks", "bats-core/bats-core", "@anthropic-ai/claude-code", "jqlang/jq"],
       "prBodyNotes": ["⚠️ Pinned checksums: run `scripts/update-tool-checksums.py` on this branch and commit the result — CI fails until then."]
     },
     {

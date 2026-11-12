@@ -8,7 +8,7 @@ name: Perf — sitespeed.io
 # The metrics are appended as one CSV row per URL/device to a `history-branch`
 # of the calling repo, which keeps them for good. The raw results go to an
 # artifact kept `artifact-retention-days` (7 by default; `upload-artifact:
-# false` uploads none) and, with `report-s3-bucket`, to S3-compatible storage.
+# false` uploads none).
 #
 # sitespeed.io runs inside the pinned `sitespeed-image` as the job's
 # container: no Docker daemon is needed, so a Kubernetes runner (ARC,
@@ -66,34 +66,12 @@ on:
         type: boolean
         required: false
         default: true
-      report-s3-endpoint:
-        description: https:// URL of an S3-compatible API for a copy of the results (e.g. https://s3.eu-central-003.backblazeb2.com)
-        type: string
-        required: false
-        default: ""
-      report-s3-bucket:
-        description: Bucket of the S3 copy of the results (private, with a lifecycle rule). Empty, no copy
-        type: string
-        required: false
-        default: ""
-      report-s3-prefix:
-        description: Key prefix of the S3 copy, before <owner>/<repo>/
-        type: string
-        required: false
-        default: ""
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews LCP/TTFB)
         type: string
         required: false
         default: '"ubuntu-26.04"'
-    secrets:
-      report-s3-access-key-id:
-        description: Access key ID of the S3 copy (a Backblaze B2 application key ID), required with report-s3-bucket
-        required: false
-      report-s3-secret-access-key:
-        description: Secret access key of the S3 copy (the B2 application key), required with report-s3-bucket
-        required: false
   # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
   # Keep them in sync manually — GitHub does not support shared input definitions.
   # `device` is a plain string in both: workflow_call has no `choice` type.
@@ -132,18 +110,6 @@ on:
         description: Upload the results as an artifact. false uploads nothing to GitHub, for a check that only gates on the budget
         type: boolean
         default: true
-      report-s3-endpoint:
-        description: https:// URL of an S3-compatible API for a copy of the results (e.g. https://s3.eu-central-003.backblazeb2.com)
-        type: string
-        default: ""
-      report-s3-bucket:
-        description: Bucket of the S3 copy of the results (private, with a lifecycle rule). Empty, no copy
-        type: string
-        default: ""
-      report-s3-prefix:
-        description: Key prefix of the S3 copy, before <owner>/<repo>/
-        type: string
-        default: ""
 
       runner:
         description: Runner labels as JSON — use '"ubuntu-26.04"'. Not on the site's own network (it skews LCP/TTFB)
@@ -194,11 +160,6 @@ jobs:
         with:
           artifact-retention-days: ${{ inputs.artifact-retention-days }}
           upload-artifact: ${{ inputs.upload-artifact }}
-          s3-endpoint: ${{ inputs.report-s3-endpoint }}
-          s3-bucket: ${{ inputs.report-s3-bucket }}
-          s3-prefix: ${{ inputs.report-s3-prefix }}
-          s3-access-key-id: ${{ secrets.report-s3-access-key-id }}
-          s3-secret-access-key: ${{ secrets.report-s3-secret-access-key }}
 
       # The URLs and the budget live in the calling repository. The image has
       # no git: the checkout downloads the repository through the REST API.
@@ -325,20 +286,6 @@ jobs:
           path: sitespeed-result
           retention-days: ${{ inputs.artifact-retention-days }}
           if-no-files-found: warn
-
-      # Requested by report-s3-bucket, so a failed copy fails the job.
-      - name: Copy results to S3
-        if: ${{ !cancelled() && inputs.report-s3-bucket != '' && steps.validate.outcome == 'success' }}
-        uses: $/.github/actions/upload-report-s3
-        with:
-          path: sitespeed-result
-          name: sitespeed-result-${{ matrix.device }}
-          workflow: perf-sitespeed
-          endpoint: ${{ inputs.report-s3-endpoint }}
-          bucket: ${{ inputs.report-s3-bucket }}
-          prefix: ${{ inputs.report-s3-prefix }}
-          access-key-id: ${{ secrets.report-s3-access-key-id }}
-          secret-access-key: ${{ secrets.report-s3-secret-access-key }}
 
   # Single writer, after the matrix: avoids concurrent pushes to the history branch.
   # It runs on the runner itself, not in the image: git and a token, no browser.

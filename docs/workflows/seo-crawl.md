@@ -48,24 +48,7 @@ jobs:
 | `linkinator-version`      | string  | `<version>`        | linkinator version, bumped by Renovate                                         |
 | `artifact-retention-days` | number  | `7`                | Days the artifact is kept, 1 to 90; the repository's retention setting caps it |
 | `upload-artifact`         | boolean | `true`             | `false` uploads nothing to GitHub: a check that only gates on broken links     |
-| `report-s3-endpoint`      | string  | `""`               | `https://` URL of an S3-compatible API, for a copy of the reports              |
-| `report-s3-bucket`        | string  | `""`               | Bucket of the copy (private, with a lifecycle rule). Empty: no copy            |
-| `report-s3-prefix`        | string  | `""`               | Key prefix of the copy, before `<owner>/<repo>/`                               |
 | `runner`                  | string  | `'"ubuntu-26.04"'` | Runner labels as JSON                                                          |
-
-| Secret                        | Description                                                           |
-| ----------------------------- | --------------------------------------------------------------------- |
-| `report-s3-access-key-id`     | Access key ID of the copy (a B2 application key ID), with a bucket    |
-| `report-s3-secret-access-key` | Secret access key of the copy (the B2 application key), with a bucket |
-
-## Reports in S3
-
-With `report-s3-bucket`, the reports go to S3-compatible storage (Backblaze B2,
-AWS S3, MinIO), whether or not an artifact is uploaded, under
-`<prefix>/<owner>/<repo>/seo-crawl/<run id>-<run attempt>/seo-crawl-result/`; the
-job summary gives the path, and a failed copy fails the job. Make the bucket
-**private** with a **lifecycle rule** that deletes the reports after a few days or
-weeks: see [`upload-report-s3`](../actions/upload-report-s3.md).
 
 ## Running on self-hosted ARC runners
 

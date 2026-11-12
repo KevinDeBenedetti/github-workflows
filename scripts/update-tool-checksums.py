@@ -73,14 +73,6 @@ TOOLS = {
         "arch": {"amd64": "amd64", "arm64": "arm64"},
         "sums": "https://github.com/jqlang/jq/releases/download/jq-{v}/sha256sum.txt",
     },
-    "RCLONE": {
-        "file": ".github/actions/upload-report-s3/action.yml",
-        # The .deb: dpkg-deb unpacks it without root where unzip is missing.
-        "url": "https://github.com/rclone/rclone/releases/download/v{v}/rclone-v{v}-linux-{a}.deb",
-        "arch": {"amd64": "amd64", "arm64": "arm64"},
-        # Clearsigned: its "<sha256>  <asset>" lines match like a plain file's.
-        "sums": "https://github.com/rclone/rclone/releases/download/v{v}/SHA256SUMS",
-    },
     "CLAUDE_CODE": {
         "file": ".github/actions/setup-claude-code/action.yml",
         "url": "https://downloads.claude.ai/claude-code-releases/{v}/linux-{a}/claude",

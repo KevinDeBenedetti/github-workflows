@@ -52,12 +52,11 @@ image, pulled once per node, holds Node and Google Chrome for every perf job.
    `CAP_SYS_ADMIN` or privilege escalation cannot offer. The container is the
    boundary, which is why the jobs that hold a write token (`history`, `statuses`)
    never run in it.
-6. **Egress on 443** (and DNS): `github.com` and its release downloads (jq and
-   rclone), `api.github.com`, `*.actions.githubusercontent.com` and the artifact
+6. **Egress on 443** (and DNS): `github.com` and its release downloads (jq),
+   `api.github.com`, `*.actions.githubusercontent.com` and the artifact
    storage (`*.blob.core.windows.net`) when `upload-artifact` is on,
-   `registry.npmjs.org` (Lighthouse CI,
-   Unlighthouse, linkinator), the audited site, and the S3 endpoint when
-   `report-s3-bucket` is set. The node pulls the image (about 1.3 GB) from Docker Hub.
+   `registry.npmjs.org` (Lighthouse CI, Unlighthouse, linkinator) and the
+   audited site. The node pulls the image (about 1.3 GB) from Docker Hub.
 7. **amd64 nodes** for Google Chrome: it has no Linux arm64 build (the arm64 variant
    of the sitespeed.io image ships Chromium).
 8. **Room on the node**: the workflow pod lands where the runner's work volume is.

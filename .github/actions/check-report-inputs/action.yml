@@ -1,11 +1,9 @@
 name: Check report inputs
 description: >
   Check the report settings shared by the perf and SEO workflows before any
-  work starts: artifact-retention-days (a whole number from 1 to 90),
-  upload-artifact (true or false) and the report-s3-* settings of an
-  S3-compatible copy (endpoint, bucket, prefix, and both credentials once a
-  bucket is set). Fails with an ::error:: that names the input; prints no
-  secret. Needs bash only, inside a job container too.
+  work starts: artifact-retention-days (a whole number from 1 to 90) and
+  upload-artifact (true or false). Fails with an ::error:: that names the
+  input. Needs bash only, inside a job container too.
 
 inputs:
   artifact-retention-days:
@@ -14,26 +12,6 @@ inputs:
   upload-artifact:
     description: Whether an artifact is uploaded (true or false)
     required: true
-  s3-endpoint:
-    description: https:// URL of the S3 API host
-    required: false
-    default: ''
-  s3-bucket:
-    description: Bucket of the S3 copy; empty, no copy
-    required: false
-    default: ''
-  s3-prefix:
-    description: Key prefix of the S3 copy
-    required: false
-    default: ''
-  s3-access-key-id:
-    description: Access key ID, required with s3-bucket
-    required: false
-    default: ''
-  s3-secret-access-key:
-    description: Secret access key, required with s3-bucket
-    required: false
-    default: ''
 
 runs:
   using: composite
@@ -44,9 +22,4 @@ runs:
       env:
         ARTIFACT_RETENTION_DAYS: ${{ inputs.artifact-retention-days }}
         UPLOAD_ARTIFACT: ${{ inputs.upload-artifact }}
-        S3_ENDPOINT: ${{ inputs.s3-endpoint }}
-        S3_BUCKET: ${{ inputs.s3-bucket }}
-        S3_PREFIX: ${{ inputs.s3-prefix }}
-        S3_ACCESS_KEY_ID: ${{ inputs.s3-access-key-id }}
-        S3_SECRET_ACCESS_KEY: ${{ inputs.s3-secret-access-key }}
       run: bash "$GITHUB_ACTION_PATH/check-report-inputs.sh"
