@@ -1,0 +1,51 @@
+name: prek home
+description: >
+  Keep prek's hook environments in a directory that outlives the job, such as
+  a volume mounted into a self-hosted runner pod, instead of the GitHub cache.
+  Exports PREK_HOME to the store of this prek config inside it (one store per
+  config, prek release and platform), then deletes the stores no run has used
+  for max-age-days days. Needs bash, flock (util-linux) and sha256sum
+  (coreutils), which the Ubuntu runner images and the official
+  actions-runner image have.
+
+inputs:
+  path:
+    description: Absolute path of the directory holding the stores; it must exist and be writable
+    required: true
+  working-directory:
+    description: Directory holding the prek config
+    required: false
+    default: .
+  prek-version:
+    description: prek release the job installs, part of the store key
+    required: true
+  max-age-days:
+    description: Days a store may stay unused before it is deleted
+    required: false
+    default: '14'
+
+outputs:
+  path:
+    description: The store of this config, exported as PREK_HOME
+    value: ${{ steps.select.outputs.path }}
+
+runs:
+  using: composite
+  steps:
+    # Inputs go through env, never interpolated into the script body.
+    - name: Select the prek store of this config
+      id: select
+      shell: bash
+      env:
+        PREK_HOME_ROOT: ${{ inputs.path }}
+        CONFIG_DIR: ${{ inputs.working-directory }}
+        PREK_VERSION: ${{ inputs.prek-version }}
+      run: bash "$GITHUB_ACTION_PATH/prek-home.sh" select
+
+    # After select, which refreshed this config's store: it is never stale here.
+    - name: Delete the prek stores no run has used lately
+      shell: bash
+      env:
+        PREK_HOME_ROOT: ${{ inputs.path }}
+        MAX_AGE_DAYS: ${{ inputs.max-age-days }}
+      run: bash "$GITHUB_ACTION_PATH/prek-home.sh" clean

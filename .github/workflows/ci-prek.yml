@@ -13,8 +13,22 @@ name: CI — prek hooks
 # .pre-commit-config.yaml — one hook definition backing both CI and pre-commit,
 # with nothing to keep in sync twice.
 #
+# Hook environments between runs (installing them is most of a cold run):
+#   - by default, the GitHub cache (`cache: true`), keyed by the config's hash;
+#   - with `prek-home`, a directory on the runner's node that outlives the job,
+#     such as a volume mounted into a self-hosted runner pod: no cache upload
+#     or download, which a self-hosted runner can do more slowly than a cold
+#     install. The prek-home action exports PREK_HOME to one store per config
+#     there (prek release + platform + config hash): prek locks a store itself,
+#     and its `cache gc` after a run only keeps what the configs it can see
+#     need, so configs never share one. Stores no run used for 14 days are
+#     deleted. `cache` is ignored. The directory must exist, be writable by the
+#     runner's user and sit at the same path in every runner pod (environments
+#     hold absolute paths). See docs/workflows/ci-prek.md for an ARC example.
+#
 # Caller requirements:
 #   prek.toml (or .pre-commit-config.yaml) at the root of the calling repo
+#   prek-home only: bash, flock and sha256sum on the runner
 
 on:
   workflow_call:
@@ -38,10 +52,19 @@ on:
         # renovate: datasource=github-releases depName=j178/prek
         default: 0.4.12
       cache:
-        description: Cache the prek hook environments between runs
+        description: Cache the prek hook environments between runs, in the GitHub cache (ignored when prek-home is set)
         type: boolean
         required: false
         default: true
+      prek-home:
+        description: >
+          Absolute path of a directory on the runner that outlives the job (a
+          volume mounted into a self-hosted runner pod). When set, the hook
+          environments are kept there, one store per prek config, instead of
+          in the GitHub cache, and `cache` is ignored. Empty: the GitHub cache.
+        type: string
+        required: false
+        default: ''
       timeout-minutes:
         description: >
           Minutes before the job is cancelled. A cold run, the first after a
@@ -76,9 +99,13 @@ on:
         # renovate: datasource=github-releases depName=j178/prek
         default: 0.4.12
       cache:
-        description: Cache the prek hook environments between runs
+        description: Cache the prek hook environments between runs (ignored when prek-home is set)
         type: boolean
         default: true
+      prek-home:
+        description: Absolute path of a directory on the runner that keeps the hook environments instead of the GitHub cache
+        type: string
+        default: ''
       timeout-minutes:
         description: Minutes before the job is cancelled
         type: number
@@ -129,6 +156,15 @@ jobs:
           echo "::error::no prek config found in ${PWD} (prek.toml or .pre-commit-config.yaml)"
           exit 1
 
+      # Exports PREK_HOME for the next step, then deletes the stale stores.
+      - name: Use the prek store on the node
+        if: inputs.prek-home != ''
+        uses: $/.github/actions/prek-home
+        with:
+          path: ${{ inputs.prek-home }}
+          working-directory: ${{ inputs.working-directory }}
+          prek-version: ${{ inputs.prek-version }}
+
       # Pinned by SHA: this runs on write-capable self-hosted runners for some
       # callers, so a mutable tag would be a supply-chain risk.
       - name: Run prek hooks
@@ -136,5 +172,6 @@ jobs:
         with:
           extra-args: ${{ inputs.extra-args }}
           prek-version: ${{ inputs.prek-version }}
-          cache: ${{ inputs.cache }}
+          # The node's store replaces the GitHub cache: never both.
+          cache: ${{ inputs.cache && inputs.prek-home == '' }}
           working-directory: ${{ inputs.working-directory }}
