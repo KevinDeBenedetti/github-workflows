@@ -421,6 +421,7 @@ steps:
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
 | [`lighthouse-results`](actions/lighthouse-results.md) | Summarize a Lighthouse CI run and post one commit status per page |
 | [`check-report-inputs`](actions/check-report-inputs.md) | Check the artifact settings of the perf and SEO workflows |
+| [`prek-home`](actions/prek-home.md) | Keep prek's hook environments in a directory on the runner's node, one store per config |
 | [`setup-jq`](actions/setup-jq.md) | Install jq, pinned and checked against a SHA-256, for a job container without it |
 | [`prerelease`](actions/prerelease.md) | Compute the next pre-release of a branch and publish it as a GitHub pre-release |
 | [`cleanup-runs`](actions/cleanup-runs.md) | Delete the old workflow runs of the repository, keeping the recent ones |
