@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.45.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.44.0...v0.45.0) (2026-11-14)
+
+
+### Features
+
+* **ci-prek:** keep the hook environments on the runner's node with prek-home ([1a546fa](https://github.com/KevinDeBenedetti/github-workflows/commit/1a546fa33784607e568ea874307fe812c7e57810))
+
 ## [0.44.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.43.0...v0.44.0) (2026-11-12)
 
 
