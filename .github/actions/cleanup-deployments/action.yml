@@ -1,0 +1,53 @@
+name: Cleanup deployments
+description: >
+  Delete the old deployment records of the repository, oldest first. Kept: the
+  keep most recent deployments of each environment and those younger than
+  older-than-days. An active deployment is given the inactive status before it
+  is deleted. Records only: nothing deployed, no environment and no secret is
+  touched. Runs on any Linux runner with bash, curl and jq. The rules are
+  documented at the top of cleanup-deployments.sh.
+
+inputs:
+  keep:
+    description: Most recent deployments kept per environment, whatever their age (1 to 100)
+    required: false
+    default: '5'
+  older-than-days:
+    description: Age, in days, before a deployment can be deleted (0 or more)
+    required: false
+    default: '30'
+  max-deletions:
+    description: Deletions at most in one run (1 to 400), two requests each
+    required: false
+    default: '200'
+  dry-run:
+    description: Log what would be deleted, delete nothing
+    required: false
+    default: 'false'
+  github-token:
+    description: Token with deployments write
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  deleted:
+    description: Deployments deleted by this run (in a dry run, those that would be)
+    value: ${{ steps.cleanup.outputs.deleted }}
+  remaining:
+    description: Deployments left for a later run by max-deletions
+    value: ${{ steps.cleanup.outputs.remaining }}
+
+runs:
+  using: composite
+  steps:
+    - name: Delete old deployments
+      id: cleanup
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        KEEP: ${{ inputs.keep }}
+        OLDER_THAN_DAYS: ${{ inputs.older-than-days }}
+        MAX_DELETIONS: ${{ inputs.max-deletions }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: bash "$GITHUB_ACTION_PATH/cleanup-deployments.sh"

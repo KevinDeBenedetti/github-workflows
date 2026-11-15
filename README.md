@@ -66,6 +66,7 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |
 | `cd-buildkit.yml` | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones | [→](docs/workflows/cd-buildkit.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
+| `cleanup-deployments.yml` | Scheduled cleanup of old deployment records, keeping the recent ones of each environment | [→](docs/workflows/cleanup-deployments.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
 | `propagate-release.yml` | Release propagation: a pull request in each consumer repository moves its pins to the new release, merged once its checks pass | [→](docs/workflows/propagate-release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |

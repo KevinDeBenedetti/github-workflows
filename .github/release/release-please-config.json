@@ -10,6 +10,10 @@
       "extra-files": [
         {
           "type": "generic",
+          "path": "examples/cleanup-deployments.yml"
+        },
+        {
+          "type": "generic",
           "path": "examples/cleanup-ghcr.yml"
         },
         {

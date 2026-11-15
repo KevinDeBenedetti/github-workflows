@@ -318,6 +318,7 @@ jobs:
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](workflows/pr-description.md) |
 | `cleanup-ghcr.yml` | Scheduled GHCR retention: keeps releases and recent images, deletes the rest and old layer caches | [→](workflows/cleanup-ghcr.md) |
 | `cleanup-runs.yml` | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest, and optionally old artifacts | [→](workflows/cleanup-runs.md) |
+| `cleanup-deployments.yml` | Scheduled cleanup of old deployment records, keeping the recent ones of each environment | [→](workflows/cleanup-deployments.md) |
 
 ---
 
@@ -350,6 +351,7 @@ steps:
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
 | [`prek-home`](actions/prek-home.md) | Keep prek's hook environments in a directory on the runner's node, one store per config |
 | [`cleanup-runs`](actions/cleanup-runs.md) | Delete the old workflow runs of the repository, keeping the recent ones |
+| [`cleanup-deployments`](actions/cleanup-deployments.md) | Delete the old deployment records of the repository, keeping the recent ones of each environment |
 | [`propagate-release`](actions/propagate-release.md) | Open a pull request in each consumer repository that moves its pins to a release |
 
 ---
@@ -368,3 +370,4 @@ Complete ready-to-use caller files live in [`examples/`](https://github.com/Kevi
 | `pr-description.yml` | PR descriptions written by Claude Code |
 | `cleanup-ghcr.yml` | Weekly GHCR retention |
 | `cleanup-runs.yml` | Weekly workflow-run retention |
+| `cleanup-deployments.yml` | Weekly deployment-record retention |
