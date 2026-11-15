@@ -11,8 +11,6 @@ and composite actions. Callers stay minimal — CI steps run consistently across
 
 - A GitHub repository
 - Appropriate secrets set in your repo/org (see each workflow's docs)
-- For the perf and SEO workflows on a Kubernetes scale set (ARC):
-  [Running on self-hosted ARC runners](self-hosted-arc-runners.md)
 
 ## How it works
 
@@ -100,21 +98,6 @@ Runs ShellCheck → actionlint → Bats.
 
 ---
 
-### Helm
-
-```yaml
-jobs:
-  ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-helm.yml@main
-    with:
-      chart-paths: 'charts/*'
-      run-template: true
-```
-
-Runs `helm lint` and an optional `helm template` dry-run on all charts.
-
----
-
 ### Kubernetes
 
 ```yaml
@@ -140,21 +123,6 @@ jobs:
 ```
 
 Runs `terraform validate` and `terraform fmt -check -diff`.
-
----
-
-### Ansible
-
-```yaml
-jobs:
-  ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-ansible.yml@main
-    with:
-      ansible-dir: ansible/
-      run-syntax-check: true
-```
-
-Runs `ansible-lint` and an optional `ansible-playbook --syntax-check`.
 
 ---
 
@@ -199,24 +167,6 @@ Builds and pushes an image to GHCR with rootless BuildKit inside the job contain
 
 ---
 
-### GitHub Pages
-
-```yaml
-jobs:
-  deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@main
-    permissions:
-      contents: read
-      pages: write     # publish the Pages deployment
-      id-token: write  # deploy-pages authenticates with OIDC
-    with:
-      output-directory: dist
-```
-
-→ [Full reference](workflows/cd-pages.md)
-
----
-
 ### Docs sync
 
 Verify this repo's docs before the centralized docs site picks them up. The site polls
@@ -250,23 +200,6 @@ jobs:
 
 Uses [release-please](https://github.com/googleapis/release-please). Automatically moves a `v<major>` tag after each release.
 → [Full reference](workflows/release.md)
-
----
-
-### Pre-releases of an integration branch
-
-```yaml
-jobs:
-  prerelease:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/prerelease.yml@main
-    with:
-      publish: true
-    permissions:
-      contents: write
-```
-
-Tags each releasable commit of a branch such as `dev` as a GitHub pre-release, `v<next>-rc.<n>`, computed from the Conventional Commits since the last release tag. To merge a pull request for each pre-release instead, call `release.yml` on that branch with `target-branch` ([pre-releases from a second branch](workflows/release.md#pre-releases-from-a-second-branch)).
-→ [Full reference](workflows/prerelease.md)
 
 ---
 
@@ -373,13 +306,10 @@ jobs:
 | `ci-node.yml` | Node.js CI (lint → typecheck → test → build) | [→](workflows/ci-node.md) |
 | `ci-python.yml` | Python CI (lint → format → test) | [→](workflows/ci-python.md) |
 | `ci-shell.yml` | Shell CI (ShellCheck → actionlint → Bats) | [→](workflows/ci-shell.md) |
-| `ci-ansible.yml` | Ansible CI (ansible-lint + syntax check) | [→](workflows/ci-ansible.md) |
-| `ci-helm.yml` | Helm CI (lint + template dry-run) | [→](workflows/ci-helm.md) |
 | `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](workflows/ci-kubernetes.md) |
 | `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](workflows/ci-terraform.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](workflows/cd-docker.md) |
 | `cd-buildkit.yml` | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones | [→](workflows/cd-buildkit.md) |
-| `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](workflows/cd-pages.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](workflows/release.md) |
 | `propagate-release.yml` | A pull request in each consumer repository moves its pins to the new release | [→](workflows/propagate-release.md) |
@@ -412,18 +342,13 @@ steps:
 | [`actionlint`](actions/actionlint.md) | Validate GitHub Actions workflow files |
 | [`kubeconform`](actions/kubeconform.md) | Validate Kubernetes manifests |
 | [`check-commit-msg`](actions/check-commit-msg.md) | Conventional Commits on commit messages (CI + commit-msg hook) |
-| [`setup-ansible`](actions/setup-ansible.md) | Install ansible-lint or ansible from a hash-locked requirements file |
 | [`setup-claude-code`](actions/setup-claude-code.md) | Install the Claude Code CLI, pinned and checked against a SHA-256 |
 | [`pr-description`](actions/pr-description.md) | Write the PR description with Claude Code into a managed block of the PR body |
 | [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
 | [`check-docs-external-links`](actions/check-docs-external-links.md) | Check the `http(s)` links of changed docs pages with lychee |
 | [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
 | [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
-| [`lighthouse-results`](actions/lighthouse-results.md) | Summarize a Lighthouse CI run and post one commit status per page |
-| [`check-report-inputs`](actions/check-report-inputs.md) | Check the artifact settings of the perf and SEO workflows |
 | [`prek-home`](actions/prek-home.md) | Keep prek's hook environments in a directory on the runner's node, one store per config |
-| [`setup-jq`](actions/setup-jq.md) | Install jq, pinned and checked against a SHA-256, for a job container without it |
-| [`prerelease`](actions/prerelease.md) | Compute the next pre-release of a branch and publish it as a GitHub pre-release |
 | [`cleanup-runs`](actions/cleanup-runs.md) | Delete the old workflow runs of the repository, keeping the recent ones |
 | [`propagate-release`](actions/propagate-release.md) | Open a pull request in each consumer repository that moves its pins to a release |
 
@@ -435,13 +360,11 @@ Complete ready-to-use caller files live in [`examples/`](https://github.com/Kevi
 
 | File | Stack |
 |---|---|
-| `ci-cd-pages.yml` | Node.js CI → GitHub Pages → release-please |
 | `next.yml` | Next.js |
 | `nuxt.yml` | Nuxt |
 | `vue-react.yml` | Vue / React (Vite) |
 | `fastapi.yml` | FastAPI (Python) |
 | `monorepo.yml` | Monorepo with change detection |
-| `vitepress.yml` | VitePress docs site |
 | `pr-description.yml` | PR descriptions written by Claude Code |
 | `cleanup-ghcr.yml` | Weekly GHCR retention |
 | `cleanup-runs.yml` | Weekly workflow-run retention |

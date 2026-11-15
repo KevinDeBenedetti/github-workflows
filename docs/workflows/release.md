@@ -94,7 +94,7 @@ Without `initial-version`, the first release is `1.0.0`. While the manifest is m
 
 ## Pre-releases from a second branch
 
-To cut the pre-releases of a long-lived `dev` branch through a pull request, the way the default branch cuts its releases, call the workflow a second time, on pushes to `dev`, with its own config and manifest. For pre-releases tagged on every push without a pull request, see [prerelease.yml](./prerelease.md).
+To cut the pre-releases of a long-lived `dev` branch through a pull request, the way the default branch cuts its releases, call the workflow a second time, on pushes to `dev`, with its own config and manifest.
 
 ```yaml
 jobs:

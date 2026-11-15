@@ -11,15 +11,7 @@
   "configMigration": true,
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
-  "enabledManagers": ["github-actions", "custom.regex", "pip-compile"],
-  "pip-compile": {
-    "description": "Hash-locked Python tools of ci-ansible.yml (.github/actions/setup-ansible): Renovate bumps the pin in the .in file and re-runs the `uv pip compile` command recorded in the .txt header, hashes included.",
-    "managerFilePatterns": ["/^\\.github/actions/setup-ansible/[^/]+\\.txt$/"]
-  },
-  "lockFileMaintenance": {
-    "description": "Refresh the transitive dependencies (and their hashes) of the locked ansible tools above, so security fixes land without waiting for a direct-dependency release.",
-    "enabled": true
-  },
+  "enabledManagers": ["github-actions", "custom.regex"],
   "customManagers": [
     {
       "customType": "regex",
@@ -28,15 +20,6 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+(?:default|version): (?<currentValue>v?[\\d][^\\s]*)",
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+[A-Z_]+=\"(?<currentValue>v?[\\d][^\"]*)\""
-      ]
-    },
-    {
-      "customType": "regex",
-      "description": "Docker image pinned by tag AND digest in a workflow input default (sitespeed-image of perf-sitespeed.yml, browser-image of perf-lighthouse.yml and perf-unlighthouse.yml: one image, bumped together). The generic manager above requires a numeric default, which an image reference is not; this one keeps tag and digest moving together.",
-      "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/"],
-      "datasourceTemplate": "docker",
-      "matchStrings": [
-        "# renovate: datasource=docker depName=(?<depName>[^\\s]+)\\n\\s+default: [^:\\s]+(?:/[^:\\s]+)*:(?<currentValue>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]{64})"
       ]
     },
     {
@@ -86,13 +69,8 @@
       "extractVersion": "^lychee-v(?<version>.+)$"
     },
     {
-      "description": "jq tags its releases `jq-X.Y.Z`; the version is stored bare (setup-jq) and the download URL adds the prefix back.",
-      "matchPackageNames": ["jqlang/jq"],
-      "extractVersion": "^jq-(?<version>.+)$"
-    },
-    {
       "description": "These tools are downloaded and verified against a SHA-256 (or commit) pinned next to the version: Renovate bumps the version only, so the job fails closed until the pins are refreshed.",
-      "matchPackageNames": ["rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "lycheeverse/lychee", "gitleaks/gitleaks", "bats-core/bats-core", "@anthropic-ai/claude-code", "jqlang/jq"],
+      "matchPackageNames": ["rhysd/actionlint", "yannh/kubeconform", "koalaman/shellcheck", "lycheeverse/lychee", "gitleaks/gitleaks", "bats-core/bats-core", "@anthropic-ai/claude-code"],
       "prBodyNotes": ["⚠️ Pinned checksums: run `scripts/update-tool-checksums.py` on this branch and commit the result — CI fails until then."]
     },
     {

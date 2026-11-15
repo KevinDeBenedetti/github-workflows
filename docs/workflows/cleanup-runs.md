@@ -101,10 +101,7 @@ artifacts too.
   `max-deletions`.
 - The job summary gives the space the artifacts freed, in MB.
 - An artifact uses storage from its upload to its deletion: a short `retention-days`
-  at upload time saves more than any cleanup. The workflows of this repository that
-  upload reports take an `artifact-retention-days` input, 7 days by default, such as
-  [`perf-sitespeed`](./perf-sitespeed.md). They can also upload no artifact at all
-  (`upload-artifact: false`), which costs no Actions storage.
+  at upload time saves more than any cleanup.
 
 ## Inputs
 

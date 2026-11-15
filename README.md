@@ -2,16 +2,15 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/KevinDeBenedetti/github-workflows/ci-cd.yml?style=for-the-badge&label=CI)](https://github.com/KevinDeBenedetti/github-workflows/actions/workflows/ci-cd.yml) [![Release](https://img.shields.io/github/v/release/KevinDeBenedetti/github-workflows?style=for-the-badge)](https://github.com/KevinDeBenedetti/github-workflows/releases) [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/KevinDeBenedetti/github-workflows?style=for-the-badge&label=Scorecard)](https://scorecard.dev/viewer/?uri=github.com/KevinDeBenedetti/github-workflows) [![License](https://img.shields.io/github/license/KevinDeBenedetti/github-workflows?style=for-the-badge)](LICENSE)
 
-> Reusable GitHub Actions workflows and composite actions for Node.js, Python, shell, Helm, Terraform, and Ansible projects.
+> Reusable GitHub Actions workflows and composite actions for Node.js, Python, shell, Kubernetes, Terraform, and Prometheus projects.
 
 ## Features
 
 - CI pipelines for Node.js (lint → typecheck → test → build), Python (lint → format → test), and shell (ShellCheck → actionlint → Bats)
-- CI pipelines for **Helm** (lint + template dry-run), **Kubernetes** (kubeconform validation), **Terraform** (validate + fmt check), and **Ansible** (lint + syntax check)
-- CD workflows for Docker/GHCR, BuildKit (rootless on self-hosted runners, Buildx on GitHub-hosted ones), GitHub Pages, and centralized docs sync
-- Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, hash-locked ansible installs, and a checksum-pinned Claude Code setup
+- CI pipelines for **Kubernetes** (kubeconform validation), **Terraform** (validate + fmt check) and **Prometheus** (PromQL check + alert unit tests)
+- CD workflows for Docker/GHCR, BuildKit (rootless on self-hosted runners, Buildx on GitHub-hosted ones), and centralized docs sync
+- Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, and a checksum-pinned Claude Code setup
 - Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
-- Performance and SEO workflows (sitespeed.io, Lighthouse CI, Unlighthouse, link and tag crawl) whose browser runs in a pinned image, on GitHub-hosted runners or a Kubernetes ARC scale set with no Docker daemon or Chrome; artifacts kept 7 days by default, or none
 - Scheduled GHCR cleanup that keeps releases and recent images, safe for multi-arch images and attestations
 - Scheduled workflow-run cleanup that keeps recent runs and the last runs of each workflow, clears deleted workflows from the Actions sidebar, and can delete old artifacts on their own, the runs kept included, to save Actions storage
 - Automated releases via release-please, and release propagation: each release opens a pull request in every consumer repository that moves its pins, merged once its checks pass
@@ -60,22 +59,14 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `ci-node.yml` | Node.js CI (lint → typecheck → test → build) | [→](docs/workflows/ci-node.md) |
 | `ci-python.yml` | Python CI (lint → format → test) | [→](docs/workflows/ci-python.md) |
 | `ci-shell.yml` | Shell CI (ShellCheck → actionlint → Bats) | [→](docs/workflows/ci-shell.md) |
-| `ci-ansible.yml` | Ansible CI (ansible-lint + syntax check) | [→](docs/workflows/ci-ansible.md) |
-| `ci-helm.yml` | Helm CI (lint + template dry-run) | [→](docs/workflows/ci-helm.md) |
 | `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](docs/workflows/ci-kubernetes.md) |
 | `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](docs/workflows/ci-terraform.md) |
 | `ci-prometheus.yml` | Prometheus CI (PromQL check + alert unit tests) | [→](docs/workflows/ci-prometheus.md) |
-| `perf-sitespeed.yml` | Core Web Vitals monitoring with sitespeed.io (budget + CSV history) | [→](docs/workflows/perf-sitespeed.md) |
-| `perf-unlighthouse.yml` | Lighthouse audit of every page (perf, a11y, SEO) with Unlighthouse, scheduled | [→](docs/workflows/perf-unlighthouse.md) |
-| `perf-lighthouse.yml` | Lighthouse CI on chosen pages of a deployed site: per-category assertions, one commit status per page | [→](docs/workflows/perf-lighthouse.md) |
-| `seo-crawl.yml` | SEO crawl: broken links, redirects, missing/duplicate tags | [→](docs/workflows/seo-crawl.md) |
 | `ci-prek.yml` | prek / pre-commit hooks run server-side (`prek run --all-files`) | [→](docs/workflows/ci-prek.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |
 | `cd-buildkit.yml` | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones | [→](docs/workflows/cd-buildkit.md) |
-| `cd-pages.yml` | Build & deploy static site to GitHub Pages | [→](docs/workflows/cd-pages.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
-| `prerelease.yml` | Pre-releases of an integration branch, `v<next>-rc.<n>` from the Conventional Commits since the last release tag | [→](docs/workflows/prerelease.md) |
 | `propagate-release.yml` | Release propagation: a pull request in each consumer repository moves its pins to the new release, merged once its checks pass | [→](docs/workflows/propagate-release.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |

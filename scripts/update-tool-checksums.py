@@ -67,12 +67,6 @@ TOOLS = {
         "arch": {"amd64": "x64", "arm64": "arm64"},
         "sums": "https://github.com/gitleaks/gitleaks/releases/download/v{v}/gitleaks_{v}_checksums.txt",
     },
-    "JQ": {
-        "file": ".github/actions/setup-jq/action.yml",
-        "url": "https://github.com/jqlang/jq/releases/download/jq-{v}/jq-linux-{a}",
-        "arch": {"amd64": "amd64", "arm64": "arm64"},
-        "sums": "https://github.com/jqlang/jq/releases/download/jq-{v}/sha256sum.txt",
-    },
     "CLAUDE_CODE": {
         "file": ".github/actions/setup-claude-code/action.yml",
         "url": "https://downloads.claude.ai/claude-code-releases/{v}/linux-{a}/claude",
