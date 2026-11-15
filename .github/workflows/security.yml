@@ -232,7 +232,10 @@ jobs:
           uv export --frozen --format requirements-txt --no-hashes \
             --no-emit-project --no-emit-workspace \
             > "$RUNNER_TEMP/requirements-audit.txt"
-          uvx pip-audit --no-deps --disable-pip \
+          # Pinned: a bare `uvx pip-audit` runs whatever PyPI serves that day.
+          # renovate: datasource=pypi depName=pip-audit
+          PIP_AUDIT_VERSION="2.10.1"
+          uvx "pip-audit==${PIP_AUDIT_VERSION}" --no-deps --disable-pip \
             -r "$RUNNER_TEMP/requirements-audit.txt"
 
   # ── Secret scanning ─────────────────────────────────────────────────────────

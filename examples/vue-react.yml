@@ -2,8 +2,8 @@ name: CI/CD
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Standalone — Vue / React lib (Vite)
-# Build → dist/, publié sur GitHub Pages (Storybook ou app statique)
-# pnpm ou bun auto-détecté depuis le lockfile
+# CI (lint, typecheck, test, build), then release-please on main
+# pnpm or bun, detected from the lockfile
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -19,17 +19,8 @@ jobs:
       node-version: '24'
       framework: vite
 
-  deploy-pages:
-    needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-pages.yml@v0.45.0 # x-release-please-version
-    with:
-      output-directory: dist
-      # build-command: bun run build-storybook  # si Storybook
-      # output-directory: storybook-static      # si Storybook
-
   release:
-    needs: deploy-pages
+    needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.45.0 # x-release-please-version
     # No token secret: release-please runs on GITHUB_TOKEN (enable "Allow

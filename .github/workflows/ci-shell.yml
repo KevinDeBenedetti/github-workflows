@@ -205,8 +205,8 @@ concurrency:
   group: ci-shell-${{ github.workflow }}-${{ github.ref }}-${{ inputs.bats-tests-dir }}-${{ inputs.docs-directory }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
 
 jobs:
   # ── ShellCheck ───────────────────────────────────────────────────────────────
@@ -215,6 +215,8 @@ jobs:
     if: inputs.run-shellcheck
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -234,6 +236,8 @@ jobs:
     if: inputs.run-actionlint
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -253,6 +257,8 @@ jobs:
     if: inputs.run-bats
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -285,6 +291,8 @@ jobs:
     if: inputs.run-docker
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 30
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -315,6 +323,8 @@ jobs:
     if: inputs.run-link-check
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -335,6 +345,8 @@ jobs:
     if: inputs.run-docs-link-check
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -355,6 +367,8 @@ jobs:
     if: inputs.run-docs-external-link-check
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -373,6 +387,8 @@ jobs:
     if: inputs.run-vitepress-check
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout

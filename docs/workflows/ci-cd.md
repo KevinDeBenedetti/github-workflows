@@ -23,7 +23,7 @@ on:
 | Job              | Runs when       | Calls                               | Purpose                                                                                 |
 | ---------------- | --------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
 | `ci-shell`       | push + PR       | `ci-shell.yml`                      | ShellCheck, actionlint, Bats and docs checks, with the actions of this commit           |
-| `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus the locked ansible tools and Claude Code |
+| `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus the pinned Claude Code binary            |
 | `ci-zizmor`      | push + PR       | `zizmorcore/zizmor-action`          | GitHub Actions security lint, pedantic persona                                          |
 | `ci-prek`        | push + PR       | `ci-prek.yml`                       | This repo's prek hooks                                                                  |
 | `security`       | push + PR       | `security.yml`                      | Gitleaks, dependency review and CodeQL (`actions`, `python`)                            |
