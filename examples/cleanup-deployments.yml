@@ -1,0 +1,24 @@
+# Weekly retention for this repository's deployment records — drop this file in
+# .github/workflows/. The 5 most recent deployments of each environment and
+# those younger than 30 days stay; the older records are deleted. Records only:
+# nothing deployed, no environment and no secret is touched.
+# Start in dry-run: run it once by hand from the Actions tab, read what the log
+# says it would delete, then remove the dry-run line.
+name: Cleanup deployments
+
+on:
+  schedule:
+    - cron: "3 5 * * 1"  # Mondays, 05:03 UTC
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  cleanup:
+    # Pin to a release tag or commit SHA for reproducible runs.
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-deployments.yml@v0.45.0 # x-release-please-version
+    # Caller permissions cap the called workflow: it deletes deployments.
+    permissions:
+      deployments: write
+    with:
+      dry-run: true

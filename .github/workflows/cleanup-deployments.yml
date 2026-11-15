@@ -1,0 +1,74 @@
+# Retention for the deployment records of a repository, meant to run on a
+# weekly schedule: the old records are deleted, the recent ones of each
+# environment stay.
+#
+# A deployment record is what a deploy job leaves behind (environment, commit,
+# statuses). It costs no storage: this keeps the Deployments page and the
+# environments readable. Nothing deployed, no environment and no secret is
+# touched.
+#
+# Call it from the repository whose deployments to clean: its GITHUB_TOKEN can
+# delete them. No PAT and no GitHub App.
+#
+# The retention policy (detailed at the top of
+# .github/actions/cleanup-deployments/cleanup-deployments.sh):
+#   never deleted  deployments younger than older-than-days, and the keep most
+#                  recent ones of each environment, whatever their age.
+#   deleted        every other deployment, oldest first, at most max-deletions
+#                  per run, each one set inactive first.
+#
+# A deleted deployment record cannot be restored.
+name: Cleanup deployments
+
+on:
+  workflow_call:
+    inputs:
+      keep:
+        description: Most recent deployments kept per environment, whatever their age (1 to 100)
+        type: number
+        required: false
+        default: 5
+      older-than-days:
+        description: Age, in days, before a deployment can be deleted (0 or more)
+        type: number
+        required: false
+        default: 30
+      max-deletions:
+        description: Deletions at most in one run (1 to 400), two requests each
+        type: number
+        required: false
+        default: 200
+      dry-run:
+        description: Log what would be deleted, delete nothing
+        type: boolean
+        required: false
+        default: false
+      runner:
+        description: Runner labels as JSON — '"ubuntu-26.04"' or '["self-hosted","linux"]' (Linux with bash, curl and jq)
+        type: string
+        required: false
+        default: '"ubuntu-26.04"'
+
+# Deny-all default: the job grants only the permissions it needs.
+permissions: {}
+
+# Two runs at once would race over the same deployments.
+concurrency:
+  group: cleanup-deployments-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Clean up deployments
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 20
+    permissions:
+      deployments: write  # list the deployments, set them inactive and delete them
+    steps:
+      - name: Delete old deployments
+        uses: $/.github/actions/cleanup-deployments
+        with:
+          keep: ${{ inputs.keep }}
+          older-than-days: ${{ inputs.older-than-days }}
+          max-deletions: ${{ inputs.max-deletions }}
+          dry-run: ${{ inputs.dry-run }}
