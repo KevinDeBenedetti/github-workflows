@@ -8,7 +8,7 @@ Finds the **change base** of the run: the commit its change starts from. A
 check then walks the commits `base..HEAD` (commit messages, a secret scan) or
 compares the files of `base` and `HEAD` (changed docs pages, changed apps).
 The workflows and actions of this repository use it wherever they need the
-change of a push or pull request: `security.yml`'s secret scan, `ci-cd.yml`'s
+change of a push or pull request: the [`secret-scan`](secret-scan.md) action of `security.yml`, `ci-cd.yml`'s
 commit check, [`check-docs-external-links`](check-docs-external-links.md) and
 [`detect-changes`](detect-changes.md).
 
