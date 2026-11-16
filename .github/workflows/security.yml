@@ -191,13 +191,10 @@ jobs:
       - name: Audit dependencies
         working-directory: ${{ inputs.node-working-directory }}
         env:
-          PACKAGE_MANAGER: ${{ steps.setup.outputs.package-manager }}
-        run: |
-          case "$PACKAGE_MANAGER" in
-            bun) bun audit --audit-level=high ;;
-            npm) npm audit --audit-level=high ;;
-            *)   pnpm audit --audit-level=high ;;
-          esac
+          AUDIT_CMD: ${{ steps.setup.outputs.audit-command }}
+        # AUDIT_CMD is "<pnpm|npm|bun> audit --audit-level=high": word-split on
+        # purpose.
+        run: $AUDIT_CMD
 
   # ── Dependency audit (Python) ───────────────────────────────────────────────
   audit-python:

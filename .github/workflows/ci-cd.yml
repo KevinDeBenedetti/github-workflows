@@ -16,6 +16,7 @@
 #   ci-shell     — shellcheck + actionlint + bats + docs checks (ci-shell.yml) [push + PR]
 #   ci-zizmor    — GitHub Actions security lint (zizmor)                [push + PR]
 #   ci-actions   — same checks through the local composite actions            [push + PR]
+#   ci-checksums — pinned tool checksums match their release assets      [push + PR]
 #   ci-commits   — Conventional Commits on every new commit             [push + PR]
 #   security     — Gitleaks + dependency review + CodeQL (security.yml)  [push + PR]
 #   ci-gate      — single required check: all CI jobs above passed      [push + PR]
@@ -215,6 +216,39 @@ jobs:
       contents: read
       pull-requests: read     # list the commits of the pull request
 
+  # ── CI — Pinned tool checksums ───────────────────────────────────────────────
+  # The SHA-256 pinned next to each downloaded tool must match its release
+  # asset: a version bump (Renovate) with a stale checksum would pass here, as
+  # not every tool is executed by this CI, and fail in the callers. Every asset
+  # is downloaded again, so the check runs only when a file holding a pin, the
+  # script or this workflow changed, and on a run with no change base.
+  ci-checksums:
+    name: CI — Tool checksums
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Comparing files needs the two commits only: fetch-base is enough on
+      # this depth-1 checkout.
+      - name: Change base (local action)
+        id: base
+        uses: ./.github/actions/change-base
+        with:
+          fetch-base: 'true'
+
+      - name: Verify the pinned checksums
+        env:
+          BASE: ${{ steps.base.outputs.base }}
+        run: |
+          # Without a change base (a manual run), every pin is verified.
+          python3 scripts/update-tool-checksums.py --check ${BASE:+--since "$BASE"}
+
   # ── CI — Commit messages ─────────────────────────────────────────────────────
   # Conventional Commits on every new commit (the same script as the prek
   # commit-msg hook): change-base..HEAD, i.e. the PR's commits, the push's, or
@@ -272,7 +306,7 @@ jobs:
   # are named "Caller / Callee job"). Passes only when every job succeeded.
   ci-gate:
     name: CI — Gate
-    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-commits, security]
+    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-checksums, ci-commits, security]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 5

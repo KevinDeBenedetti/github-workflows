@@ -67,7 +67,7 @@ jobs:
 ## Notes
 
 - The `tag-workflows` job only runs when `released == 'true'` and `prerelease` is not: a pre-release (`v1.3.0-rc.2`) leaves `v1` on the last final release.
-- The major alias (e.g. `v1`) is force-pushed after each release, enabling callers to pin to `@v1` without a breaking update.
+- The major alias (e.g. `v1`) is force-pushed after each release, enabling callers to pin to `@v1` without a breaking update. The move is the [`move-release-aliases`](../actions/move-release-aliases.md) action.
 - Before 1.0, `pre-major-alias` picks the alias(es): `both` (default) moves `v0` and `v0.<minor>` (e.g. `v0.25`); `minor` moves only `v0.<minor>` — with `bump-minor-pre-major`, release-please ships breaking changes as minor bumps, so a moving `v0` carries callers across them; `major` moves only `v0`. Switching to `minor` freezes an existing `v0` tag: tell callers pinned to `@v0` to move to `@v0.<minor>`.
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
 - With `notify-reviewers` set, a listed user is requested as a reviewer only when the PR's timeline has no `review_requested` event for them yet. Later runs (on any push while the PR stays open) skip users already asked, even once they have reviewed or been removed, so nobody is pinged twice.

@@ -30,7 +30,10 @@ docs, the consistency of the reusable workflows, and the commit message.
    `workflow_dispatch` (`scripts/check-workflow-consistency.py` checks it).
 4. **Tests:** a new or changed script ships with its Bats tests in `tests/`
    (`bats tests/`).
-5. Update the matching page in `docs/workflows/` or `docs/actions/`.
+5. Update the matching page in `docs/workflows/` or `docs/actions/`. A new
+   workflow or action also needs its page and its row in the tables of
+   `README.md` and `docs/getting-started.md`: the same script checks them, and
+   the `with:` keys passed to this repository's actions.
 
 ## Review
 

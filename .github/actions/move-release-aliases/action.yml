@@ -1,0 +1,44 @@
+name: Move release aliases
+description: >
+  Move the alias tags of a release so that callers pinned to them receive it:
+  v1.2.3 moves v1; before 1.0, v0.24.3 moves v0 and v0.24 (pre-major-alias).
+  Safe to re-run and against a concurrent move: each alias is re-synced from
+  the remote first and left alone when it is already right. Needs a checkout
+  and a token with contents write. The rules are at the top of
+  move-release-aliases.sh.
+
+inputs:
+  tag:
+    description: The release tag, vMAJOR.MINOR.PATCH
+    required: true
+  pre-major-alias:
+    description: Which aliases a v0.x release moves — both (v0 and v0.<minor>), minor or major
+    required: false
+    default: both
+  git-user-name:
+    description: Name of the tagger of the alias tags
+    required: false
+    default: github-actions[bot]
+  git-user-email:
+    description: Email of the tagger of the alias tags
+    required: false
+    default: github-actions[bot]@users.noreply.github.com
+  github-token:
+    description: Token with contents write, used for the push only
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Move the alias tags
+      shell: bash
+      # Inputs go through env, never interpolated into the script body. The
+      # token reaches git through this step's environment only.
+      env:
+        TAG: ${{ inputs.tag }}
+        PRE_MAJOR_ALIAS: ${{ inputs.pre-major-alias }}
+        GIT_USER_NAME: ${{ inputs.git-user-name }}
+        GIT_USER_EMAIL: ${{ inputs.git-user-email }}
+        PUSH_TOKEN: ${{ inputs.github-token }}
+      run: bash "$GITHUB_ACTION_PATH/move-release-aliases.sh"
