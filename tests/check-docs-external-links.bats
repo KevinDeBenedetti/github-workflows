@@ -23,7 +23,7 @@ EOF
   chmod +x bin/lychee
   PATH="$BATS_TEST_TMPDIR/bin:$PATH"
   # Never write to the real job summary when the suite itself runs in CI.
-  unset GITHUB_STEP_SUMMARY GITHUB_TOKEN CHANGED_ONLY EVENT PR_BASE BEFORE
+  unset GITHUB_STEP_SUMMARY GITHUB_TOKEN CHANGED_ONLY BASE
   printf '[a](https://example.com/a)\n' > docs/a.md
   printf '[b](https://example.com/b)\n' > docs/guide/b.md
 }
@@ -54,52 +54,44 @@ checked() { sed '1,/^--$/d' "$BATS_TEST_TMPDIR/lychee.args"; }
   grep -qF 'medium\.com/' lychee.args
 }
 
-@test "push: checks only the Markdown files changed since BEFORE" {
+@test "checks only the Markdown files changed since the change base" {
   repo
-  before="$(git rev-parse HEAD)"
+  base="$(git rev-parse HEAD)"
   printf '[c](https://example.com/c)\n' >> docs/a.md
+  printf '[n](https://example.com/n)\n' > docs/guide/new.md
   printf 'not markdown\n' > docs/notes.txt
   rm docs/guide/b.md
   snapshot change
-  CHANGED_ONLY=true EVENT=push BEFORE="$before" run bash "$SCRIPT"
+  CHANGED_ONLY=true BASE="$base" run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  [ "$(checked)" = "docs/a.md" ]
-}
-
-@test "pull request: checks only the Markdown files changed since the PR base" {
-  repo
-  base="$(git rev-parse HEAD)"
-  printf '[n](https://example.com/n)\n' > docs/guide/new.md
-  snapshot change
-  CHANGED_ONLY=true EVENT=pull_request PR_BASE="$base" run bash "$SCRIPT"
-  [ "$status" -eq 0 ]
-  [ "$(checked)" = "docs/guide/new.md" ]
+  [ "$(checked)" = "$(printf 'docs/a.md\ndocs/guide/new.md')" ]
 }
 
 @test "does not run lychee when no Markdown file changed" {
   repo
-  before="$(git rev-parse HEAD)"
+  base="$(git rev-parse HEAD)"
   printf 'x\n' > README.txt
   snapshot change
-  CHANGED_ONLY=true EVENT=push BEFORE="$before" run bash "$SCRIPT"
+  CHANGED_ONLY=true BASE="$base" run bash "$SCRIPT"
   [ "$status" -eq 0 ]
   [[ "$output" == *"No Markdown file to check"* ]]
   [ ! -e lychee.args ]
 }
 
-@test "a push that creates a branch checks every file" {
+@test "no change base: checks every file, with a notice" {
   repo
-  CHANGED_ONLY=true EVENT=push BEFORE=0000000000000000000000000000000000000000 run bash "$SCRIPT"
+  CHANGED_ONLY=true BASE='' run bash "$SCRIPT"
   [ "$status" -eq 0 ]
+  [[ "$output" == *"::notice::No change base"* ]]
   [ "$(checked | grep -c .)" -eq 2 ]
 }
 
-@test "a base that cannot be fetched falls back to every file, with a notice" {
+@test "a change base missing from the clone fails before lychee runs" {
   repo
-  CHANGED_ONLY=true EVENT=push BEFORE=1234567890abcdef1234567890abcdef12345678 run bash "$SCRIPT"
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"::notice::"* ]]
-  [ "$(checked | grep -c .)" -eq 2 ]
+  CHANGED_ONLY=true BASE=1234567890abcdef1234567890abcdef12345678 run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"::error::Change base 1234567890abcdef1234567890abcdef12345678 is not in the clone."* ]]
+  [ ! -e lychee.args ]
 }
 
 @test "checks the files passed as arguments, Markdown only" {

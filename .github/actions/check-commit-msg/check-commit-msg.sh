@@ -56,9 +56,16 @@ if [ "$#" -gt 0 ]; then
     check_message "commit message" < "$file" || failed=1
   done
 elif [ -n "${COMMIT_RANGE:-}" ]; then
+  # Read the list first: inside a < <(…) substitution a git failure slips
+  # past set -e, and a range git cannot read would pass as "no commit".
+  if ! shas="$(git rev-list --no-merges "$COMMIT_RANGE")"; then
+    echo "::error::cannot read the commit range '$COMMIT_RANGE' — check out with fetch-depth: 0 so that both ends are in the clone" >&2
+    exit 2
+  fi
   while IFS= read -r sha; do
+    [ -n "$sha" ] || continue
     git log -1 --format=%B "$sha" | check_message "${sha:0:7}" || failed=1
-  done < <(git rev-list --no-merges "$COMMIT_RANGE")
+  done <<< "$shas"
 else
   echo "usage: check-commit-msg.sh <msg-file>… | COMMIT_RANGE=base..head check-commit-msg.sh" >&2
   exit 2

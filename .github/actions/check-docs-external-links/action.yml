@@ -50,6 +50,15 @@ runs:
         tar xz -C "$INSTALL_DIR" --strip-components=1 "lychee-${ARCH}-unknown-linux-gnu/lychee" < "$RUNNER_TEMP/lychee.tar.gz"
         echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 
+    # The changed files are compared with the change base, fetched when a
+    # shallow checkout lacks it: comparing two trees needs no history between.
+    - name: Find the change base
+      id: base
+      if: inputs.changed-only == 'true'
+      uses: $/.github/actions/change-base
+      with:
+        fetch-base: 'true'
+
     - name: Check external links
       shell: bash
       # Inputs go through env, never interpolated into the script body.
@@ -57,7 +66,5 @@ runs:
         DOCS_DIR: ${{ inputs.docs-directory }}
         CHANGED_ONLY: ${{ inputs.changed-only }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
-        EVENT: ${{ github.event_name }}
-        PR_BASE: ${{ github.event.pull_request.base.sha }}
-        BEFORE: ${{ github.event.before }}
+        BASE: ${{ steps.base.outputs.base }}
       run: bash "$GITHUB_ACTION_PATH/check-docs-external-links.sh"

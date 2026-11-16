@@ -6,12 +6,12 @@
 #
 # Files
 #   arguments         : the Markdown files passed (a run by hand before a push)
-#   CHANGED_ONLY=true : the $DOCS_DIR/**/*.md files the push or pull request
-#                       changed, against $PR_BASE (pull request) or $BEFORE
-#                       (push). A page that rotted elsewhere never fails an
-#                       unrelated change — the central site's weekly crawl
-#                       reports it. No base (new branch, manual run), or one
-#                       that cannot be fetched → every file.
+#   CHANGED_ONLY=true : the $DOCS_DIR/**/*.md files changed since $BASE, the
+#                       change base the action's change-base step found. A page
+#                       that rotted elsewhere never fails an unrelated change —
+#                       the central site's weekly crawl reports it. No change
+#                       base (a manual run, a base that cannot be fetched) →
+#                       every file. A $BASE missing from the clone fails.
 #   otherwise         : every $DOCS_DIR/**/*.md
 #
 # Never checked: links in code blocks (lychee's default), relative links
@@ -33,18 +33,14 @@ if [[ $# -gt 0 ]]; then
 else
   base=""
   if [[ "${CHANGED_ONLY:-false}" == true ]]; then
-    case "${EVENT:-}" in
-      pull_request|pull_request_target) base="${PR_BASE:-}" ;;
-      push) base="${BEFORE:-}" ;;
-    esac
-    # A push that creates a branch has an all-zero `before`.
-    if [[ "$base" =~ ^0+$ ]]; then base=""; fi
-  fi
-  if [[ -n "$base" ]] && ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
-    # A shallow checkout lacks the base commit: fetch that one commit.
-    if ! git fetch --quiet --no-tags --depth=1 origin "$base" 2>/dev/null; then
-      echo "::notice::Base commit $base cannot be fetched — checking every file."
-      base=""
+    base="${BASE:-}"
+    if [[ -z "$base" ]]; then
+      echo "::notice::No change base for this run (a manual run, or a base that cannot be fetched) — checking every file."
+    elif ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+      # Inside the < <(…) below, a failing git diff would slip past set -e
+      # and check nothing.
+      echo "::error::Change base $base is not in the clone." >&2
+      exit 1
     fi
   fi
   if [[ -n "$base" ]]; then

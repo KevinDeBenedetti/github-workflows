@@ -28,9 +28,10 @@ steps:
 
 ## Notes
 
-- **Changed files**: diffed against the pull request's base commit, or against the commit before the push. A shallow checkout is enough: the action fetches that one commit. A push that creates a branch, a manual run, or a base that cannot be fetched checks every file instead.
+- **Changed files**: diffed against the change base that [`change-base`](change-base.md) finds: the pull request's base commit, the commit before the push, or on a new or force-pushed branch its fork point with the default branch (when the clone holds the default branch). A shallow checkout is enough: the action fetches that one commit. A manual run, or a base that cannot be fetched, checks every file instead, with a notice.
 - **Never checked**: links inside code blocks, relative links (the [`check-docs-links`](check-docs-links.md) action's job), loopback addresses such as `localhost` dev servers, and `medium.com`, which answers any non-browser client with a 403. Add a `.lycheeignore` at the repository root (one regex per line) for anything else.
 - **github.com**: requests go through `github-token`, so they are not rate-limited. A link to a private repository fails, as it does for readers.
 - Retries a failing link 3 times, 5 s apart, with a 30 s timeout. Fails with lychee's exit code (`2`) on any broken link; the lychee report, with the file and line of each broken link, is printed and written to the job summary.
+- Needs runner 2.336.0 or newer: the action calls `change-base` with `uses: $/…`, which GitHub Enterprise Server does not support.
 - lychee is downloaded from its GitHub release and checked against a SHA-256 pinned in the action. After a version bump, refresh it with `scripts/update-tool-checksums.py`.
 - Locally, with `lychee` on the `PATH`: `bash .github/actions/check-docs-external-links/check-docs-external-links.sh docs/page.md`.
