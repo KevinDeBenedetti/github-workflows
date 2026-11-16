@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.47.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.46.0...v0.47.0) (2026-11-16)
+
+
+### Features
+
+* **secret-scan:** move the Gitleaks scan into a tested composite action ([4068625](https://github.com/KevinDeBenedetti/github-workflows/commit/40686252fa99165249c2f6a5fb54aa8f4355289b))
+
+
+### Bug Fixes
+
+* **ci:** keep a merged pull request's run out of its base branch's concurrency group ([6c2f59e](https://github.com/KevinDeBenedetti/github-workflows/commit/6c2f59ed096f6882a251a2494eeb7a0eb5519e83))
+
 ## [0.46.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.45.0...v0.46.0) (2026-11-16)
 
 
