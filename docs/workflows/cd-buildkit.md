@@ -4,7 +4,7 @@ title: CD — BuildKit
 
 # CD — BuildKit
 
-Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless inside the job container on a self-hosted Kubernetes (ARC) runner, or through **Docker Buildx** on a GitHub-hosted runner. The `runner` input picks the path, and the caller changes nothing else: tags, provenance, SBOM and the registry layer cache are the same on both.
+Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless inside the job container on a self-hosted Kubernetes (ARC) runner, or through **Docker Buildx** on a hosted VM runner (GitHub's or Ubicloud's). The `runner` input picks the path, and the caller changes nothing else: tags, provenance, SBOM and the registry layer cache are the same on both.
 On the cluster the builder runs as a non-root user; both paths expose a `digest` output and take build secrets, provenance and SBOM inputs. Its predecessor `cd-kaniko.yml` (upstream Kaniko is archived) was removed from this repository once the cluster dropped the Kaniko executor.
 
 ::: warning Experimental on the cluster
@@ -35,7 +35,7 @@ jobs:
 
 | `runner` input                                                         | Job        | Builder                                                                                             |
 | ---------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| A GitHub-hosted label starting with `ubuntu-`, e.g. `'"ubuntu-26.04"'` (the default)  | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
+| A hosted VM label: GitHub's `ubuntu-…`, e.g. `'"ubuntu-26.04"'` (the default), or Ubicloud's `ubicloud-…`, e.g. `'"ubicloud-standard-2"'` | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
 | Any other label, the ARC scale set set up for image builds               | `buildkit` | Rootless BuildKit in the job container: needs the [cluster prerequisites](#cluster-prerequisites) |
 
 Both paths build for the runner's native platform: use an x86_64 runner for an x86_64 cluster. One repository variable can then move every job, image builds included:

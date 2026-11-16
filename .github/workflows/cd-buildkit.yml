@@ -1,4 +1,4 @@
-name: Deploy — BuildKit (rootless on self-hosted, Buildx on GitHub-hosted)
+name: Deploy — BuildKit (rootless on self-hosted, Buildx on hosted VMs)
 
 # The image build of this repository's callers: the same inputs and tags,
 # built by BuildKit on whichever runner the `runner` input selects, so a caller
@@ -16,7 +16,8 @@ name: Deploy — BuildKit (rootless on self-hosted, Buildx on GitHub-hosted)
 #     The rootless image has no glibc Node.js: NO JavaScript actions;
 #     BuildKit fetches the source itself (git context) and tags are computed
 #     in sh.
-#   - GitHub-hosted runner (a label starting with `ubuntu-`, the default): the `buildx` job
+#   - Hosted VM runner (a label starting with `ubuntu-`, the default, or
+#     with `ubicloud-`): the `buildx` job
 #     runs the same build through Docker Buildx, which drives BuildKit with the
 #     runner's Docker daemon, from a checkout of the same commit.
 # Both build for the runner's native platform: pick an x86_64 runner for an
@@ -85,7 +86,7 @@ on:
         required: false
         default: true
       runner:
-        description: Runner labels as JSON — a GitHub-hosted ubuntu-… label (e.g. '"ubuntu-26.04"') runs Docker Buildx, any other label (the name of an ARC runner scale set set up for image builds) runs rootless BuildKit
+        description: Runner labels as JSON — a hosted VM label, GitHub's ubuntu-… (e.g. '"ubuntu-26.04"') or Ubicloud's ubicloud-…, runs Docker Buildx, any other label (the name of an ARC runner scale set set up for image builds) runs rootless BuildKit
         type: string
         required: false
         default: '"ubuntu-26.04"'
@@ -177,7 +178,10 @@ jobs:
   # Self-hosted runners (ARC): rootless BuildKit inside the job container.
   buildkit:
     name: BuildKit build & push (${{ inputs.context }})
-    if: ${{ !contains(inputs.runner, '"ubuntu-') }}
+    # Not a hosted VM (see the buildx job): the rootless image's user cannot
+    # even write the runner's step files there ("Permission denied" on the
+    # first `>> "$GITHUB_OUTPUT"`), let alone start its user namespace.
+    if: ${{ !contains(inputs.runner, '"ubuntu-') && !contains(inputs.runner, '"ubicloud-') }}
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     container:
@@ -385,13 +389,13 @@ jobs:
             done
           } >> "$GITHUB_STEP_SUMMARY"
 
-  # GitHub-hosted runners (a label starting with ubuntu-): no ARC pod to relax,
-  # but a Docker daemon. The same build runs through Docker Buildx, which drives
+  # Hosted VM runners (a label starting with ubuntu- for GitHub's, ubicloud-
+  # for Ubicloud's): no ARC pod to relax, but a Docker daemon. The same build runs through Docker Buildx, which drives
   # BuildKit, from a checkout of the same commit. Image name, tags and summary
   # come from steps identical to the buildkit job's: change them in both jobs.
   buildx:
     name: Buildx build & push (${{ inputs.context }})
-    if: ${{ contains(inputs.runner, '"ubuntu-') }}
+    if: ${{ contains(inputs.runner, '"ubuntu-') || contains(inputs.runner, '"ubicloud-') }}
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
     defaults:
