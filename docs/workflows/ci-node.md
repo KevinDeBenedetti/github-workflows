@@ -25,7 +25,7 @@ jobs:
 | `node-version`        | string  | `'24'`  | Node.js version                                                                  |
 | `working-directory`   | string  | `'.'`   | Path to the app root (e.g. `apps/web`)                                           |
 | `package-manager`     | string  | `auto`  | `pnpm` \| `bun` \| `npm` \| `auto` — auto-detects from lockfile                  |
-| `framework`           | string  | `auto`  | `next` \| `nuxt` \| `vite` \| `auto` — resolves build output path when uploading |
+| `framework`           | string  | `auto`  | `next` \| `nuxt` \| `vite` \| `auto` — picks the build output path to upload and turns on the Next.js build cache |
 | `run-lint`            | boolean | `true`  | Run `lint` script                                                                |
 | `run-typecheck`       | boolean | `true`  | Run `typecheck` script                                                           |
 | `run-test`            | boolean | `true`  | Run `test` script                                                                |
@@ -59,6 +59,7 @@ jobs:
 
 - Build output path is resolved per framework: `next` → `.next`, `nuxt` → `.output`, otherwise `dist`.
 - Setting `framework: auto` (default) detects the framework from config files (`next.config.*`, `nuxt.config.*`).
+- A Next.js app, detected or set with `framework: next`, gets its `.next/cache` build cache restored before the build.
 - Steps are individually skippable with their `run-*` flags, which is useful for partial pipelines (e.g. build-only).
 - The dependency cache and the Next.js build cache are keyed on the lockfile [`setup-node`](../actions/setup-node.md) resolves — the repository root's for a workspace member — so a monorepo app gets a cache that follows its dependency set.
 - `timeout-minutes` cuts off a hung install, test or build: without it a job holds the runner (and bills the minutes) for up to 6 hours.

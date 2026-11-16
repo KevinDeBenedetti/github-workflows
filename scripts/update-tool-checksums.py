@@ -16,6 +16,9 @@ repository root:
 
     scripts/update-tool-checksums.py           # rewrite the pinned values
     scripts/update-tool-checksums.py --check   # verify only (exit 1 on drift)
+    scripts/update-tool-checksums.py --check --since <commit>
+                                               # CI: only when a pin changed since
+    scripts/update-tool-checksums.py --list-files   # the files holding a pin
 
 Where the project publishes checksums (one file per release, or one per asset
 for lychee), the computed value is also cross-checked against them (Claude
@@ -76,6 +79,8 @@ TOOLS = {
         "manifest": "https://downloads.claude.ai/claude-code-releases/{v}/manifest.json",
     },
 }
+# Besides the files holding a pin, a change to these re-runs the check (--since).
+WATCHED = ["scripts/update-tool-checksums.py", ".github/workflows/ci-cd.yml"]
 # prefix → file, git repository: the pinned <PREFIX>_COMMIT must be the tag's commit.
 GIT_TAGS = {
     "BATS": {
@@ -121,7 +126,25 @@ def current_value(text: str, var: str) -> str | None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="verify only, do not rewrite files")
+    parser.add_argument("--list-files", action="store_true", help="print the files holding a pin, one per line, and exit")
+    parser.add_argument("--since", metavar="COMMIT", help="do nothing unless a file holding a pin, this script or ci-cd.yml changed since COMMIT")
     args = parser.parse_args()
+
+    pinned_files = sorted({tool["file"] for tool in (*TOOLS.values(), *GIT_TAGS.values())})
+    if args.list_files:
+        print("\n".join(pinned_files))
+        return 0
+    if args.since:
+        # CI: every asset is downloaded again, so skip when nothing that
+        # holds or checks a pin changed since the given commit.
+        changed = subprocess.run(
+            ["git", "diff", "--name-only", args.since, "HEAD", "--", *pinned_files, *WATCHED],
+            check=True, capture_output=True, text=True,
+        ).stdout.split()
+        if not changed:
+            print(f"No pinned tool changed since {args.since[:7]}: nothing to verify.")
+            return 0
+        print("Changed: " + " ".join(changed))
 
     drift = 0
     texts: dict[str, str] = {}

@@ -20,8 +20,9 @@ on:
         default: auto
       framework:
         description: >
-          Hint for build output path: "next" | "nuxt" | "vite" | "auto".
-          Used only when upload-build is true.
+          Framework: "next" | "nuxt" | "vite" | "auto" (detected from the
+          config files). Picks the build output path to upload and turns on
+          the Next.js build cache.
         type: string
         required: false
         default: auto
@@ -176,7 +177,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # Setup resolves pnpm or bun automatically from the lockfile
+      # Setup resolves the package manager from the lockfile and the framework
+      # from the config files, and outputs the matching commands.
       - name: Setup Node.js
         id: setup
         uses: $/.github/actions/setup-node
@@ -184,25 +186,13 @@ jobs:
           node-version: ${{ inputs.node-version }}
           working-directory: ${{ inputs.working-directory }}
           package-manager: ${{ inputs.package-manager }}
-
-      # All run commands go through a helper so we write "run: ${{ steps.run-alias.outputs.cmd }} lint"
-      - name: Set run alias
-        id: run-alias
-        shell: bash
-        env:
-          PM: ${{ steps.setup.outputs.package-manager }}
-        run: |
-          case "$PM" in
-            bun) echo "cmd=bun run" >> "$GITHUB_OUTPUT" ;;
-            npm) echo "cmd=npm run" >> "$GITHUB_OUTPUT" ;;
-            *)   echo "cmd=pnpm"    >> "$GITHUB_OUTPUT" ;;
-          esac
+          framework: ${{ inputs.framework }}
 
       - name: Lint
         if: inputs.run-lint
         working-directory: ${{ inputs.working-directory }}
         env:
-          RUN_CMD: ${{ steps.run-alias.outputs.cmd }}
+          RUN_CMD: ${{ steps.setup.outputs.run-command }}
         # RUN_CMD is "pnpm", "npm run" or "bun run": word-split on purpose.
         run: $RUN_CMD lint
 
@@ -210,7 +200,7 @@ jobs:
         if: inputs.run-typecheck
         working-directory: ${{ inputs.working-directory }}
         env:
-          RUN_CMD: ${{ steps.run-alias.outputs.cmd }}
+          RUN_CMD: ${{ steps.setup.outputs.run-command }}
         # RUN_CMD is "pnpm", "npm run" or "bun run": word-split on purpose.
         run: $RUN_CMD typecheck
 
@@ -247,7 +237,7 @@ jobs:
       # saves a fresh entry, with restore-keys falling back to the most recent
       # cache for the same dependency set. No-op for non-Next frameworks.
       - name: Cache Next.js build
-        if: inputs.run-build && inputs.framework == 'next'
+        if: inputs.run-build && steps.setup.outputs.framework == 'next'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ inputs.working-directory }}/.next/cache
@@ -266,45 +256,14 @@ jobs:
           NEXT_TELEMETRY_DISABLED: '1'
           TURBO_TELEMETRY_DISABLED: '1'
           DO_NOT_TRACK: '1'
-          RUN_CMD: ${{ steps.run-alias.outputs.cmd }}
+          RUN_CMD: ${{ steps.setup.outputs.run-command }}
         run: $RUN_CMD build
-
-      # Resolve build output path per framework
-      - name: Resolve build output path
-        if: inputs.upload-build && inputs.run-build
-        id: output-path
-        shell: bash
-        env:
-          FW: ${{ inputs.framework }}
-          DIR: ${{ inputs.working-directory }}
-        run: |
-
-          if [ "$FW" = "auto" ]; then
-            # Detect from config files
-            if [ -f "$DIR/next.config.ts" ] || [ -f "$DIR/next.config.js" ] || [ -f "$DIR/next.config.mjs" ]; then
-              FW="next"
-            elif [ -f "$DIR/nuxt.config.ts" ] || [ -f "$DIR/nuxt.config.js" ]; then
-              FW="nuxt"
-            else
-              FW="vite"
-            fi
-          fi
-
-          case "$FW" in
-            next)  OUT=".next"   ;;
-            nuxt)  OUT=".output" ;;
-            *)     OUT="dist"    ;;
-          esac
-
-          echo "path=${DIR}/${OUT}" >> "$GITHUB_OUTPUT"
-          echo "framework=$FW"     >> "$GITHUB_OUTPUT"
-          echo "🏗️ Framework: $FW → output: ${DIR}/${OUT}"
 
       - name: Upload build artifact
         if: inputs.upload-build && inputs.run-build
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ${{ inputs.build-artifact-name }}
-          path: ${{ steps.output-path.outputs.path }}
+          path: ${{ inputs.working-directory }}/${{ steps.setup.outputs.build-output }}
           retention-days: 1
           if-no-files-found: error

@@ -34,6 +34,14 @@ inputs:
     required: false
     # renovate: datasource=npm depName=bun
     default: 1.4.3
+  framework:
+    description: >
+      Framework of the project: "next" | "nuxt" | "vite" | "auto" (default).
+      "auto" detects it from the config files of the working directory
+      (next.config.*, nuxt.config.*, otherwise vite). Only sets the
+      `framework` and `build-output` outputs.
+    required: false
+    default: auto
   install:
     description: Run install after setup
     required: false
@@ -57,6 +65,21 @@ outputs:
       repository root — what the dependency caches are keyed on. Hash it
       (`hashFiles`) to key a cache of your own on the same dependency set.
     value: ${{ steps.resolve.outputs.lockfile }}
+  run-command:
+    description: >
+      Command that runs a package.json script with the resolved package
+      manager ("pnpm", "npm run" or "bun run"): word-split it, then add the
+      script name.
+    value: ${{ steps.resolve.outputs.run-command }}
+  audit-command:
+    description: Command that audits the lockfile at the high level, e.g. "pnpm audit --audit-level=high"
+    value: ${{ steps.resolve.outputs.audit-command }}
+  framework:
+    description: Resolved framework ("next", "nuxt" or "vite")
+    value: ${{ steps.resolve.outputs.framework }}
+  build-output:
+    description: The framework's build directory, relative to the working directory (".next", ".output" or "dist")
+    value: ${{ steps.resolve.outputs.build-output }}
   cache-hit:
     description: Whether the package cache was restored
     value: ${{ steps.cache-pnpm.outputs.cache-hit || steps.cache-bun.outputs.cache-hit || steps.setup-npm.outputs.cache-hit }}
@@ -69,92 +92,13 @@ runs:
     - name: Resolve package manager
       id: resolve
       shell: bash
+      # Inputs go through env, never interpolated into the script body.
       env:
         INPUT_PM: ${{ inputs.package-manager }}
         INPUT_PNPM_VERSION: ${{ inputs.pnpm-version }}
+        INPUT_FRAMEWORK: ${{ inputs.framework }}
         DIR: ${{ inputs.working-directory }}
-      run: |
-        # Workspaces (npm, pnpm, bun) keep a single lockfile at the repository
-        # root, so a lockfile in the working directory wins, then the root's.
-        find_lock() {
-          local d n
-          for d in "$DIR" "."; do
-            for n in "$@"; do
-              if [ -f "$d/$n" ]; then echo "$d/$n"; return; fi
-            done
-          done
-        }
-
-        if [ "$INPUT_PM" != "auto" ]; then
-          PM="$INPUT_PM"
-        else
-          case "$(find_lock bun.lockb bun.lock package-lock.json pnpm-lock.yaml)" in
-            */bun.lock|*/bun.lockb) PM="bun" ;;
-            */package-lock.json)    PM="npm" ;;
-            *)                      PM="pnpm" ;;
-          esac
-        fi
-        case "$PM" in
-          pnpm|bun|npm) ;;
-          *) echo "::error::unsupported package-manager '$PM' (expected pnpm, bun, npm or auto)"; exit 1 ;;
-        esac
-
-        # npm: cache and `npm ci` from the lockfile's directory (the workspace
-        # root when the working directory is a workspace member).
-        NPM_LOCKFILE=""
-        NPM_DIR="$DIR"
-        if [ "$PM" = "npm" ]; then
-          NPM_LOCKFILE="$(find_lock package-lock.json)"
-          if [ -z "$NPM_LOCKFILE" ]; then
-            echo "::error::package-manager npm needs a package-lock.json in '$DIR' or the repository root"
-            exit 1
-          fi
-          NPM_DIR="$(dirname "$NPM_LOCKFILE")"
-        fi
-
-        # pnpm version: explicit input > packageManager field > pinned fallback.
-        # When packageManager is set, the version input must stay EMPTY and
-        # pnpm/action-setup is pointed at that package.json instead.
-        PNPM_VERSION="$INPUT_PNPM_VERSION"
-        PKG_JSON="package.json"
-        if [ "$PM" = "pnpm" ] && [ -z "$PNPM_VERSION" ]; then
-          # A pinned release rather than `latest`, so a freshly published (or
-          # compromised) pnpm never reaches CI unreviewed. Renovate bumps it.
-          # renovate: datasource=npm depName=pnpm
-          PNPM_VERSION="12.14.0"
-          for f in "$DIR/package.json" "package.json"; do
-            if [ -f "$f" ] && grep -qE '"packageManager"[[:space:]]*:[[:space:]]*"pnpm@' "$f"; then
-              PNPM_VERSION=""
-              PKG_JSON="${f#./}"
-              break
-            fi
-          done
-        fi
-
-        # The lockfile the caches are keyed on: the one the package manager
-        # reads. Hashing only "$DIR/<lockfile>" hashed nothing for a workspace
-        # member (the lockfile sits at the root), so every member of every
-        # dependency set shared one key — saved once, then never refreshed.
-        # Falls back to the (absent) working-directory path, an empty hash.
-        case "$PM" in
-          pnpm) LOCKFILE="$(find_lock pnpm-lock.yaml)"; LOCKFILE="${LOCKFILE:-$DIR/pnpm-lock.yaml}" ;;
-          bun)  LOCKFILE="$(find_lock bun.lock bun.lockb)"; LOCKFILE="${LOCKFILE:-$DIR/bun.lock}" ;;
-          npm)  LOCKFILE="$NPM_LOCKFILE" ;;
-        esac
-        LOCKFILE="${LOCKFILE#./}"
-
-        {
-          echo "pm=$PM"
-          echo "pnpm-version=$PNPM_VERSION"
-          echo "package-json=$PKG_JSON"
-          echo "npm-lockfile=$NPM_LOCKFILE"
-          echo "npm-dir=$NPM_DIR"
-          echo "lockfile=$LOCKFILE"
-        } >> "$GITHUB_OUTPUT"
-        echo "📦 Package manager: $PM"
-        if [ "$PM" = "pnpm" ]; then
-          echo "📌 pnpm version: ${PNPM_VERSION:-from packageManager in $PKG_JSON}"
-        fi
+      run: bash "$GITHUB_ACTION_PATH/resolve.sh"
 
     # ── 2a. Setup pnpm ───────────────────────────────────────────────────────
     - name: Setup pnpm

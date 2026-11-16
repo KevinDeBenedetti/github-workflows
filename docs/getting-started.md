@@ -301,24 +301,26 @@ jobs:
 
 ## All available workflows
 
-| Workflow | Description | Doc |
-|---|---|---|
-| `ci-node.yml` | Node.js CI (lint → typecheck → test → build) | [→](workflows/ci-node.md) |
-| `ci-python.yml` | Python CI (lint → format → test) | [→](workflows/ci-python.md) |
-| `ci-shell.yml` | Shell CI (ShellCheck → actionlint → Bats) | [→](workflows/ci-shell.md) |
-| `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](workflows/ci-kubernetes.md) |
-| `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](workflows/ci-terraform.md) |
-| `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](workflows/cd-docker.md) |
-| `cd-buildkit.yml` | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones | [→](workflows/cd-buildkit.md) |
-| `cd-docs.yml` | Sync docs to a centralized docs repository | [→](workflows/cd-docs.md) |
-| `release.yml` | Automated releases via release-please | [→](workflows/release.md) |
-| `propagate-release.yml` | A pull request in each consumer repository moves its pins to the new release | [→](workflows/propagate-release.md) |
-| `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](workflows/security.md) |
-| `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](workflows/check-bot-commits.md) |
-| `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](workflows/pr-description.md) |
-| `cleanup-ghcr.yml` | Scheduled GHCR retention: keeps releases and recent images, deletes the rest and old layer caches | [→](workflows/cleanup-ghcr.md) |
-| `cleanup-runs.yml` | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest, and optionally old artifacts | [→](workflows/cleanup-runs.md) |
-| `cleanup-deployments.yml` | Scheduled cleanup of old deployment records, keeping the recent ones of each environment | [→](workflows/cleanup-deployments.md) |
+| Workflow                  | Description                                                                                                                            | Doc                                   |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `ci-node.yml`             | Node.js CI (lint → typecheck → test → build)                                                                                           | [→](workflows/ci-node.md)             |
+| `ci-python.yml`           | Python CI (lint → format → test)                                                                                                       | [→](workflows/ci-python.md)           |
+| `ci-shell.yml`            | Shell CI (ShellCheck → actionlint → Bats)                                                                                              | [→](workflows/ci-shell.md)            |
+| `ci-kubernetes.yml`       | Kubernetes CI (kubeconform manifest validation)                                                                                        | [→](workflows/ci-kubernetes.md)       |
+| `ci-terraform.yml`        | Terraform CI (validate + fmt check)                                                                                                    | [→](workflows/ci-terraform.md)        |
+| `ci-prometheus.yml`       | Prometheus CI (PromQL check + alert unit tests)                                                                                        | [→](workflows/ci-prometheus.md)       |
+| `ci-prek.yml`             | prek / pre-commit hooks run server-side (`prek run --all-files`)                                                                       | [→](workflows/ci-prek.md)             |
+| `cd-docker.yml`           | Build & push multi-platform Docker image to GHCR                                                                                       | [→](workflows/cd-docker.md)           |
+| `cd-buildkit.yml`         | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones                         | [→](workflows/cd-buildkit.md)         |
+| `cd-docs.yml`             | Sync docs to a centralized docs repository                                                                                             | [→](workflows/cd-docs.md)             |
+| `release.yml`             | Automated releases via release-please                                                                                                  | [→](workflows/release.md)             |
+| `propagate-release.yml`   | A pull request in each consumer repository moves its pins to the new release                                                           | [→](workflows/propagate-release.md)   |
+| `security.yml`            | Secret scan + CodeQL SAST + dependency audit                                                                                           | [→](workflows/security.md)            |
+| `check-bot-commits.yml`   | Guard PRs against bot-authored commits                                                                                                 | [→](workflows/check-bot-commits.md)   |
+| `pr-description.yml`      | PR description written by Claude Code on every push (Claude subscription)                                                              | [→](workflows/pr-description.md)      |
+| `cleanup-ghcr.yml`        | Scheduled GHCR retention: keeps releases and recent images, deletes the rest and old layer caches                                      | [→](workflows/cleanup-ghcr.md)        |
+| `cleanup-runs.yml`        | Scheduled workflow-run retention: keeps recent runs and the last runs of each workflow, deletes the rest, and optionally old artifacts | [→](workflows/cleanup-runs.md)        |
+| `cleanup-deployments.yml` | Scheduled cleanup of old deployment records, keeping the recent ones of each environment                                               | [→](workflows/cleanup-deployments.md) |
 
 ---
 
@@ -333,28 +335,29 @@ steps:
       node-version: '24'
 ```
 
-| Action | Description |
-|---|---|
-| [`setup-node`](actions/setup-node.md) | Install Node.js + pnpm/bun with cache |
-| [`setup-python`](actions/setup-python.md) | Install Python + uv with cache |
-| [`shellcheck`](actions/shellcheck.md) | Run ShellCheck on all `.sh` files |
-| [`bats`](actions/bats.md) | Run Bats shell unit tests |
-| [`detect-changes`](actions/detect-changes.md) | Output a JSON matrix of changed apps in a monorepo |
-| [`change-base`](actions/change-base.md) | Find the commit a push or pull request's change starts from |
-| [`secret-scan`](actions/secret-scan.md) | Scan the commits a run brings with Gitleaks, with the config of a trusted commit |
-| [`actionlint`](actions/actionlint.md) | Validate GitHub Actions workflow files |
-| [`kubeconform`](actions/kubeconform.md) | Validate Kubernetes manifests |
-| [`check-commit-msg`](actions/check-commit-msg.md) | Conventional Commits on commit messages (CI + commit-msg hook) |
-| [`setup-claude-code`](actions/setup-claude-code.md) | Install the Claude Code CLI, pinned and checked against a SHA-256 |
-| [`pr-description`](actions/pr-description.md) | Write the PR description with Claude Code into a managed block of the PR body |
-| [`check-docs-links`](actions/check-docs-links.md) | Check for broken links in docs |
-| [`check-docs-external-links`](actions/check-docs-external-links.md) | Check the `http(s)` links of changed docs pages with lychee |
-| [`check-vitepress-md`](actions/check-vitepress-md.md) | Validate VitePress markdown |
-| [`notify-deployment`](actions/notify-deployment.md) | Post a deployment status notification |
-| [`prek-home`](actions/prek-home.md) | Keep prek's hook environments in a directory on the runner's node, one store per config |
-| [`cleanup-runs`](actions/cleanup-runs.md) | Delete the old workflow runs of the repository, keeping the recent ones |
-| [`cleanup-deployments`](actions/cleanup-deployments.md) | Delete the old deployment records of the repository, keeping the recent ones of each environment |
-| [`propagate-release`](actions/propagate-release.md) | Open a pull request in each consumer repository that moves its pins to a release |
+| Action                                                              | Description                                                                                      |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| [`setup-node`](actions/setup-node.md)                               | Install Node.js + pnpm/bun with cache                                                            |
+| [`setup-python`](actions/setup-python.md)                           | Install Python + uv with cache                                                                   |
+| [`shellcheck`](actions/shellcheck.md)                               | Run ShellCheck on all `.sh` files                                                                |
+| [`bats`](actions/bats.md)                                           | Run Bats shell unit tests                                                                        |
+| [`detect-changes`](actions/detect-changes.md)                       | Output a JSON matrix of changed apps in a monorepo                                               |
+| [`change-base`](actions/change-base.md)                             | Find the commit a push or pull request's change starts from                                      |
+| [`secret-scan`](actions/secret-scan.md)                             | Scan the commits a run brings with Gitleaks, with the config of a trusted commit                 |
+| [`actionlint`](actions/actionlint.md)                               | Validate GitHub Actions workflow files                                                           |
+| [`kubeconform`](actions/kubeconform.md)                             | Validate Kubernetes manifests                                                                    |
+| [`check-commit-msg`](actions/check-commit-msg.md)                   | Conventional Commits on commit messages (CI + commit-msg hook)                                   |
+| [`setup-claude-code`](actions/setup-claude-code.md)                 | Install the Claude Code CLI, pinned and checked against a SHA-256                                |
+| [`pr-description`](actions/pr-description.md)                       | Write the PR description with Claude Code into a managed block of the PR body                    |
+| [`check-docs-links`](actions/check-docs-links.md)                   | Check for broken links in docs                                                                   |
+| [`check-docs-external-links`](actions/check-docs-external-links.md) | Check the `http(s)` links of changed docs pages with lychee                                      |
+| [`check-vitepress-md`](actions/check-vitepress-md.md)               | Validate VitePress markdown                                                                      |
+| [`notify-deployment`](actions/notify-deployment.md)                 | Post a deployment status notification                                                            |
+| [`prek-home`](actions/prek-home.md)                                 | Keep prek's hook environments in a directory on the runner's node, one store per config          |
+| [`cleanup-runs`](actions/cleanup-runs.md)                           | Delete the old workflow runs of the repository, keeping the recent ones                          |
+| [`cleanup-deployments`](actions/cleanup-deployments.md)             | Delete the old deployment records of the repository, keeping the recent ones of each environment |
+| [`propagate-release`](actions/propagate-release.md)                 | Open a pull request in each consumer repository that moves its pins to a release                 |
+| [`move-release-aliases`](actions/move-release-aliases.md)           | Move the `v<major>` (and `v0.<minor>`) alias tags to a release                                   |
 
 ---
 

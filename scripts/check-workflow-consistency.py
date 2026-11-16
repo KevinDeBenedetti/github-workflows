@@ -21,6 +21,17 @@
    release-please stops bumping it and callers copy an example that tracks the
    mutable `main`.
 
+4. Catalogs (full run only): every reusable workflow (`workflow_call`) has its
+   page in docs/workflows/ and a row in the workflow tables of README.md and
+   docs/getting-started.md; every composite action has its page in
+   docs/actions/ and a row in the actions table of docs/getting-started.md.
+   Nothing else reminds a contributor of these files.
+
+5. The `with:` keys a workflow or a composite action passes to one of this
+   repo's actions (`uses: $/.github/actions/<name>` or `./.github/actions/…`)
+   must be inputs that action declares. actionlint does not read `$/` yet, and
+   GitHub only warns about an unknown input at run time.
+
 Usage: check-workflow-consistency.py [files...]   (no args → all workflows)
 Run from the repository root.
 """
@@ -34,7 +45,11 @@ from pathlib import Path
 import yaml
 
 WORKFLOWS = Path(".github/workflows")
+ACTIONS = Path(".github/actions")
 EXAMPLES = Path("examples")
+README = Path("README.md")
+GETTING_STARTED = Path("docs/getting-started.md")
+LOCAL_ACTION = re.compile(r"^(?:\$|\.)/\.github/actions/(?P<name>[\w-]+)$")
 RELEASE_CONFIG = Path(".github/release/release-please-config.json")
 MANIFEST = Path(".github/release/.release-please-manifest.json")
 ACTION_REF = re.compile(
@@ -116,6 +131,67 @@ def check_self_refs(path: Path) -> list[str]:
     return errors
 
 
+def is_reusable(doc: dict) -> bool:
+    on = triggers(doc)
+    return isinstance(on, dict) and "workflow_call" in on
+
+
+def table_rows(path: Path) -> list[str]:
+    if not path.exists():
+        return []
+    return [line for line in path.read_text().splitlines() if line.startswith("|")]
+
+
+def check_catalogs(reusable: list[Path], actions: list[str]) -> list[str]:
+    errors = []
+    readme, started = table_rows(README), table_rows(GETTING_STARTED)
+    for path in reusable:
+        page = Path("docs/workflows") / f"{path.stem}.md"
+        if not page.exists():
+            errors.append(f"{path}: no documentation page {page}")
+        for catalog, rows in ((README, readme), (GETTING_STARTED, started)):
+            if not any(f"`{path.name}`" in row for row in rows):
+                errors.append(f"{path}: no row for `{path.name}` in the workflow table of {catalog}")
+    for name in actions:
+        page = Path("docs/actions") / f"{name}.md"
+        if not page.exists():
+            errors.append(f"{ACTIONS / name}: no documentation page {page}")
+        if not any(f"(actions/{name}.md)" in row for row in started):
+            errors.append(f"{ACTIONS / name}: no row linking actions/{name}.md in the actions table of {GETTING_STARTED}")
+    return errors
+
+
+def action_inputs(name: str) -> set[str] | None:
+    for filename in ("action.yml", "action.yaml"):
+        path = ACTIONS / name / filename
+        if path.exists():
+            return set((yaml.safe_load(path.read_text()) or {}).get("inputs") or {})
+    return None
+
+
+def steps_of(doc: dict) -> list[dict]:
+    """The steps of a workflow's jobs, or of a composite action."""
+    steps = list((doc.get("runs") or {}).get("steps") or [])
+    for job in (doc.get("jobs") or {}).values():
+        steps += (job or {}).get("steps") or []
+    return [s for s in steps if isinstance(s, dict)]
+
+
+def check_with_keys(path: Path, doc: dict) -> list[str]:
+    errors = []
+    for step in steps_of(doc):
+        m = LOCAL_ACTION.match(str(step.get("uses", "")))
+        if not m:
+            continue
+        declared = action_inputs(m.group("name"))
+        if declared is None:
+            errors.append(f"{path}: `uses: {step['uses']}` — no such action in {ACTIONS}")
+            continue
+        for key in sorted(set(step.get("with") or {}) - declared):
+            errors.append(f"{path}: `{key}` is not an input of the {m.group('name')} action")
+    return errors
+
+
 def main(argv: list[str]) -> int:
     files = [Path(a) for a in argv] if argv else sorted(WORKFLOWS.glob("*.y*ml"))
     files = [f for f in files if f.parent == WORKFLOWS and f.suffix in (".yml", ".yaml")]
@@ -131,10 +207,20 @@ def main(argv: list[str]) -> int:
     }
 
     errors: list[str] = []
+    reusable = []
     for path in files:
         doc = yaml.safe_load(path.read_text()) or {}
         errors += check_inputs(path, doc)
         errors += check_self_refs(path)
+        errors += check_with_keys(path, doc)
+        if is_reusable(doc):
+            reusable.append(path)
+    if not argv:
+        actions = sorted(p.parent.name for p in ACTIONS.glob("*/action.y*ml"))
+        for name in actions:
+            action_file = next((ACTIONS / name).glob("action.y*ml"))
+            errors += check_with_keys(action_file, yaml.safe_load(action_file.read_text()) or {})
+        errors += check_catalogs(reusable, actions)
     for path in examples:
         errors += check_action_refs(path, version, extra_files, EXAMPLE_REF)
 
