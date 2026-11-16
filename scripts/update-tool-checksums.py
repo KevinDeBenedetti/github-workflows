@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Refresh the pinned SHA-256 checksums (and git commit) of downloaded tools.
 
-The composite actions and security.yml download release binaries and verify
+The composite actions download release binaries and verify
 them against SHA-256 values pinned next to the version:
 
     # renovate: datasource=github-releases depName=rhysd/actionlint
@@ -62,7 +62,7 @@ TOOLS = {
         "sums": "https://github.com/lycheeverse/lychee/releases/download/lychee-v{v}/lychee-{a}-unknown-linux-gnu.tar.gz.sha256",
     },
     "GITLEAKS": {
-        "file": ".github/workflows/security.yml",
+        "file": ".github/actions/secret-scan/action.yml",
         "url": "https://github.com/gitleaks/gitleaks/releases/download/v{v}/gitleaks_{v}_linux_{a}.tar.gz",
         "arch": {"amd64": "x64", "arm64": "arm64"},
         "sums": "https://github.com/gitleaks/gitleaks/releases/download/v{v}/gitleaks_{v}_checksums.txt",

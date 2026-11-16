@@ -251,7 +251,7 @@ jobs:
 
     steps:
       # Depth 0 (the default) fetches everything. Callers on a history-heavy
-      # repo can narrow it — the gitleaks step below already falls back to
+      # repo can narrow it — the Gitleaks step below already falls back to
       # scanning whatever was fetched when the push range is out of reach.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -259,167 +259,22 @@ jobs:
           persist-credentials: false
           fetch-depth: ${{ inputs.secret-scan-fetch-depth }}
 
-      - name: Install Gitleaks
-        run: |
-          # renovate: datasource=github-releases depName=gitleaks/gitleaks
-          GITLEAKS_VERSION="8.30.1"
-          # SHA-256 of the release asset per architecture, for the version above.
-          # Refresh after a version bump: scripts/update-tool-checksums.py
-          GITLEAKS_SHA256_amd64="551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
-          GITLEAKS_SHA256_arm64="e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"
-          case "$(uname -m)" in
-            x86_64)        ARCH=x64;   KEY=amd64 ;;
-            aarch64|arm64) ARCH=arm64; KEY=arm64 ;;
-            *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
-          esac
-          INSTALL_DIR="$RUNNER_TEMP/gitleaks"
-          mkdir -p "$INSTALL_DIR"
-          # Same retries as the composite actions' tool installs: without
-          # --retry-all-errors, a refused or reset connection is not retried.
-          curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
-            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${ARCH}.tar.gz" \
-            -o "$RUNNER_TEMP/gitleaks.tar.gz"
-          if [ "$KEY" = amd64 ]; then WANT="$GITLEAKS_SHA256_amd64"; else WANT="$GITLEAKS_SHA256_arm64"; fi
-          echo "$WANT  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --strict --quiet - \
-            || { echo "::error::gitleaks ${GITLEAKS_VERSION} ($(uname -m)) does not match its pinned SHA-256 — after a version bump, run scripts/update-tool-checksums.py"; exit 1; }
-          tar xz -C "$INSTALL_DIR" -f "$RUNNER_TEMP/gitleaks.tar.gz" gitleaks
-          echo "$INSTALL_DIR" >> "$GITHUB_PATH"
-
       # No fetch-base: the scan walks base..HEAD, which needs the history in
       # between. A change base outside a shallow clone gives mode none.
       - name: Change base
         id: base
         uses: $/.github/actions/change-base
 
+      # Installs the pinned Gitleaks, then scans base..HEAD (all fetched
+      # history without a change base) with the config of a trusted commit:
+      # the rules are at the top of the action's secret-scan.sh.
       - name: Gitleaks
-        env:
-          EVENT: ${{ github.event_name }}
-          BEFORE: ${{ github.event.before }}
-          BASE: ${{ steps.base.outputs.base }}
-          IGNORE_INLINE_ALLOW: ${{ inputs.secret-scan-ignore-inline-allow }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          has_commit() { [ -n "$1" ] && git cat-file -e "$1^{commit}" 2>/dev/null; }
-
-          # Scan range: every commit the run brings, base..HEAD from the change
-          # base (the PR's base commit, the commit before the push, or the fork
-          # point with the default branch when a force push or a new branch
-          # left no previous commit; the default branch's own pushes scan the
-          # rest). No --first-parent anywhere: on a PR, HEAD is the synthetic
-          # merge commit whose first parent is the BASE branch, and on a push to
-          # main after a merge commit the feature commits only sit behind the
-          # second parent — following first parents would skip exactly the
-          # commits that need scanning.
-          #
-          # TRUSTED is the trusted commit: where the gitleaks config and ignore
-          # list are read from, never the commits under scan. It is the change
-          # base, or the default branch for a manual or scheduled run. Gitleaks
-          # otherwise auto-loads .gitleaks.toml and .gitleaksignore from the
-          # checkout, so a PR (or a push) could add an allowlist matching
-          # everything and silence its own leaks.
-          if [ -n "$BASE" ]; then
-            RANGE="${BASE}..HEAD"
-            TRUSTED="$BASE"
-          elif [ "$EVENT" = "workflow_dispatch" ] && [ -n "$DEFAULT_BRANCH" ] \
-            && has_commit "refs/remotes/origin/${DEFAULT_BRANCH}"; then
-            # Manual run: no range, so scan everything that was fetched, with
-            # the config and ignore list of the default branch. That branch
-            # went through review, and nothing in this run can change it.
-            RANGE=""
-            TRUSTED="refs/remotes/origin/${DEFAULT_BRANCH}"
-          elif [ "$EVENT" = "schedule" ]; then
-            # Scheduled run: the checkout is the default branch's own tip.
-            RANGE=""
-            TRUSTED="HEAD"
-          else
-            # No trusted commit to start from: the range fell outside a shallow
-            # clone (which lacks the default branch), or the default branch
-            # itself was force-pushed or pushed for the first time. Scan
-            # everything that was fetched, with the default rules.
-            if [ "$EVENT" = "workflow_dispatch" ]; then
-              echo "::warning::The default branch (${DEFAULT_BRANCH:-unknown}) is not in this clone: a finite secret-scan-fetch-depth fetches the triggering branch only. Gitleaks' default rules apply, without the repository's ignore list."
-            elif [ "$EVENT" = "push" ]; then
-              echo "::warning::No trusted commit to start the scan from: the commit before this push (${BEFORE:0:7}) is not in this clone, and the default branch cannot stand in for it. All fetched history is scanned with gitleaks' default rules, without the repository's ignore list — findings already triaged there are reported again."
-            elif [[ "$EVENT" == pull_request* ]]; then
-              echo "::warning::No trusted commit to start the scan from: the pull request's base commit is not in this clone (a finite secret-scan-fetch-depth). All fetched history is scanned with gitleaks' default rules, without the repository's ignore list — findings already triaged there are reported again."
-            else
-              echo "::warning::No trusted commit to start the scan from on a ${EVENT} event. All fetched history is scanned with gitleaks' default rules, without the repository's ignore list — findings already triaged there are reported again."
-            fi
-            RANGE=""
-            TRUSTED=""
-          fi
-
-          # Fail closed: without a trusted copy, use gitleaks' default rules
-          # (an explicit --config also stops the auto-load from the checkout)
-          # and an empty ignore list.
-          EXTEND_WATCH=()
-          CFG_DIR="$RUNNER_TEMP/gitleaks-config"
-          mkdir -p "$CFG_DIR"
-          printf '[extend]\nuseDefault = true\n' > "$CFG_DIR/gitleaks.toml"
-          : > "$CFG_DIR/.gitleaksignore"
-          if [ -n "$TRUSTED" ]; then
-            git show "${TRUSTED}:.gitleaks.toml" > "$CFG_DIR/gitleaks.toml" 2>/dev/null \
-              || printf '[extend]\nuseDefault = true\n' > "$CFG_DIR/gitleaks.toml"
-            git show "${TRUSTED}:.gitleaksignore" > "$CFG_DIR/.gitleaksignore" 2>/dev/null \
-              || : > "$CFG_DIR/.gitleaksignore"
-            # `[extend] path = "..."` is resolved against the working directory,
-            # i.e. the checkout under scan: restore that file from TRUSTED too, or
-            # the change could rewrite the extended config. Fail closed if absent.
-            EXTEND_PATH=$(awk '
-              /^[[:space:]]*\[/ { in_extend = ($0 ~ /^[[:space:]]*\[extend\]/) ; next }
-              in_extend && /^[[:space:]]*path[[:space:]]*=/ {
-                sub(/^[^=]*=[[:space:]]*["\047]/, ""); sub(/["\047].*$/, ""); print; exit
-              }' "$CFG_DIR/gitleaks.toml")
-            if [ -n "$EXTEND_PATH" ]; then
-              EXTEND_REL="${EXTEND_PATH#./}"
-              case "$EXTEND_REL" in
-                /*|*..*) echo "::error::.gitleaks.toml extends '${EXTEND_PATH}' outside the repository — not supported by this workflow"; exit 1 ;;
-              esac
-              mkdir -p "$(dirname "$EXTEND_REL")"
-              git show "${TRUSTED}:${EXTEND_REL}" > "$EXTEND_REL" 2>/dev/null \
-                || { echo "::error::extended config '${EXTEND_REL}' not found at ${TRUSTED:0:7}"; exit 1; }
-              EXTEND_WATCH=("$EXTEND_REL")
-            fi
-            # Only with a range: a manual or scheduled run has nothing to compare.
-            if [ -n "$RANGE" ]; then
-              # Config changes in the scanned range take effect once merged —
-              # flag them so the reviewer looks at what they would silence.
-              CHANGED=$(git diff --name-only "$RANGE" -- .gitleaks.toml .gitleaksignore "${EXTEND_WATCH[@]}" 2>/dev/null || true)
-              if [ -n "$CHANGED" ]; then
-                echo "::warning::This change modifies $(echo "$CHANGED" | tr '\n' ' ')— not applied to this scan (the config of ${TRUSTED:0:7} is used). Review what it allowlists before merging."
-              fi
-              # Inline `gitleaks:allow` comments silence the finding on their line.
-              ALLOWS=$(git diff --unified=0 "$RANGE" 2>/dev/null | grep -c '^+.*gitleaks:allow' || true)
-              if [ "${ALLOWS:-0}" -gt 0 ]; then
-                echo "::warning::This change adds ${ALLOWS} \`gitleaks:allow\` comment(s), each silencing a finding — check them before merging (or set secret-scan-ignore-inline-allow)."
-              fi
-            fi
-          fi
-
-          # gitleaks ALWAYS reads .gitleaksignore from the scanned working tree,
-          # on top of --gitleaks-ignore-path: overwrite the checked-out copy with
-          # the trusted one (or empty it). Only the working tree changes — the
-          # history under scan is read from git objects.
-          if [ -e .gitleaksignore ]; then
-            cp "$CFG_DIR/.gitleaksignore" .gitleaksignore
-          fi
-
-          INLINE_FLAG=()
-          if [ "$IGNORE_INLINE_ALLOW" = "true" ]; then
-            INLINE_FLAG=(--ignore-gitleaks-allow)
-          fi
-
-          # No trailing space when RANGE is empty: gitleaks splits --log-opts on
-          # spaces, and the resulting empty argument makes `git log` yield
-          # nothing — the scan then "passes" having read 0 bytes.
-          LOG_OPTS="--no-merges${RANGE:+ $RANGE}"
-          echo "Scanning: ${RANGE:-all fetched history} (config from ${TRUSTED:-gitleaks defaults})"
-          gitleaks git --redact -v --exit-code=1 \
-            --config "$CFG_DIR/gitleaks.toml" \
-            --gitleaks-ignore-path "$CFG_DIR/.gitleaksignore" \
-            "${INLINE_FLAG[@]}" \
-            --report-format=sarif --report-path=results.sarif \
-            --log-opts="$LOG_OPTS"
+        uses: $/.github/actions/secret-scan
+        with:
+          base: ${{ steps.base.outputs.base }}
+          ignore-inline-allow: ${{ inputs.secret-scan-ignore-inline-allow }}
+          # The upload step below reads the same file.
+          report-path: results.sarif
 
       - name: Upload SARIF report
         if: failure() && inputs.secret-scan-upload-sarif && hashFiles('results.sarif') != ''

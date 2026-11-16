@@ -341,6 +341,7 @@ steps:
 | [`bats`](actions/bats.md) | Run Bats shell unit tests |
 | [`detect-changes`](actions/detect-changes.md) | Output a JSON matrix of changed apps in a monorepo |
 | [`change-base`](actions/change-base.md) | Find the commit a push or pull request's change starts from |
+| [`secret-scan`](actions/secret-scan.md) | Scan the commits a run brings with Gitleaks, with the config of a trusted commit |
 | [`actionlint`](actions/actionlint.md) | Validate GitHub Actions workflow files |
 | [`kubeconform`](actions/kubeconform.md) | Validate Kubernetes manifests |
 | [`check-commit-msg`](actions/check-commit-msg.md) | Conventional Commits on commit messages (CI + commit-msg hook) |

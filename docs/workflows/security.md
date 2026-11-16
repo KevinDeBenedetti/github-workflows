@@ -60,3 +60,4 @@ jobs:
 - CodeQL runs in a matrix — add multiple languages to scan them in parallel.
 - Requires `security-events: write` permission for Gitleaks and CodeQL (granted automatically). The secret-scan job requests it even with the upload off: job permissions cannot depend on an input.
 - This workflow declares no secrets; Gitleaks is installed directly from its GitHub release and runs with no license.
+- The scan itself is the [`secret-scan`](../actions/secret-scan.md) action: the pinned Gitleaks install, the trusted configuration and the warnings above. Use it directly for a secret scan outside this workflow.
