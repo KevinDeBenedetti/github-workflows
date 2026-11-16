@@ -107,7 +107,7 @@ permissions: {}
 # several times in the same run (e.g. one call per directory) gets one group per
 # call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-kubernetes-${{ github.workflow }}-${{ github.ref }}-${{ inputs.kubeconform-paths }}-${{ inputs.env-example-file }}
+  group: ci-kubernetes-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.kubeconform-paths }}-${{ inputs.env-example-file }}
   cancel-in-progress: true
 
 jobs:

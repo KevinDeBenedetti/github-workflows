@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
 ```
 
-- `concurrency` is keyed on <code v-pre>${{ github.workflow }}-${{ github.ref }}</code>; only pull-request runs are cancelled by a newer push, so an in-flight release on `main` always finishes.
+- `concurrency` is keyed on <code v-pre>${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}</code>; only pull-request runs are cancelled by a newer push, so an in-flight release on `main` always finishes. A pull request groups on its number because, once it is merged, `github.ref` of its runs is the base branch: a run approved or re-run after the merge would otherwise join `main`'s group and cancel the release run.
 - Top-level `permissions: {}` (deny-all): each job grants only what it needs, and a reusable workflow never gets more than its caller job grants.
 
 ## Jobs

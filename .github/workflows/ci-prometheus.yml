@@ -99,7 +99,7 @@ permissions: {}
 # several times in the same run (e.g. one call per directory) gets one group per
 # call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-prometheus-${{ github.workflow }}-${{ github.ref }}-${{ inputs.check-script }}
+  group: ci-prometheus-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.check-script }}
   cancel-in-progress: true
 
 jobs:

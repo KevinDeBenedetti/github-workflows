@@ -36,7 +36,12 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # A pull request groups on its number, never on github.ref: once a pull
+  # request is merged, github.ref of its runs is the base branch, so a run
+  # approved or re-run after the merge (the release PR's, opened by
+  # GITHUB_TOKEN, waits for "Approve workflows to run") would join main's group
+  # and cancel the release run in progress there.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   # Don't cancel in-progress release runs on a follow-up push to main —
   # only superseded PR runs are safe to cancel.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}

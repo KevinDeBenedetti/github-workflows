@@ -56,7 +56,7 @@ permissions: {}
 # A newer push supersedes the run in progress: the central site rebuilds from
 # the newest commit anyway, so verifying and dispatching an older one is waste.
 concurrency:
-  group: cd-docs-${{ github.ref }}-${{ inputs.docs-directory }}
+  group: cd-docs-${{ github.event.pull_request.number || github.ref }}-${{ inputs.docs-directory }}
   cancel-in-progress: true
 
 jobs:
