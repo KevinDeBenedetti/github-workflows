@@ -114,7 +114,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: ci-python-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
+  group: ci-python-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.working-directory }}
   cancel-in-progress: true
 
 jobs:

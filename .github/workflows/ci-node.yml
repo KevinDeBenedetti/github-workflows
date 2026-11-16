@@ -159,7 +159,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: ci-node-${{ github.workflow }}-${{ github.ref }}-${{ inputs.working-directory }}
+  group: ci-node-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.working-directory }}
   cancel-in-progress: true
 
 jobs:

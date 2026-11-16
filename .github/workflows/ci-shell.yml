@@ -202,7 +202,7 @@ on:
 # several times in the same run (e.g. one call per directory) gets one group per
 # call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-shell-${{ github.workflow }}-${{ github.ref }}-${{ inputs.bats-tests-dir }}-${{ inputs.docs-directory }}
+  group: ci-shell-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.bats-tests-dir }}-${{ inputs.docs-directory }}
   cancel-in-progress: true
 
 # Deny-all default: each job grants only the permissions it needs.

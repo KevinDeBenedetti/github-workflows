@@ -68,7 +68,7 @@ permissions: {}
 # several times in the same run (e.g. one call per directory) gets one group per
 # call — with a shared group, cancel-in-progress makes the calls cancel each other.
 concurrency:
-  group: ci-terraform-${{ github.workflow }}-${{ github.ref }}-${{ inputs.tf-dir }}
+  group: ci-terraform-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.tf-dir }}
   cancel-in-progress: true
 
 jobs:
