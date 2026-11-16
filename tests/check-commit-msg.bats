@@ -80,6 +80,16 @@ mkcommit() {
   [[ "$output" == *"bad message"* ]]
 }
 
+@test "CI mode fails on a range git cannot read, and passes an empty one" {
+  git init -q repo && cd repo
+  mkcommit 'chore: base'
+  COMMIT_RANGE="1234567890abcdef1234567890abcdef12345678..HEAD" run bash "$SCRIPT"
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"::error::cannot read the commit range"* ]]
+  COMMIT_RANGE="HEAD..HEAD" run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+}
+
 @test "fails with usage when given neither a file nor a range" {
   run bash "$SCRIPT"
   [ "$status" -eq 2 ]

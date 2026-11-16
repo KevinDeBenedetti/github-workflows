@@ -1,0 +1,51 @@
+name: Change base
+description: >
+  Find the change base of the run: the commit its change starts from, so that
+  a caller walks the commits base..HEAD or compares the files of base and HEAD.
+  A pull request's base commit, the commit before a push, or, when a push's
+  previous commit is gone (a new branch, a force push), the fork point with the
+  default branch. Mode none means there is no change base (a manual or
+  scheduled run, a clone without those commits): each caller decides what that
+  means. The rules are at the top of change-base.sh.
+
+inputs:
+  base-ref:
+    description: >
+      Commit, branch or tag to use as the change base instead of the lookup.
+      The step fails when it is not in the clone (and cannot be fetched).
+    required: false
+    default: ''
+  fetch-base:
+    description: >
+      Fetch a change base missing from a shallow clone, that one commit. Only
+      for comparing files: a walk of the commits base..HEAD would stop at the
+      edge of the clone without an error. A complete clone fetches nothing: a
+      commit missing there was rewritten away by a force push.
+    required: false
+    default: 'false'
+
+outputs:
+  base:
+    description: Full SHA of the change base, empty when mode is none
+    value: ${{ steps.base.outputs.base }}
+  mode:
+    description: How the change base was found (override, pull-request, push, fork-point or none)
+    value: ${{ steps.base.outputs.mode }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find the change base
+      id: base
+      shell: bash
+      # Event fields and inputs go through env, never interpolated into the
+      # script body.
+      env:
+        EVENT: ${{ github.event_name }}
+        REF: ${{ github.ref }}
+        BEFORE: ${{ github.event.before }}
+        PR_BASE: ${{ github.event.pull_request.base.sha }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        BASE_REF: ${{ inputs.base-ref }}
+        FETCH_BASE: ${{ inputs.fetch-base }}
+      run: bash "$GITHUB_ACTION_PATH/change-base.sh"

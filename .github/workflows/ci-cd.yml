@@ -74,8 +74,8 @@ jobs:
       contents: read
 
   # ── CI — Local composite actions ─────────────────────────────────────────────
-  # Runs this checkout's ./.github/actions/* (not the @vX.Y.Z pins ci-shell.yml
-  # uses), so a PR that changes an action tests its own version of it.
+  # Runs this checkout's ./.github/actions/* through `./` refs, which actionlint
+  # checks (ci-shell.yml reaches the same commit's actions through `$/`).
   ci-actions:
     name: CI — Local actions
     runs-on: ubuntu-26.04
@@ -119,6 +119,14 @@ jobs:
 
       - name: VitePress markdown check (local action)
         uses: ./.github/actions/check-vitepress-md
+
+      # Exercises the action's nested `uses: $/…` call to change-base, with
+      # fetch-base on this depth-1 checkout. The action folders stand in for a
+      # monorepo's apps.
+      - name: detect-changes (local action)
+        uses: ./.github/actions/detect-changes
+        with:
+          apps-directory: .github/actions
 
       # The pinned Claude Code binary: a Renovate PR that bumps its version
       # must prove that the pinned SHA-256 values were refreshed with it.
@@ -204,8 +212,9 @@ jobs:
 
   # ── CI — Commit messages ─────────────────────────────────────────────────────
   # Conventional Commits on every new commit (the same script as the prek
-  # commit-msg hook): PR → base..head, push → before..after. A push that
-  # creates a branch has no `before` and is left to the PR check.
+  # commit-msg hook): change-base..HEAD, i.e. the PR's commits, the push's, or
+  # on a new or force-pushed branch the commits beyond its fork point with main.
+  # A run with no change base (a manual run) is left to the PR check.
   ci-commits:
     name: CI — Commit messages
     runs-on: ubuntu-26.04
@@ -219,28 +228,21 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Resolve commit range
-        id: range
-        env:
-          EVENT: ${{ github.event_name }}
-          PR_BASE: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD: ${{ github.event.pull_request.head.sha }}
-          BEFORE: ${{ github.event.before }}
-          AFTER: ${{ github.sha }}
-        run: |
-          range=""
-          if [ "$EVENT" = "pull_request" ]; then
-            range="${PR_BASE}..${PR_HEAD}"
-          elif [ "$EVENT" = "push" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
-            range="${BEFORE}..${AFTER}"
-          fi
-          echo "range=${range}" >> "$GITHUB_OUTPUT"
+      # No fetch-base: a walk of base..HEAD needs the history in between,
+      # which fetch-depth 0 above provides.
+      - name: Change base (local action)
+        id: base
+        uses: ./.github/actions/change-base
+
+      - name: No change base
+        if: steps.base.outputs.mode == 'none'
+        run: echo "::notice::No change base for this run (a manual run, or a clone without the previous commit), so no commit message is checked here. The pull request check covers them."
 
       - name: Conventional Commits (local action)
-        if: steps.range.outputs.range != ''
+        if: steps.base.outputs.mode != 'none'
         uses: ./.github/actions/check-commit-msg
         with:
-          range: ${{ steps.range.outputs.range }}
+          range: ${{ steps.base.outputs.base }}..HEAD
 
   # ── PR description (Claude Code) ─────────────────────────────────────────────
   # Self-test of pr-description.yml, and the descriptions of this repo's own

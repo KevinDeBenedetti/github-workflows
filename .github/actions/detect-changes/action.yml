@@ -1,7 +1,9 @@
 name: Detect Changed Apps
 description: >
-  Detects which subdirectories under apps/ have changed
-  and outputs a JSON matrix for downstream jobs.
+  Detects which subdirectories under apps/ have changed since the change base
+  (the pull request's base, the commit before the push, or a new branch's fork
+  point with the default branch) and outputs a JSON matrix for downstream jobs.
+  With no change base (a manual run), every app counts as changed.
 
 inputs:
   apps-directory:
@@ -9,7 +11,7 @@ inputs:
     required: false
     default: 'apps'
   base-ref:
-    description: Base git ref to compare against
+    description: Commit, branch or tag to compare against instead of the change base
     required: false
     default: ''
 
@@ -36,68 +38,21 @@ outputs:
 runs:
   using: composite
   steps:
+    # Comparing two trees needs no history between them: a change base missing
+    # from a shallow checkout is fetched. base-ref fails the step when it
+    # cannot be found.
+    - name: Find the change base
+      id: base
+      uses: $/.github/actions/change-base
+      with:
+        base-ref: ${{ inputs.base-ref }}
+        fetch-base: 'true'
+
     - name: Detect changed apps
       id: detect
       shell: bash
+      # Inputs go through env, never interpolated into the script body.
       env:
         APPS_DIR: ${{ inputs.apps-directory }}
-        BASE_REF: ${{ inputs.base-ref }}
-        PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        BEFORE: ${{ github.event.before }}
-      run: |
-        set -euo pipefail
-
-        # Resolve base commit: input > PR base > previous commit on push
-        if [ -n "$BASE_REF" ]; then
-          BASE_COMMIT="$BASE_REF"
-        elif [ -n "$PR_BASE_SHA" ]; then
-          BASE_COMMIT="$PR_BASE_SHA"
-        else
-          BASE_COMMIT="$BEFORE"
-          # Fallback: compare with HEAD~1 if before is null/zeros
-          if [ -z "$BASE_COMMIT" ] || [ "$BASE_COMMIT" = "0000000000000000000000000000000000000000" ]; then
-            BASE_COMMIT="HEAD~1"
-          fi
-        fi
-
-        echo "Comparing against: $BASE_COMMIT"
-
-        # The base must be in the clone. With the default shallow checkout it
-        # usually is not, and a failing `git diff` used to be read as "nothing
-        # changed" — every downstream job was then skipped without a word.
-        if ! git rev-parse --verify --quiet "${BASE_COMMIT}^{commit}" > /dev/null; then
-          echo "::error::Base commit '$BASE_COMMIT' is not in the clone — check out with 'fetch-depth: 0' (actions/checkout) before this action."
-          exit 1
-        fi
-
-        CHANGED_APPS="[]"
-        HAS_CHANGES="false"
-
-        if [ -d "$APPS_DIR" ]; then
-          shopt -s nullglob
-          for APP_PATH in "$APPS_DIR"/*/; do
-            APP_NAME=$(basename "$APP_PATH")
-            SAFE_NAME=$(printf '%s' "$APP_NAME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '_')
-
-            # Check if any file changed inside this app (a git failure aborts
-            # the step through set -e instead of passing as "no change").
-            DIFF=$(git diff --name-only "$BASE_COMMIT" HEAD -- "$APP_PATH")
-
-            if [ -n "$DIFF" ]; then
-              echo "✅ Changed: $APP_NAME"
-              CHANGED_APPS=$(echo "$CHANGED_APPS" | jq -c --arg app "$APP_NAME" '. + [$app]')
-              HAS_CHANGES="true"
-              echo "changed_${SAFE_NAME}=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "⏭️  Unchanged: $APP_NAME"
-              echo "changed_${SAFE_NAME}=false" >> "$GITHUB_OUTPUT"
-            fi
-          done
-        else
-          echo "⚠️  Directory '$APPS_DIR' not found — no apps to build"
-        fi
-
-        echo "changed_apps=$CHANGED_APPS" >> "$GITHUB_OUTPUT"
-        echo "has_changes=$HAS_CHANGES"    >> "$GITHUB_OUTPUT"
-        echo ""
-        echo "Summary → changed apps: $CHANGED_APPS"
+        BASE: ${{ steps.base.outputs.base }}
+      run: bash "$GITHUB_ACTION_PATH/detect-changes.sh"

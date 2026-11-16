@@ -27,7 +27,7 @@ on:
 | `ci-zizmor`      | push + PR       | `zizmorcore/zizmor-action`          | GitHub Actions security lint, pedantic persona                                          |
 | `ci-prek`        | push + PR       | `ci-prek.yml`                       | This repo's prek hooks                                                                  |
 | `security`       | push + PR       | `security.yml`                      | Gitleaks, dependency review and CodeQL (`actions`, `python`)                            |
-| `ci-commits`     | push + PR       | `check-commit-msg` action           | Conventional Commits on every new commit                                                |
+| `ci-commits`     | push + PR       | `change-base`, `check-commit-msg`   | Conventional Commits on every commit since the change base                              |
 | `ci-gate`        | push + PR       | —                                   | The ruleset's single required check: every job above succeeded                          |
 | `pr-description` | PR              | `./…/pr-description.yml` (local)    | Pull request description written by Claude Code, outside the gate                       |
 | `release`        | push to `main`  | `./…/release.yml` (local)           | release-please PR, tags and `v0.<minor>` alias, once `ci-gate` passed                   |

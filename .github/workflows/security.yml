@@ -285,48 +285,39 @@ jobs:
           tar xz -C "$INSTALL_DIR" -f "$RUNNER_TEMP/gitleaks.tar.gz" gitleaks
           echo "$INSTALL_DIR" >> "$GITHUB_PATH"
 
+      # No fetch-base: the scan walks base..HEAD, which needs the history in
+      # between. A change base outside a shallow clone gives mode none.
+      - name: Change base
+        id: base
+        uses: $/.github/actions/change-base
+
       - name: Gitleaks
         env:
           EVENT: ${{ github.event_name }}
-          REF: ${{ github.ref }}
           BEFORE: ${{ github.event.before }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE: ${{ steps.base.outputs.base }}
           IGNORE_INLINE_ALLOW: ${{ inputs.secret-scan-ignore-inline-allow }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           has_commit() { [ -n "$1" ] && git cat-file -e "$1^{commit}" 2>/dev/null; }
 
-          # Scan range, narrowest first. No --first-parent anywhere: on a PR,
-          # HEAD is the synthetic merge commit whose first parent is the BASE
-          # branch, and on a push to main after a merge commit the feature
-          # commits only sit behind the second parent — following first parents
-          # would skip exactly the commits that need scanning.
+          # Scan range: every commit the run brings, base..HEAD from the change
+          # base (the PR's base commit, the commit before the push, or the fork
+          # point with the default branch when a force push or a new branch
+          # left no previous commit; the default branch's own pushes scan the
+          # rest). No --first-parent anywhere: on a PR, HEAD is the synthetic
+          # merge commit whose first parent is the BASE branch, and on a push to
+          # main after a merge commit the feature commits only sit behind the
+          # second parent — following first parents would skip exactly the
+          # commits that need scanning.
           #
-          # TRUSTED is where the gitleaks config and ignore list are read from,
-          # never the commits under scan: the commit the scanned range starts
-          # from, or the default branch for a manual or scheduled run. Gitleaks
+          # TRUSTED is the trusted commit: where the gitleaks config and ignore
+          # list are read from, never the commits under scan. It is the change
+          # base, or the default branch for a manual or scheduled run. Gitleaks
           # otherwise auto-loads .gitleaks.toml and .gitleaksignore from the
           # checkout, so a PR (or a push) could add an allowlist matching
           # everything and silence its own leaks.
-          if [[ "$EVENT" == pull_request* ]] && has_commit "$PR_BASE_SHA" && has_commit "$PR_HEAD_SHA"; then
-            # Every commit the PR brings, whatever the event action.
-            RANGE="${PR_BASE_SHA}..${PR_HEAD_SHA}"
-            TRUSTED="$PR_BASE_SHA"
-          elif [ "$EVENT" = "push" ] \
-            && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
-            && has_commit "$BEFORE"; then
-            RANGE="${BEFORE}..HEAD"
-            TRUSTED="$BEFORE"
-          elif [ "$EVENT" = "push" ] && [ -n "$DEFAULT_BRANCH" ] \
-            && [ "$REF" != "refs/heads/${DEFAULT_BRANCH}" ] \
-            && has_commit "refs/remotes/origin/${DEFAULT_BRANCH}" \
-            && BASE=$(git merge-base "refs/remotes/origin/${DEFAULT_BRANCH}" HEAD); then
-            # BEFORE is not in the clone: a force push rewrote it away, or the
-            # branch is new. Scan what the branch holds beyond the default
-            # branch, whose own pushes scan the rest, with the config of the
-            # commit it forks from. A full-history scan here would run without
-            # any ignore list, and fail on every finding already triaged.
+          if [ -n "$BASE" ]; then
             RANGE="${BASE}..HEAD"
             TRUSTED="$BASE"
           elif [ "$EVENT" = "workflow_dispatch" ] && [ -n "$DEFAULT_BRANCH" ] \
@@ -349,6 +340,10 @@ jobs:
               echo "::warning::The default branch (${DEFAULT_BRANCH:-unknown}) is not in this clone: a finite secret-scan-fetch-depth fetches the triggering branch only. Gitleaks' default rules apply, without the repository's ignore list."
             elif [ "$EVENT" = "push" ]; then
               echo "::warning::No trusted commit to start the scan from: the commit before this push (${BEFORE:0:7}) is not in this clone, and the default branch cannot stand in for it. All fetched history is scanned with gitleaks' default rules, without the repository's ignore list — findings already triaged there are reported again."
+            elif [[ "$EVENT" == pull_request* ]]; then
+              echo "::warning::No trusted commit to start the scan from: the pull request's base commit is not in this clone (a finite secret-scan-fetch-depth). All fetched history is scanned with gitleaks' default rules, without the repository's ignore list — findings already triaged there are reported again."
+            else
+              echo "::warning::No trusted commit to start the scan from on a ${EVENT} event. All fetched history is scanned with gitleaks' default rules, without the repository's ignore list — findings already triaged there are reported again."
             fi
             RANGE=""
             TRUSTED=""
