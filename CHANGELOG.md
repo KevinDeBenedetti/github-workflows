@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.46.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.45.0...v0.46.0) (2026-11-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* **change-base:** check-docs-external-links and detect-changes need runner 2.336.0 or newer and no longer run on GitHub Enterprise Server: they call change-base with `uses: $/`. detect-changes compares a new branch with its fork point instead of HEAD~1; with no change base (a manual or scheduled run, which used to compare HEAD~1, or a shallow clone, which used to fail) it counts every app as changed. check-commit-msg exits 2 on a range git cannot read, where it used to pass.
+
+### Features
+
+* **change-base:** find the commit a run's change starts from in one action ([6c0afce](https://github.com/KevinDeBenedetti/github-workflows/commit/6c0afcefab2a05f1a60ad46f3a75cab4bdaef393))
+* **cleanup-deployments:** add a scheduled cleanup of old deployment records ([449dd87](https://github.com/KevinDeBenedetti/github-workflows/commit/449dd87a513be5c0bf499f5731f40f5db8033916))
+* **docs:** add domain documentation and issue tracker guidelines ([de7320c](https://github.com/KevinDeBenedetti/github-workflows/commit/de7320c8e1eff924fe47acb16151488b404e30e7))
+
 ## [0.45.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.44.0...v0.45.0) (2026-11-14)
 
 
