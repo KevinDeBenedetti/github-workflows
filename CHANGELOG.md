@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.48.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.47.0...v0.48.0) (2026-11-16)
+
+
+### Features
+
+* **ci:** add ci-checksums workflow for tool checksum verification ([9271977](https://github.com/KevinDeBenedetti/github-workflows/commit/9271977d17ccb7d27af4221d584d29b5d17541c2))
+
 ## [0.47.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.46.0...v0.47.0) (2026-11-16)
 
 
