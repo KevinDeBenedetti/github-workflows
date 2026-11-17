@@ -5,6 +5,8 @@
 ACTION="$BATS_TEST_DIRNAME/../.github/actions/propagate-release"
 SCRIPT="$ACTION/propagate-release.sh"
 BUMP="$ACTION/bump-pins.py"
+
+load helpers/fake-github
 SHA=1111111111111111111111111111111111111111
 OLD=2222222222222222222222222222222222222222
 
@@ -66,58 +68,39 @@ file() {
 # sent 'METHOD PATH': the last payload sent to that endpoint.
 sent() {
   local seq
-  seq="$(awk -v k="$1" 'substr($0, index($0, " ") + 1) == k { s = $1 } END { print s }' "$STUB_DIR/curl.log")"
+  seq="$(grep -nxF "$1" "$STUB_DIR/curl.log" | tail -n 1 | cut -d: -f1)"
   cat "$STUB_DIR/sent/$seq.json"
 }
 
 # writes: the requests that change something, in order.
 writes() {
-  awk '$2 != "GET" { $1 = ""; sub(/^ /, ""); print }' "$STUB_DIR/curl.log"
+  grep -v '^GET ' "$STUB_DIR/curl.log"
 }
 
 # A curl that plays the GitHub API from files in $STUB_DIR, and logs every
-# call as "SEQ METHOD PATH" (API root cut off), with its payload in
-# sent/SEQ.json and the headers it got in headers.log. Besides the files
+# call as "METHOD PATH" (API root cut off), with its payload in sent/N.json
+# and the headers it got in curl-headers.log (helpers/fake-github.bash).
+# Besides the files
 # `consumer` writes:
 #   rules-<name>.json     the rules of the target branch (default: 404)
 #   pulls-<name>.json     the open pull requests (default: none)
 #   automerge-on-<name>   present: the pull request already has auto-merge
 #   graphql-error         the error that turning auto-merge on answers
 stub_curl() {
-  cat > "$BATS_TEST_TMPDIR/bin/curl" <<'EOF'
-#!/usr/bin/env bash
-out=/dev/stdout method=GET url="" data=""
-printf '%s\n' "$*" >> "$STUB_DIR/args.log"
-while [ $# -gt 0 ]; do
-  case "$1" in
-    -o) out="$2"; shift 2 ;;
-    -X) method="$2"; shift 2 ;;
-    -w | --retry | --retry-delay | --max-time) shift 2 ;;
-    --data-binary) data="${2#@}"; shift 2 ;;
-    -H) case "$2" in @*) cat "${2#@}" >> "$STUB_DIR/headers.log" ;; *) printf '%s\n' "$2" >> "$STUB_DIR/headers.log" ;; esac; shift 2 ;;
-    -*) shift ;;
-    *) url="$1"; shift ;;
-  esac
-done
-path="${url#https://api.github.test}"
-seq=$(( $(wc -l < "$STUB_DIR/curl.log" 2> /dev/null || echo 0) + 1 ))
-printf '%s %s %s\n' "$seq" "$method" "$path" >> "$STUB_DIR/curl.log"
-[ -z "$data" ] || cp "$data" "$STUB_DIR/sent/$seq.json"
-reply() { printf '%s' "$2" > "$out"; printf '%s' "$1"; }
-file() { if [ -f "$STUB_DIR/$1" ]; then reply "$2" "$(cat "$STUB_DIR/$1")"; else reply 404 '{"message":"Not Found"}'; fi; }
+  fake_github https://api.github.test "$(cat <<'EOF'
 case "$method $path" in
   "GET /repos/o/src/releases/latest") reply 200 '{"tag_name":"v1.1.0"}' ;;
   "GET /repos/o/src/commits/"*) reply 200 '{"sha":"1111111111111111111111111111111111111111"}' ;;
   "GET /repos/o/"*/git/ref/heads/*)
     name="${path#/repos/o/}"; name="${name%%/*}"; ref="${path#*/git/ref/heads/}"
-    file "ref-$name-${ref//\//_}.json" 200 ;;
-  "GET /repos/o/"*/git/trees/*) name="${path#/repos/o/}"; file "tree-${name%%/*}.json" 200 ;;
-  "GET /repos/o/"*/git/blobs/*) file "blob-${path##*/}" 200 ;;
-  "GET /repos/o/"*/git/commits/*) file "commit-${path##*/}.json" 200 ;;
-  "GET /repos/o/"*/rules/branches/*) name="${path#/repos/o/}"; file "rules-${name%%/*}.json" 200 ;;
+    reply_file "ref-$name-${ref//\//_}.json" 200 ;;
+  "GET /repos/o/"*/git/trees/*) name="${path#/repos/o/}"; reply_file "tree-${name%%/*}.json" 200 ;;
+  "GET /repos/o/"*/git/blobs/*) reply_file "blob-${path##*/}" 200 ;;
+  "GET /repos/o/"*/git/commits/*) reply_file "commit-${path##*/}.json" 200 ;;
+  "GET /repos/o/"*/rules/branches/*) name="${path#/repos/o/}"; reply_file "rules-${name%%/*}.json" 200 ;;
   "GET /repos/o/"*/pulls\?*) name="${path#/repos/o/}"; name="${name%%/*}"
     if [ -f "$STUB_DIR/pulls-$name.json" ]; then reply 200 "$(cat "$STUB_DIR/pulls-$name.json")"; else reply 200 '[]'; fi ;;
-  "GET /repos/o/"*) file "repo-${path#/repos/o/}.json" 200 ;;
+  "GET /repos/o/"*) reply_file "repo-${path#/repos/o/}.json" 200 ;;
   "POST /repos/o/"*/git/blobs) reply 201 "{\"sha\":\"$(git hash-object "$data")\"}" ;;
   "POST /repos/o/"*/git/trees) reply 201 '{"sha":"newtree"}' ;;
   "POST /repos/o/"*/git/commits) reply 201 '{"sha":"newcommit"}' ;;
@@ -134,10 +117,9 @@ case "$method $path" in
     else
       reply 200 '{"data":{"enablePullRequestAutoMerge":{"clientMutationId":null}}}'
     fi ;;
-  *) reply 404 '{"message":"Not Found"}' ;;
 esac
 EOF
-  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+)"
 }
 
 # ── Which pins move (bump-pins.py) ───────────────────────────────────────────
@@ -221,7 +203,7 @@ EOF
     and (.body | contains("| `.github/workflows/ci.yml` | `.github/workflows/ci.yml` | v1.0.0 | v1.1.0 |"))'
   sent 'POST /graphql' | jq -e '.variables == {id: "PR_app", method: "SQUASH"}'
   # Files are read raw, blob by blob.
-  grep -q '^Accept: application/vnd.github.raw$' "$STUB_DIR/headers.log"
+  grep -q '^Accept: application/vnd.github.raw$' "$STUB_DIR/curl-headers.log"
   [[ "$output" == *"o/app: pull request, merges once its checks pass https://github.test/o/app/pull/7"* ]]
 }
 
@@ -360,9 +342,9 @@ EOF
   consumer app
   REPOSITORIES=app run bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  refute grep -qE 'app-token|source-token' "$STUB_DIR/args.log"
-  grep -q 'Authorization: Bearer app-token' "$STUB_DIR/headers.log"
-  grep -q 'Authorization: Bearer source-token' "$STUB_DIR/headers.log"
+  refute grep -qE 'app-token|source-token' "$STUB_DIR/curl-args.log"
+  grep -q 'Authorization: Bearer app-token' "$STUB_DIR/curl-headers.log"
+  grep -q 'Authorization: Bearer source-token' "$STUB_DIR/curl-headers.log"
 }
 
 @test "invalid settings are refused before any request" {

@@ -3,10 +3,13 @@
 
 ACTION="$BATS_TEST_DIRNAME/../.github/actions/pr-description"
 
+load helpers/fake-github
+
 setup() {
   cd "$BATS_TEST_TMPDIR"
   mkdir -p bin tmp
   PATH="$BATS_TEST_TMPDIR/bin:$PATH"
+  export STUB_DIR="$BATS_TEST_TMPDIR"
   # The scripts' mktemp files stay inside the test's own directory, in CI too.
   export TMPDIR="$BATS_TEST_TMPDIR/tmp"
   export RUNNER_TEMP="$TMPDIR"
@@ -84,36 +87,19 @@ describe_with() {
     bash "$ACTION/write-description.sh"
 }
 
-# stub_curl PR_JSON [GET_EXIT]: a fake curl that serves the pull request. It
-# logs every call (arguments, then method and URL), the header files it reads,
-# and keeps the body of a PATCH.
+# stub_curl PR_JSON [STATUS]: a fake GitHub (helpers/fake-github.bash) that
+# serves the pull request with STATUS (200 by default) and keeps the body of a
+# PATCH in patched.json. It logs every call: arguments, headers, method and URL.
 stub_curl() {
-  printf '%s\n' "$1" > "$BATS_TEST_TMPDIR/pr.json"
-  cat > bin/curl <<EOF
-#!/usr/bin/env bash
-out=/dev/stdout method=GET data="" url=""
-printf '%s\n' "\$*" >> "$BATS_TEST_TMPDIR/curl-args.log"
-while [ \$# -gt 0 ]; do
-  case "\$1" in
-    -o) out="\$2"; shift 2 ;;
-    -X) method="\$2"; shift 2 ;;
-    --data-binary) data="\${2#@}"; shift 2 ;;
-    -H) case "\$2" in @*) cat "\${2#@}" >> "$BATS_TEST_TMPDIR/curl-headers.log" ;; esac; shift 2 ;;
-    --retry | --retry-delay | --max-time) shift 2 ;;
-    -*) shift ;;
-    *) url="\$1"; shift ;;
-  esac
-done
-printf '%s %s\n' "\$method" "\$url" >> "$BATS_TEST_TMPDIR/curl.log"
-if [ "\$method" = PATCH ]; then
-  cp "\$data" "$BATS_TEST_TMPDIR/patched.json"
-  printf '{}' > "\$out"
-  exit 0
-fi
-cat "$BATS_TEST_TMPDIR/pr.json" > "\$out"
-exit ${2:-0}
+  printf '%s\n' "$1" > "$STUB_DIR/pr.json"
+  printf '%s' "${2:-200}" > "$STUB_DIR/pr.status"
+  fake_github "" "$(cat <<'EOF'
+case "$method" in
+  PATCH) cp "$data" "$STUB_DIR/patched.json"; reply 200 '{}' ;;
+  GET) reply "$(cat "$STUB_DIR/pr.status")" "$(cat "$STUB_DIR/pr.json")" ;;
+esac
 EOF
-  chmod +x bin/curl
+)"
 }
 
 # update [VAR=value...]: run update-body.sh against the fake curl.
@@ -617,7 +603,7 @@ EOF
 }
 
 @test "update: an API error fails and shows GitHub's answer" {
-  stub_curl '{"message":"Resource not accessible by integration"}' 22
+  stub_curl '{"message":"Resource not accessible by integration"}' 403
   printf 'Adds b.\n' > description.md
   run update
   [ "$status" -eq 1 ]
@@ -650,7 +636,7 @@ EOF
 }
 
 @test "update: a failure leaves no token in files or output" {
-  stub_curl '{"message":"Bad credentials"}' 22
+  stub_curl '{"message":"Bad credentials"}' 401
   printf 'Adds b.\n' > description.md
   run update
   [ "$status" -eq 1 ]

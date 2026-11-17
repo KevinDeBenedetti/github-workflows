@@ -3,6 +3,8 @@
 
 SCRIPT="$BATS_TEST_DIRNAME/../.github/actions/cleanup-runs/cleanup-runs.sh"
 
+load helpers/fake-github
+
 setup() {
   cd "$BATS_TEST_TMPDIR"
   mkdir -p bin tmp stub
@@ -107,28 +109,10 @@ EOF
 #   artifacts-<page>.json  a page of artifacts
 #   delete-<id>.status     the status deleting run <id> answers (default 204)
 #   delete-artifact-<id>.status  the same for artifact <id>
-# It prints the HTTP status, as `-w '%{http_code}'` does, and logs every call
-# as METHOD PATH, the API root of o/r cut off.
+# Logs every call as METHOD PATH, the API root of o/r cut off
+# (helpers/fake-github.bash).
 stub_curl() {
-  cat > "$BATS_TEST_TMPDIR/bin/curl" <<'EOF'
-#!/usr/bin/env bash
-out=/dev/stdout method=GET url=""
-printf '%s\n' "$*" >> "$STUB_DIR/curl-args.log"
-while [ $# -gt 0 ]; do
-  case "$1" in
-    -o) out="$2"; shift 2 ;;
-    -X) method="$2"; shift 2 ;;
-    -w) shift 2 ;;
-    -H) case "$2" in @*) cat "${2#@}" >> "$STUB_DIR/curl-headers.log" ;; esac; shift 2 ;;
-    --retry | --retry-delay | --max-time) shift 2 ;;
-    -*) shift ;;
-    *) url="$1"; shift ;;
-  esac
-done
-path="${url#https://api.github.test/repos/o/r}"
-printf '%s %s\n' "$method" "$path" >> "$STUB_DIR/curl.log"
-reply() { printf '%s' "$2" > "$out"; printf '%s' "$1"; }
-page="$(printf '%s' "$path" | sed -n 's/.*[?&]page=\([0-9]*\).*/\1/p')"
+  fake_github https://api.github.test/repos/o/r "$(cat <<'EOF'
 case "$method $path" in
   "GET /actions/workflows/"*"/runs?"*)
     id="${path#/actions/workflows/}"
@@ -176,10 +160,9 @@ case "$method $path" in
       reply 204 ''
     fi
     ;;
-  *) reply 404 '{"message":"Not Found"}' ;;
 esac
 EOF
-  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+)"
 }
 
 @test "old runs go oldest first; the KEEP_RUNS most recent of their workflow stay" {
