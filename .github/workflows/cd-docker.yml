@@ -39,7 +39,7 @@ on:
         required: false
         default: false
       version:
-        description: Explicit version tag to apply (e.g. v1.2.3 from a release job output). When set, adds a type=raw tag with this value.
+        description: Explicit version tag to apply (e.g. v1.2.3 from a release job output), plus its X.Y alias for a final release (v1.2.3 → 1.2)
         type: string
         required: false
         default: ''
@@ -117,7 +117,7 @@ jobs:
 
     outputs:
       image: ${{ steps.meta.outputs.tags }}
-      image-name: ${{ steps.image.outputs.full }}
+      image-name: ${{ steps.image.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
 
     steps:
@@ -126,33 +126,23 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Set image name
+      # The tag rules shared with cd-buildkit.yml (actions/image-tags);
+      # metadata-action only adds the OCI labels and lowercases the names.
+      - name: Image tags
         id: image
-        # Inputs go through env, never interpolated into the script body.
-        # Lowercased here (OCI repositories must be) so the job summary and the
-        # pushed image agree — metadata-action lowercases on its side anyway.
-        env:
-          IMAGE_NAME: ${{ inputs.image-name }}
-          REPO_NAME: ${{ github.event.repository.name }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          NAME="${IMAGE_NAME:-$REPO_NAME}"
-          FULL=$(printf '%s/%s/%s' "$REGISTRY" "$OWNER" "$NAME" | tr '[:upper:]' '[:lower:]')
-          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
+        uses: $/.github/actions/image-tags
+        with:
+          image-name: ${{ inputs.image-name }}
+          version: ${{ inputs.version }}
+          tag-latest: ${{ inputs.tag-latest }}
+          registry: ${{ env.REGISTRY }}
 
-      - name: Docker meta (tags + labels)
+      - name: Docker meta (labels)
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ steps.image.outputs.full }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=sha,prefix=sha-
-            ${{ inputs.version != '' && format('type=raw,value={0}', inputs.version) || '' }}
-            ${{ inputs.tag-latest && 'type=raw,value=latest,enable={{is_default_branch}}' || '' }}
+          images: ${{ steps.image.outputs.image }}
+          tags: ${{ steps.image.outputs.raw-tags }}
 
       # Only for a foreign architecture: an amd64-only build on the amd64
       # runner needs no emulator, and registering one costs a container pull.
@@ -195,7 +185,7 @@ jobs:
 
       - name: Export digest summary
         env:
-          IMAGE: ${{ steps.image.outputs.full }}
+          IMAGE: ${{ steps.image.outputs.image }}
           DIGEST: ${{ steps.build.outputs.digest }}
           PLATFORMS: ${{ inputs.platforms }}
         run: |

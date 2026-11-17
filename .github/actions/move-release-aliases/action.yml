@@ -3,14 +3,19 @@ description: >
   Move the alias tags of a release so that callers pinned to them receive it:
   v1.2.3 moves v1; before 1.0, v0.24.3 moves v0 and v0.24 (pre-major-alias).
   Safe to re-run and against a concurrent move: each alias is re-synced from
-  the remote first and left alone when it is already right. Needs a checkout
-  and a token with contents write. The rules are at the top of
+  the remote first and left alone when it is already right. A pre-release
+  (v1.3.0-rc.2) moves nothing. Needs a checkout and a token with contents
+  write, except with classify-only. The rules are at the top of
   move-release-aliases.sh.
 
 inputs:
   tag:
-    description: The release tag, vMAJOR.MINOR.PATCH
+    description: The release tag, vMAJOR.MINOR.PATCH, optionally with a component prefix (my-lib-v1.2.3) or a pre-release suffix (v1.3.0-rc.2)
     required: true
+  classify-only:
+    description: "'true' only sets the prerelease output: no checkout, token or identity needed"
+    required: false
+    default: 'false'
   pre-major-alias:
     description: Which aliases a v0.x release moves — both (v0 and v0.<minor>), minor or major
     required: false
@@ -28,15 +33,22 @@ inputs:
     required: false
     default: ${{ github.token }}
 
+outputs:
+  prerelease:
+    description: "'true' when the tag is a semver pre-release, which moves no alias"
+    value: ${{ steps.move.outputs.prerelease }}
+
 runs:
   using: composite
   steps:
     - name: Move the alias tags
+      id: move
       shell: bash
       # Inputs go through env, never interpolated into the script body. The
       # token reaches git through this step's environment only.
       env:
         TAG: ${{ inputs.tag }}
+        CLASSIFY_ONLY: ${{ inputs.classify-only }}
         PRE_MAJOR_ALIAS: ${{ inputs.pre-major-alias }}
         GIT_USER_NAME: ${{ inputs.git-user-name }}
         GIT_USER_EMAIL: ${{ inputs.git-user-email }}

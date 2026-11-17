@@ -220,8 +220,9 @@ jobs:
   # The SHA-256 pinned next to each downloaded tool must match its release
   # asset: a version bump (Renovate) with a stale checksum would pass here, as
   # not every tool is executed by this CI, and fail in the callers. Every asset
-  # is downloaded again, so the check runs only when a file holding a pin, the
-  # script or this workflow changed, and on a run with no change base.
+  # is downloaded again, so the check runs only when .github/tools.json, a file
+  # holding a pin, the script or this workflow changed, and on a run with no
+  # change base.
   ci-checksums:
     name: CI — Tool checksums
     runs-on: ubuntu-26.04

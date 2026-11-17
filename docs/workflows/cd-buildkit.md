@@ -234,6 +234,8 @@ kubectl delete namespace buildkit-smoke
 - Cluster path: the rootless BuildKit image has no glibc Node.js, so it cannot run JavaScript actions. BuildKit fetches the source itself from a git context (`<repo>.git#<sha>:<context>`) with the job token, passed as the `GIT_AUTH_TOKEN` build secret.
 - Cluster path: registry credentials and secrets are written to a `0700` temporary directory removed at the end of the step.
 - GitHub-hosted path: the source comes from `actions/checkout` of the same commit, and the job logs in to GHCR even when `push` is false, since the layer cache lives there.
+- Tags: a first `tags` job runs the [`image-tags`](../actions/image-tags.md) action on the same runner and passes the image name, tags and cache reference to the build job, so both paths and [`cd-docker`](./cd-docker.md) tag alike. The rootless BuildKit container (busybox `sh`, no checkout) only reads them. A push of a release tag `v1.2.3` adds `1.2.3` and `1.2`.
+- Cluster path: the `tags` job has no job container, so the scale set must allow container-less jobs (`ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER=false` on the runner, which ARC's Kubernetes mode sets to `true` by default) and its runner image needs bash.
 - Layer cache: `<image>-cache:buildcache` on GHCR, shared by both paths (`mode=max`; export failures don't fail the build).
 - Each build leaves new versions in GHCR: the tagged image index with its untagged image and attestations, and the replaced cache manifest. [`cleanup-ghcr`](./cleanup-ghcr.md) deletes the old ones on a schedule.
 - Single architecture: the runner's native platform.

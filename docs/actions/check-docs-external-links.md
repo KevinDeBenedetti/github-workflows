@@ -33,5 +33,5 @@ steps:
 - **github.com**: requests go through `github-token`, so they are not rate-limited. A link to a private repository fails, as it does for readers.
 - Retries a failing link 3 times, 5 s apart, with a 30 s timeout. Fails with lychee's exit code (`2`) on any broken link; the lychee report, with the file and line of each broken link, is printed and written to the job summary.
 - Needs runner 2.336.0 or newer: the action calls `change-base` with `uses: $/…`, which GitHub Enterprise Server does not support.
-- lychee is downloaded from its GitHub release and checked against a SHA-256 pinned in the action. After a version bump, refresh it with `scripts/update-tool-checksums.py`.
+- lychee is downloaded from its GitHub release and checked against a SHA-256 pinned in `.github/tools.json` and copied into the action. After a version bump, refresh both with `scripts/update-tool-checksums.py`.
 - Locally, with `lychee` on the `PATH`: `bash .github/actions/check-docs-external-links/check-docs-external-links.sh docs/page.md`.

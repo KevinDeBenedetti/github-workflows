@@ -20,7 +20,8 @@ runs:
         # Pinned to 1.7.11: 1.7.12 regressed its bundled "popular actions" metadata
         # for actions/create-github-app-token@v3 (false-positive on the `client-id`
         # input). When bumping past 1.7.11, pass `flags: -ignore create-github-app-token`.
-        # renovate: datasource=github-releases depName=rhysd/actionlint
+        # Copy of .github/tools.json, where Renovate bumps it: scripts/update-tool-checksums.py
+        # writes the version and its pins here, and CI fails while they differ.
         ACTIONLINT_VERSION="1.7.11"
         # SHA-256 of the release asset per architecture, for the version above.
         # Refresh after a version bump: scripts/update-tool-checksums.py

@@ -28,7 +28,8 @@ runs:
     - name: Install lychee
       shell: bash
       run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
-        # renovate: datasource=github-releases depName=lycheeverse/lychee
+        # Copy of .github/tools.json, where Renovate bumps it: scripts/update-tool-checksums.py
+        # writes the version and its pins here, and CI fails while they differ.
         LYCHEE_VERSION="0.24.2"
         # SHA-256 of the release asset per architecture, for the version above.
         # Refresh after a version bump: scripts/update-tool-checksums.py

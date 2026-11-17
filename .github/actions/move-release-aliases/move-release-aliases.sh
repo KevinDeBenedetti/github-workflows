@@ -16,8 +16,15 @@
 # nothing when it is already right, and only then move it, retrying when a
 # concurrent job moved it in between.
 #
+# A semver pre-release (v1.3.0-rc.2, my-lib-v1.3.0-beta.1) moves no alias: v1
+# would otherwise point at a release candidate. The script reports the kind as
+# `prerelease=true|false` in GITHUB_OUTPUT, and with CLASSIFY_ONLY=true does
+# only that (no git, no identity needed). tests/fixtures/release-tags.tsv
+# holds the tags every release-tag rule of this repository is tested against.
+#
 # Environment:
-#   TAG              the release tag, vMAJOR.MINOR.PATCH (required)
+#   TAG              the release tag, [component-]vMAJOR.MINOR.PATCH[-pre] (required)
+#   CLASSIFY_ONLY    true: report prerelease and stop (default false)
 #   PRE_MAJOR_ALIAS  both | minor | major (default both), for v0.x releases
 #   GIT_USER_NAME, GIT_USER_EMAIL  identity of the alias tags (required)
 #   PUSH_TOKEN       token for the push; empty uses git's own credentials
@@ -27,22 +34,40 @@
 set -euo pipefail
 
 TAG="${TAG:-}"
+CLASSIFY_ONLY="${CLASSIFY_ONLY:-false}"
 PRE_MAJOR_ALIAS="${PRE_MAJOR_ALIAS:-both}"
 REMOTE="${REMOTE:-origin}"
 RETRY_DELAY="${RETRY_DELAY:-3}"
+# An optional release-please component prefix, then SemVer 2.0 core and
+# pre-release (no build metadata: release-please never writes one).
+release_re='^([0-9A-Za-z._-]*-)?v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'
 
 fail() {
   echo "::error::$*" >&2
   exit 1
 }
 
+case "$CLASSIFY_ONLY" in
+  true | false) ;;
+  *) fail "CLASSIFY_ONLY must be true or false, not '$CLASSIFY_ONLY'" ;;
+esac
+[[ "$TAG" =~ $release_re ]] ||
+  fail "unusable release tag '$TAG' — expected vMAJOR.MINOR.PATCH, optionally with a -pre-release suffix"
+prerelease=false
+[[ -n "${BASH_REMATCH[2]}" ]] && prerelease=true
+if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
+  echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
+fi
+if [[ "$prerelease" == true ]]; then
+  echo "ℹ️ ${TAG} is a pre-release: the alias tags stay where they are"
+  exit 0
+fi
+[[ "$CLASSIFY_ONLY" == false ]] || exit 0
+
 : "${GIT_USER_NAME:?GIT_USER_NAME is required}"
 : "${GIT_USER_EMAIL:?GIT_USER_EMAIL is required}"
 
 major="${TAG%%.*}" # v1.2.3 → v1 (a component tag my-lib-v1.2.3 → my-lib-v1)
-if [[ -z "$TAG" || "$major" == "$TAG" ]]; then
-  fail "unusable release tag '$TAG' — expected vMAJOR.MINOR.PATCH"
-fi
 aliases=("$major")
 if [[ "$major" == v0 ]]; then
   minor="${TAG#v0.}"

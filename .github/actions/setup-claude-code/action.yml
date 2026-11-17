@@ -10,7 +10,8 @@ runs:
       shell: bash
       run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
         set -euo pipefail
-        # renovate: datasource=npm depName=@anthropic-ai/claude-code
+        # Copy of .github/tools.json, where Renovate bumps it: scripts/update-tool-checksums.py
+        # writes the version and its pins here, and CI fails while they differ.
         CLAUDE_CODE_VERSION="2.1.308"
         # SHA-256 of the linux binary per architecture, for the version above, as
         # listed in that release's signed manifest.json.

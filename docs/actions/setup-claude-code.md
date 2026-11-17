@@ -32,9 +32,10 @@ None.
 - No version input: a version chosen by the caller could not be checked against a
   pinned checksum. The version follows the release of this repository you pin.
 - The pinned SHA-256 values are the ones listed in the release's signed
-  `manifest.json`. Renovate bumps the version (npm datasource,
-  `@anthropic-ai/claude-code`); the job then fails closed until
-  `scripts/update-tool-checksums.py` refreshes the checksums.
+  `manifest.json`. Renovate bumps the version in `.github/tools.json` (npm
+  datasource, `@anthropic-ai/claude-code`); CI then fails closed until
+  `scripts/update-tool-checksums.py` refreshes the checksums and copies them
+  into the action.
 - The action sets no credential. The CLI authenticates with
   `CLAUDE_CODE_OAUTH_TOKEN` (subscription) or `ANTHROPIC_API_KEY` in the step that
   runs it.

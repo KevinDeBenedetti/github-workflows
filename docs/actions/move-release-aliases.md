@@ -26,13 +26,20 @@ steps:
 
 ## Inputs
 
-| Input             | Default                                        | Description                                                                   |
-| ----------------- | ---------------------------------------------- | ----------------------------------------------------------------------------- |
-| `tag`             | —                                              | The release tag, `vMAJOR.MINOR.PATCH` (required)                              |
-| `pre-major-alias` | `both`                                         | Aliases a `v0.x` release moves: `both` (`v0`, `v0.<minor>`), `minor`, `major` |
-| `git-user-name`   | `github-actions[bot]`                          | Name of the tagger of the alias tags                                          |
-| `git-user-email`  | `github-actions[bot]@users.noreply.github.com` | Email of the tagger of the alias tags                                         |
-| `github-token`    | <code v-pre>${{ github.token }}</code>         | Token with contents write, used for the push only                             |
+| Input             | Default                                        | Description                                                                                        |
+| ----------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `tag`             | —                                              | The release tag, `vMAJOR.MINOR.PATCH`, with an optional component prefix or pre-release (required) |
+| `classify-only`   | `'false'`                                      | `'true'` only sets the `prerelease` output: no checkout, token or identity needed                  |
+| `pre-major-alias` | `both`                                         | Aliases a `v0.x` release moves: `both` (`v0`, `v0.<minor>`), `minor`, `major`                      |
+| `git-user-name`   | `github-actions[bot]`                          | Name of the tagger of the alias tags                                                               |
+| `git-user-email`  | `github-actions[bot]@users.noreply.github.com` | Email of the tagger of the alias tags                                                              |
+| `github-token`    | <code v-pre>${{ github.token }}</code>         | Token with contents write, used for the push only                                                  |
+
+## Outputs
+
+| Output       | Description                                                                         |
+| ------------ | ----------------------------------------------------------------------------------- |
+| `prerelease` | `'true'` when the tag is a semver pre-release (`v1.3.0-rc.2`), which moves no alias |
 
 ## Notes
 
@@ -46,5 +53,11 @@ steps:
   checkout sits on. The release tag is fetched, so a shallow checkout is
   enough.
 - A component tag works too: `my-lib-v2.0.1` moves `my-lib-v2`.
+- **A pre-release moves nothing**: `v1.3.0-rc.2` leaves `v1` on the last final
+  release. A tag that is not `vMAJOR.MINOR.PATCH[-pre]` (`v1.2`,
+  `v1.2.3+build`) fails the step. `release.yml` computes its `prerelease`
+  output with `classify-only`, so both jobs apply one rule;
+  `tests/fixtures/release-tags.tsv` holds the tags every release-tag rule of
+  this repository is tested against.
 - The token is passed to git through the step's environment and never written
   to `.git/config`.

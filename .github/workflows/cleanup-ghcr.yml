@@ -156,6 +156,8 @@ jobs:
         uses: dataaxiom/ghcr-cleanup-action@d52806a0dc70b430571a37da1fde39733ffd640f # v1.2.2
         with:
           packages: ${{ steps.resolve.outputs.caches }}
+          # The cache tag of actions/image-tags (CACHE_TAG); tests/image-tags.bats
+          # fails when the two differ.
           exclude-tags: buildcache
           delete-tags: '*'
           delete-untagged: true
