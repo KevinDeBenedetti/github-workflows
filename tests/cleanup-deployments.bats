@@ -3,6 +3,8 @@
 
 SCRIPT="$BATS_TEST_DIRNAME/../.github/actions/cleanup-deployments/cleanup-deployments.sh"
 
+load helpers/fake-github
+
 setup() {
   cd "$BATS_TEST_TMPDIR"
   mkdir -p bin tmp stub
@@ -17,28 +19,12 @@ setup() {
   stub_curl
 }
 
-# A curl that answers from STUB_DIR and logs "METHOD PATH" in curl.log.
+# A curl that answers from STUB_DIR and logs "METHOD PATH" in curl.log
+# (helpers/fake-github.bash).
 # deployments-N.json is page N of the list; status-ID and delete-ID hold the
 # HTTP status of the two calls for a deployment (201 and 204 by default).
 stub_curl() {
-  cat > "$BATS_TEST_TMPDIR/bin/curl" <<'EOF'
-#!/usr/bin/env bash
-out=/dev/stdout method=GET url="" data=""
-while [ $# -gt 0 ]; do
-  case "$1" in
-    -o) out="$2"; shift 2 ;;
-    -X) method="$2"; shift 2 ;;
-    -d) data="$2"; shift 2 ;;
-    -H) case "$2" in @*) cat "${2#@}" >> "$STUB_DIR/curl-headers.log" ;; esac; shift 2 ;;
-    -w | --retry | --retry-delay | --max-time) shift 2 ;;
-    -*) shift ;;
-    *) url="$1"; shift ;;
-  esac
-done
-path="${url#https://api.github.test/repos/o/r}"
-printf '%s %s %s\n' "$method" "$path" "$data" | sed 's/ $//' >> "$STUB_DIR/curl.log"
-reply() { printf '%s' "$2" > "$out"; printf '%s' "$1"; }
-page="$(printf '%s' "$path" | sed -n 's/.*[?&]page=\([0-9]*\).*/\1/p')"
+  fake_github https://api.github.test/repos/o/r "$(cat <<'EOF'
 case "$method $path" in
   "GET /deployments?"*)
     if [ -f "$STUB_DIR/list-status" ]; then
@@ -57,7 +43,7 @@ case "$method $path" in
   *) reply 500 '{"message":"unexpected request"}' ;;
 esac
 EOF
-  chmod +x "$BATS_TEST_TMPDIR/bin/curl"
+)"
 }
 
 # days_ago N: an ISO timestamp N days ago.
