@@ -1,0 +1,64 @@
+name: Image tags
+description: >
+  Image name, tags and layer-cache reference of a container build, from the
+  event that triggered it: sha-<7>, the branch, pr-<number>, the release tag
+  and an explicit version (with their X.Y alias), latest on the default
+  branch. Shared by cd-buildkit.yml and cd-docker.yml; the rules are at the top
+  of image-tags.sh. Needs bash: no checkout.
+
+inputs:
+  image-name:
+    description: Image name; empty uses the repository name
+    required: false
+    default: ''
+  version:
+    description: Explicit version tag (v1.2.3 also tags 1.2)
+    required: false
+    default: ''
+  tag-latest:
+    description: "'true' also tags latest on the default branch"
+    required: false
+    default: 'false'
+  registry:
+    description: Registry host
+    required: false
+    default: ghcr.io
+
+outputs:
+  image:
+    description: Image reference without a tag (registry/owner/name, lowercase)
+    value: ${{ steps.tags.outputs.image }}
+  tags:
+    description: The tags, space-separated
+    value: ${{ steps.tags.outputs.tags }}
+  names:
+    description: image:tag for each tag, comma-separated
+    value: ${{ steps.tags.outputs.names }}
+  raw-tags:
+    description: One type=raw,value=<tag> line per tag, for docker/metadata-action's tags input
+    value: ${{ steps.tags.outputs.raw-tags }}
+  cache:
+    description: Registry layer-cache reference, <image>-cache:buildcache
+    value: ${{ steps.tags.outputs.cache }}
+
+runs:
+  using: composite
+  steps:
+    - name: Compute the image tags
+      id: tags
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        IMAGE_NAME: ${{ inputs.image-name }}
+        VERSION: ${{ inputs.version }}
+        TAG_LATEST: ${{ inputs.tag-latest }}
+        REGISTRY: ${{ inputs.registry }}
+        REPO_NAME: ${{ github.event.repository.name }}
+        OWNER: ${{ github.repository_owner }}
+        SHA: ${{ github.sha }}
+        REF_NAME: ${{ github.ref_name }}
+        REF_TYPE: ${{ github.ref_type }}
+        EVENT: ${{ github.event_name }}
+        PR_NUMBER: ${{ github.event.number }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: bash "$GITHUB_ACTION_PATH/image-tags.sh"

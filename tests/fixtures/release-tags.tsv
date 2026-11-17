@@ -1,0 +1,21 @@
+# The release tags every release-tag rule of this repository is tested
+# against: move-release-aliases.sh (classification), propagate-release.sh and
+# bump-pins.py (validation), image-tags.sh (image tags). One tag per line, a
+# tab, then its kind: release, prerelease or invalid. Component tags
+# (my-lib-v1.2.3) are not here: only the alias move accepts them.
+v1.2.3	release
+v0.24.3	release
+v10.20.30	release
+v1.0.0	release
+v1.3.0-rc.2	prerelease
+v1.3.0-rc.1	prerelease
+v2.0.0-beta	prerelease
+v1.0.0-alpha.1.x-y	prerelease
+v1	invalid
+v1.2	invalid
+1.2.3	invalid
+v1.2.3-	invalid
+v1.2.3+build.5	invalid
+v1.2.3.4	invalid
+v1.2.x	invalid
+main	invalid

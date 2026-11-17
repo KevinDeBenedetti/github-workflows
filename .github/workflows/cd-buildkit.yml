@@ -175,9 +175,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Image name, tags and cache reference, once for both build jobs: the
+  # rootless BuildKit container runs busybox sh with no checkout, so the shared
+  # script (actions/image-tags) runs here, on the same runner, and the build
+  # only reads its outputs.
+  tags:
+    name: Image tags
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 5
+    permissions: {}
+    outputs:
+      image: ${{ steps.tags.outputs.image }}
+      tags: ${{ steps.tags.outputs.tags }}
+      names: ${{ steps.tags.outputs.names }}
+      cache: ${{ steps.tags.outputs.cache }}
+    steps:
+      - name: Compute the image tags
+        id: tags
+        uses: $/.github/actions/image-tags
+        with:
+          image-name: ${{ inputs.image-name }}
+          version: ${{ inputs.version }}
+          tag-latest: ${{ inputs.tag-latest }}
+          registry: ${{ env.REGISTRY }}
+
   # Self-hosted runners (ARC): rootless BuildKit inside the job container.
   buildkit:
     name: BuildKit build & push (${{ inputs.context }})
+    needs: tags
     # Not a hosted VM (see the buildx job): the rootless image's user cannot
     # even write the runner's step files there ("Permission denied" on the
     # first `>> "$GITHUB_OUTPUT"`), let alone start its user namespace.
@@ -202,80 +227,21 @@ jobs:
       packages: write  # push the image and the layer cache to GHCR
 
     outputs:
-      image: ${{ steps.image.outputs.full }}
+      image: ${{ needs.tags.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
 
     steps:
-      - name: Set image name
-        id: image
-        # Inputs go through env, never interpolated into the script body.
-        env:
-          IMAGE_NAME: ${{ inputs.image-name }}
-          REPO_NAME: ${{ github.event.repository.name }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          NAME="${IMAGE_NAME:-$REPO_NAME}"
-          # OCI repositories must be lowercase.
-          FULL=$(printf '%s/%s/%s' "$REGISTRY" "$OWNER" "$NAME" | tr '[:upper:]' '[:lower:]')
-          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
-
-      - name: Compute tags
-        id: tags
-        env:
-          SHA: ${{ github.sha }}
-          REF_NAME: ${{ github.ref_name }}
-          REF_TYPE: ${{ github.ref_type }}
-          EVENT: ${{ github.event_name }}
-          PR_NUMBER: ${{ github.event.number }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          VERSION: ${{ inputs.version }}
-          TAG_LATEST: ${{ inputs.tag-latest }}
-        run: |
-          # Same tag set as cd-docker.yml (subset of docker/metadata-action).
-          TAGS=""
-          add_tag() { TAGS="${TAGS:+$TAGS }$1"; }
-
-          SHORT_SHA=$(printf '%s' "$SHA" | cut -c1-7)
-          add_tag "sha-${SHORT_SHA}"
-
-          if [ "$EVENT" = "push" ] && [ "$REF_TYPE" = "branch" ]; then
-            BRANCH_TAG=$(printf '%s' "$REF_NAME" | tr -c 'A-Za-z0-9_.-' '-' | sed 's/^[.-]*//' | cut -c1-128)
-            [ -n "$BRANCH_TAG" ] && add_tag "$BRANCH_TAG"
-          fi
-
-          if [ "$EVENT" = "pull_request" ] && [ -n "$PR_NUMBER" ]; then
-            add_tag "pr-${PR_NUMBER}"
-          fi
-
-          if [ -n "$VERSION" ]; then
-            add_tag "$VERSION"
-            SEMVER="${VERSION#v}"
-            case "$SEMVER" in
-              # A pre-release (1.2.3-rc.4) keeps its own tag only: the 1.2
-              # alias belongs to the final releases.
-              *-*) ;;
-              [0-9]*.[0-9]*.[0-9]*) add_tag "$(printf '%s' "$SEMVER" | cut -d. -f1-2)" ;;
-            esac
-          fi
-
-          if [ "$TAG_LATEST" = "true" ] && [ "$REF_NAME" = "$DEFAULT_BRANCH" ]; then
-            add_tag "latest"
-          fi
-
-          echo "Computed tags: $TAGS"
-          echo "list=$TAGS" >> "$GITHUB_OUTPUT"
-
       - name: Build and push with BuildKit
         id: build
         env:
-          TAGS: ${{ steps.tags.outputs.list }}
+          NAMES: ${{ needs.tags.outputs.names }}
+          CACHE: ${{ needs.tags.outputs.cache }}
           BUILD_ARGS: ${{ inputs.build-args }}
           BUILD_SECRETS: ${{ secrets.BUILD_SECRETS }}
           TARGET: ${{ inputs.target }}
           PUSH: ${{ inputs.push }}
           PROVENANCE: ${{ inputs.provenance }}
           SBOM: ${{ inputs.sbom }}
-          IMAGE_BASE: ${{ steps.image.outputs.full }}
           CONTEXT: ${{ inputs.context }}
           DOCKERFILE: ${{ inputs.dockerfile }}
           REPO: ${{ github.repository }}
@@ -336,12 +302,6 @@ jobs:
             set -- "$@" --opt "attest:sbom="
           fi
 
-          NAMES=""
-          for tag in $TAGS; do
-            NAMES="${NAMES:+$NAMES,}${IMAGE_BASE}:${tag}"
-          done
-          CACHE="${IMAGE_BASE}-cache:buildcache"
-
           # Context = this repository at this exact commit, narrowed to the
           # context directory (`#<ref>:<subdir>`); the Dockerfile path is
           # relative to it.
@@ -368,8 +328,8 @@ jobs:
       - name: Job summary
         if: always()
         env:
-          IMAGE: ${{ steps.image.outputs.full }}
-          TAGS: ${{ steps.tags.outputs.list }}
+          IMAGE: ${{ needs.tags.outputs.image }}
+          TAGS: ${{ needs.tags.outputs.tags }}
           CONTEXT: ${{ inputs.context }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
@@ -395,6 +355,7 @@ jobs:
   # come from steps identical to the buildkit job's: change them in both jobs.
   buildx:
     name: Buildx build & push (${{ inputs.context }})
+    needs: tags
     if: ${{ contains(inputs.runner, '"ubuntu-') || contains(inputs.runner, '"ubicloud-') }}
     runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
@@ -407,7 +368,7 @@ jobs:
       packages: write  # push the image and the layer cache to GHCR
 
     outputs:
-      image: ${{ steps.image.outputs.full }}
+      image: ${{ needs.tags.outputs.image }}
       digest: ${{ steps.build.outputs.digest }}
 
     steps:
@@ -415,79 +376,6 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Set image name
-        id: image
-        # Inputs go through env, never interpolated into the script body.
-        env:
-          IMAGE_NAME: ${{ inputs.image-name }}
-          REPO_NAME: ${{ github.event.repository.name }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          NAME="${IMAGE_NAME:-$REPO_NAME}"
-          # OCI repositories must be lowercase.
-          FULL=$(printf '%s/%s/%s' "$REGISTRY" "$OWNER" "$NAME" | tr '[:upper:]' '[:lower:]')
-          echo "full=${FULL}" >> "$GITHUB_OUTPUT"
-
-      - name: Compute tags
-        id: tags
-        env:
-          SHA: ${{ github.sha }}
-          REF_NAME: ${{ github.ref_name }}
-          REF_TYPE: ${{ github.ref_type }}
-          EVENT: ${{ github.event_name }}
-          PR_NUMBER: ${{ github.event.number }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          VERSION: ${{ inputs.version }}
-          TAG_LATEST: ${{ inputs.tag-latest }}
-        run: |
-          # Same tag set as cd-docker.yml (subset of docker/metadata-action).
-          TAGS=""
-          add_tag() { TAGS="${TAGS:+$TAGS }$1"; }
-
-          SHORT_SHA=$(printf '%s' "$SHA" | cut -c1-7)
-          add_tag "sha-${SHORT_SHA}"
-
-          if [ "$EVENT" = "push" ] && [ "$REF_TYPE" = "branch" ]; then
-            BRANCH_TAG=$(printf '%s' "$REF_NAME" | tr -c 'A-Za-z0-9_.-' '-' | sed 's/^[.-]*//' | cut -c1-128)
-            [ -n "$BRANCH_TAG" ] && add_tag "$BRANCH_TAG"
-          fi
-
-          if [ "$EVENT" = "pull_request" ] && [ -n "$PR_NUMBER" ]; then
-            add_tag "pr-${PR_NUMBER}"
-          fi
-
-          if [ -n "$VERSION" ]; then
-            add_tag "$VERSION"
-            SEMVER="${VERSION#v}"
-            case "$SEMVER" in
-              # A pre-release (1.2.3-rc.4) keeps its own tag only: the 1.2
-              # alias belongs to the final releases.
-              *-*) ;;
-              [0-9]*.[0-9]*.[0-9]*) add_tag "$(printf '%s' "$SEMVER" | cut -d. -f1-2)" ;;
-            esac
-          fi
-
-          if [ "$TAG_LATEST" = "true" ] && [ "$REF_NAME" = "$DEFAULT_BRANCH" ]; then
-            add_tag "latest"
-          fi
-
-          echo "Computed tags: $TAGS"
-          echo "list=$TAGS" >> "$GITHUB_OUTPUT"
-
-      - name: Image references
-        id: refs
-        env:
-          TAGS: ${{ steps.tags.outputs.list }}
-          IMAGE_BASE: ${{ steps.image.outputs.full }}
-        run: |
-          # The same names and cache reference as the buildkit job's build step.
-          NAMES=""
-          for tag in $TAGS; do
-            NAMES="${NAMES:+$NAMES,}${IMAGE_BASE}:${tag}"
-          done
-          echo "names=${NAMES}" >> "$GITHUB_OUTPUT"
-          echo "cache=${IMAGE_BASE}-cache:buildcache" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -508,7 +396,7 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.context }}/${{ inputs.dockerfile }}
           push: ${{ inputs.push }}
-          tags: ${{ steps.refs.outputs.names }}
+          tags: ${{ needs.tags.outputs.names }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
@@ -517,14 +405,14 @@ jobs:
           secrets: ${{ secrets.BUILD_SECRETS }}
           provenance: ${{ inputs.provenance }}
           sbom: ${{ inputs.sbom }}
-          cache-from: type=registry,ref=${{ steps.refs.outputs.cache }}
-          cache-to: type=registry,ref=${{ steps.refs.outputs.cache }},mode=max,ignore-error=true
+          cache-from: type=registry,ref=${{ needs.tags.outputs.cache }}
+          cache-to: type=registry,ref=${{ needs.tags.outputs.cache }},mode=max,ignore-error=true
 
       - name: Job summary
         if: always()
         env:
-          IMAGE: ${{ steps.image.outputs.full }}
-          TAGS: ${{ steps.tags.outputs.list }}
+          IMAGE: ${{ needs.tags.outputs.image }}
+          TAGS: ${{ needs.tags.outputs.tags }}
           CONTEXT: ${{ inputs.context }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |

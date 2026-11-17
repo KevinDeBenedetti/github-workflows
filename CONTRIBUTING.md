@@ -16,7 +16,8 @@ prek install                 # pre-commit and commit-msg hooks (prek.toml)
 ```
 
 The hooks check whitespace, YAML/JSON, actionlint, the Renovate config, the
-docs, the consistency of the reusable workflows, and the commit message.
+docs, the consistency of the reusable workflows, the tool pins, and the commit
+message.
 
 ## Make a change
 
@@ -29,11 +30,16 @@ docs, the consistency of the reusable workflows, and the commit message.
    SHA with a version comment. Declare a new input in both `workflow_call` and
    `workflow_dispatch` (`scripts/check-workflow-consistency.py` checks it).
 4. **Tests:** a new or changed script ships with its Bats tests in `tests/`
-   (`bats tests/`).
+   (`bats tests/`). A script that calls the GitHub API is tested against the
+   fake curl of `tests/helpers/fake-github.bash`.
 5. Update the matching page in `docs/workflows/` or `docs/actions/`. A new
    workflow or action also needs its page and its row in the tables of
    `README.md` and `docs/getting-started.md`: the same script checks them, and
    the `with:` keys passed to this repository's actions.
+6. **Downloaded tools** (actionlint, Gitleaks, lychee, …) are pinned in
+   `.github/tools.json`. After changing one there, run
+   `scripts/update-tool-checksums.py`: it refreshes the checksums and copies
+   the pins into the action, and a hook fails while the two differ.
 
 ## Review
 

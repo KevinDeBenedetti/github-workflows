@@ -138,3 +138,29 @@ setup() {
   run remote_alias v4
   [ "$status" -ne 0 ]
 }
+
+@test "a pre-release moves no alias and reports prerelease=true" {
+  release v1.0.0
+  TAG=v1.0.0 run bash "$SCRIPT"
+  release v1.1.0-rc.1
+  : > "$BATS_TEST_TMPDIR/out"
+  GITHUB_OUTPUT="$BATS_TEST_TMPDIR/out" TAG=v1.1.0-rc.1 run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"v1.1.0-rc.1 is a pre-release"* ]]
+  [ "$(cat "$BATS_TEST_TMPDIR/out")" = prerelease=true ]
+  [ "$(remote_alias v1)" = "$(remote_tag v1.0.0)" ]
+}
+
+@test "classify-only reports the kind without an identity or a push" {
+  release v2.0.0
+  : > "$BATS_TEST_TMPDIR/out"
+  unset GIT_USER_NAME GIT_USER_EMAIL
+  GITHUB_OUTPUT="$BATS_TEST_TMPDIR/out" TAG=v2.0.0 CLASSIFY_ONLY=true run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(cat "$BATS_TEST_TMPDIR/out")" = prerelease=false ]
+  run remote_alias v2
+  [ "$status" -ne 0 ]
+  CLASSIFY_ONLY=yes TAG=v2.0.0 run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"::error::CLASSIFY_ONLY must be true or false, not 'yes'"* ]]
+}

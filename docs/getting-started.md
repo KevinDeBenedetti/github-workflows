@@ -358,6 +358,7 @@ steps:
 | [`cleanup-deployments`](actions/cleanup-deployments.md)             | Delete the old deployment records of the repository, keeping the recent ones of each environment |
 | [`propagate-release`](actions/propagate-release.md)                 | Open a pull request in each consumer repository that moves its pins to a release                 |
 | [`move-release-aliases`](actions/move-release-aliases.md)           | Move the `v<major>` (and `v0.<minor>`) alias tags to a release                                   |
+| [`image-tags`](actions/image-tags.md)                               | Image name, tags and layer-cache reference of a container build                                  |
 
 ---
 

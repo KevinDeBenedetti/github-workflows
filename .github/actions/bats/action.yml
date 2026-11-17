@@ -22,7 +22,8 @@ runs:
     - name: Install Bats
       shell: bash
       run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
-        # renovate: datasource=github-tags depName=bats-core/bats-core
+        # Copy of .github/tools.json, where Renovate bumps it: scripts/update-tool-checksums.py
+        # writes the version and its pins here, and CI fails while they differ.
         BATS_VERSION="v1.11.0"
         # Commit the tag points to — a tag can be moved, a commit cannot.
         # Refresh after a version bump: scripts/update-tool-checksums.py

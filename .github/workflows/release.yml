@@ -237,18 +237,13 @@ jobs:
         id: kind
         # A semver pre-release tag (v1.3.0-rc.2, also my-lib-v1.3.0-beta.1)
         # must not move the alias tags: tag-workflows would point v1 (or v0
-        # and v0.3) at a release candidate.
+        # and v0.3) at a release candidate. The rule lives in the action that
+        # moves them, which also refuses a tag it cannot use.
         if: steps.rp.outputs.release_created == 'true'
-        env:
-          TAG: ${{ steps.rp.outputs.tag_name }}
-        shell: bash
-        run: |
-          if [[ "$TAG" =~ [0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.-]+$ ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-            echo "ℹ️ $TAG is a pre-release: the alias tags stay where they are"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
+        uses: $/.github/actions/move-release-aliases
+        with:
+          tag: ${{ steps.rp.outputs.tag_name }}
+          classify-only: 'true'
 
       - name: Find release PRs to notify
         id: find-prs

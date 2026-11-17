@@ -1,0 +1,116 @@
+{
+  "ACTIONLINT": {
+    "file": ".github/actions/actionlint/action.yml",
+    "datasource": "github-releases",
+    "package": "rhysd/actionlint",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "1.7.11",
+    "url": "https://github.com/rhysd/actionlint/releases/download/v{v}/actionlint_{v}_linux_{a}.tar.gz",
+    "archVar": "ARCH",
+    "arch": {
+      "amd64": "amd64",
+      "arm64": "arm64"
+    },
+    "sums": "https://github.com/rhysd/actionlint/releases/download/v{v}/actionlint_{v}_checksums.txt",
+    "sha256": {
+      "amd64": "900919a84f2229bac68ca9cd4103ea297abc35e9689ebb842c6e34a3d1b01b0a",
+      "arm64": "21bc0dfb57a913fe175298c2a9e906ee630f747cb66d0a934d0d4b69f4ee1235"
+    }
+  },
+  "KUBECONFORM": {
+    "file": ".github/actions/kubeconform/action.yml",
+    "datasource": "github-releases",
+    "package": "yannh/kubeconform",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "0.7.0",
+    "url": "https://github.com/yannh/kubeconform/releases/download/v{v}/kubeconform-linux-{a}.tar.gz",
+    "archVar": "ARCH",
+    "arch": {
+      "amd64": "amd64",
+      "arm64": "arm64"
+    },
+    "sums": "https://github.com/yannh/kubeconform/releases/download/v{v}/CHECKSUMS",
+    "sha256": {
+      "amd64": "c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3",
+      "arm64": "cc907ccf9e3c34523f0f32b69745265e0a6908ca85b92f41931d4537860eb83c"
+    }
+  },
+  "SHELLCHECK": {
+    "file": ".github/actions/shellcheck/action.yml",
+    "datasource": "github-releases",
+    "package": "koalaman/shellcheck",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "0.11.0",
+    "url": "https://github.com/koalaman/shellcheck/releases/download/v{v}/shellcheck-v{v}.linux.{a}.tar.xz",
+    "archVar": "ARCH",
+    "arch": {
+      "amd64": "x86_64",
+      "arm64": "aarch64"
+    },
+    "sha256": {
+      "amd64": "8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198",
+      "arm64": "12b331c1d2db6b9eb13cfca64306b1b157a86eb69db83023e261eaa7e7c14588"
+    }
+  },
+  "LYCHEE": {
+    "file": ".github/actions/check-docs-external-links/action.yml",
+    "datasource": "github-releases",
+    "package": "lycheeverse/lychee",
+    "extractVersion": "^lychee-v(?<version>.+)$",
+    "version": "0.24.2",
+    "url": "https://github.com/lycheeverse/lychee/releases/download/lychee-v{v}/lychee-{a}-unknown-linux-gnu.tar.gz",
+    "archVar": "ARCH",
+    "arch": {
+      "amd64": "x86_64",
+      "arm64": "aarch64"
+    },
+    "sums": "https://github.com/lycheeverse/lychee/releases/download/lychee-v{v}/lychee-{a}-unknown-linux-gnu.tar.gz.sha256",
+    "sha256": {
+      "amd64": "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a",
+      "arm64": "91a7bd65685da41b90ccb9bc867a3d649a7818042dae04ff405e55a25bddee4c"
+    }
+  },
+  "GITLEAKS": {
+    "file": ".github/actions/secret-scan/action.yml",
+    "datasource": "github-releases",
+    "package": "gitleaks/gitleaks",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "8.30.1",
+    "url": "https://github.com/gitleaks/gitleaks/releases/download/v{v}/gitleaks_{v}_linux_{a}.tar.gz",
+    "archVar": "ARCH",
+    "arch": {
+      "amd64": "x64",
+      "arm64": "arm64"
+    },
+    "sums": "https://github.com/gitleaks/gitleaks/releases/download/v{v}/gitleaks_{v}_checksums.txt",
+    "sha256": {
+      "amd64": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
+      "arm64": "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"
+    }
+  },
+  "CLAUDE_CODE": {
+    "file": ".github/actions/setup-claude-code/action.yml",
+    "datasource": "npm",
+    "package": "@anthropic-ai/claude-code",
+    "version": "2.1.308",
+    "url": "https://downloads.claude.ai/claude-code-releases/{v}/{a}/claude",
+    "archVar": "PLATFORM",
+    "arch": {
+      "amd64": "linux-x64",
+      "arm64": "linux-arm64"
+    },
+    "releaseManifest": "https://downloads.claude.ai/claude-code-releases/{v}/manifest.json",
+    "sha256": {
+      "amd64": "356733f185fa988e6bf3aa9a555269fdd167982a2e2a80d3c8a78037bb92ad58",
+      "arm64": "fdd22e6cbb734d580f5664c48df4294eeec850218ff07f186f9af30426396ee1"
+    }
+  },
+  "BATS": {
+    "file": ".github/actions/bats/action.yml",
+    "datasource": "github-tags",
+    "package": "bats-core/bats-core",
+    "version": "v1.11.0",
+    "git": "https://github.com/bats-core/bats-core.git",
+    "commit": "5da66876b8b619235aee1eb3e54954eaca88059b"
+  }
+}

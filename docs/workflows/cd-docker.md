@@ -19,48 +19,52 @@ jobs:
 
 ## Inputs
 
-| Input        | Type    | Default                   | Description                                                  |
-| ------------ | ------- | ------------------------- | ------------------------------------------------------------ |
-| `image-name` | string  | `''`                      | Image name (e.g. `my-api`). Defaults to the repository name. |
-| `context`    | string  | `'.'`                     | Docker build context (e.g. `apps/api`)                       |
-| `dockerfile` | string  | `Dockerfile`              | Path to the Dockerfile, relative to `context`                |
-| `platforms`  | string  | `linux/amd64,linux/arm64` | Comma-separated target platforms                             |
-| `push`       | boolean | `true`                    | Push image to GHCR                                           |
-| `target`     | string  | `''`                      | Build target stage (e.g. `dev`, `prod`)                      |
-| `tag-latest` | boolean | `false`                   | Also tag the image as `:latest` on the default branch        |
-| `version`    | string  | `''`                      | Explicit version tag to apply (e.g. `v1.2.3`). When set, adds a `type=raw` tag with this value. |
-| `build-args` | string  | `''`                      | List of Docker build-args (one per line, `KEY=VALUE`). **Never secrets** — see below. |
-| `provenance` | string  | `mode=max`                | SLSA provenance attached by BuildKit (`mode=max`, `mode=min`, `false`) |
-| `sbom`       | boolean | `true`                    | Attach an SBOM attestation to the image                      |
-| `attest`     | boolean | `true`                    | Sign a GitHub artifact attestation for the pushed image (only when `push`) |
-| `timeout-minutes` | number | `60`                   | Minutes before the build job is cancelled (GitHub's default is 360) — raise it for a slow emulated build |
+| Input             | Type    | Default                   | Description                                                                                              |
+| ----------------- | ------- | ------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `image-name`      | string  | `''`                      | Image name (e.g. `my-api`). Defaults to the repository name.                                             |
+| `context`         | string  | `'.'`                     | Docker build context (e.g. `apps/api`)                                                                   |
+| `dockerfile`      | string  | `Dockerfile`              | Path to the Dockerfile, relative to `context`                                                            |
+| `platforms`       | string  | `linux/amd64,linux/arm64` | Comma-separated target platforms                                                                         |
+| `push`            | boolean | `true`                    | Push image to GHCR                                                                                       |
+| `target`          | string  | `''`                      | Build target stage (e.g. `dev`, `prod`)                                                                  |
+| `tag-latest`      | boolean | `false`                   | Also tag the image as `:latest` on the default branch                                                    |
+| `version`         | string  | `''`                      | Explicit version tag to apply (e.g. `v1.2.3`), plus its `major.minor` alias for a final release          |
+| `build-args`      | string  | `''`                      | List of Docker build-args (one per line, `KEY=VALUE`). **Never secrets** — see below.                    |
+| `provenance`      | string  | `mode=max`                | SLSA provenance attached by BuildKit (`mode=max`, `mode=min`, `false`)                                   |
+| `sbom`            | boolean | `true`                    | Attach an SBOM attestation to the image                                                                  |
+| `attest`          | boolean | `true`                    | Sign a GitHub artifact attestation for the pushed image (only when `push`)                               |
+| `timeout-minutes` | number  | `60`                      | Minutes before the build job is cancelled (GitHub's default is 360) — raise it for a slow emulated build |
 
 ## Secrets
 
-| Secret          | Required | Description |
-| --------------- | -------- | ----------- |
+| Secret          | Required | Description                                                                                              |
+| --------------- | -------- | -------------------------------------------------------------------------------------------------------- |
 | `BUILD_SECRETS` | No       | BuildKit secrets, one `id=value` per line, read in the Dockerfile with `RUN --mount=type=secret,id=<id>` |
 
 ## Outputs
 
-| Output   | Description                        |
-| -------- | ---------------------------------- |
+| Output   | Description                                           |
+| -------- | ----------------------------------------------------- |
 | `image`  | Image tag(s) applied to the build (newline-separated) |
-| `digest` | Image digest                       |
+| `digest` | Image digest                                          |
 
 ## Tags applied
 
-| Event                               | Tag                            |
-| ----------------------------------- | ------------------------------ |
-| Branch push                         | `<branch-name>`                |
-| Pull request                        | `pr-<number>`                  |
-| Semver tag                          | `<version>`, `<major>.<minor>` |
-| Any commit                          | `sha-<short-sha>`              |
-| Default branch + `tag-latest: true` | `latest`                       |
+The [`image-tags`](../actions/image-tags.md) action computes them, with the
+same rules as [`cd-buildkit`](./cd-buildkit.md):
+
+| Event                               | Tag                                                              |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| Branch push                         | `<branch-name>`                                                  |
+| Pull request                        | `pr-<number>`                                                    |
+| Release tag push (`v1.2.3`)         | `<version>`, `<major>.<minor>` (a pre-release: `<version>` only) |
+| `version` set                       | the version, `<major>.<minor>` for a final release               |
+| Any commit                          | `sha-<short-sha>`                                                |
+| Default branch + `tag-latest: true` | `latest`                                                         |
 
 ## Notes
 
-- Uses `docker/metadata-action` for automatic tag and label generation.
+- `docker/metadata-action` adds the OCI labels; the tags come from `image-tags`.
 - Build cache is scoped per `context` using GitHub Actions cache (`type=gha`).
 - QEMU is registered only when `platforms` names something other than `linux/amd64`, the runner's own architecture. An `arm64` image built this way runs under emulation, several times slower than a native build: for a large image, build each platform on its own runner (GitHub's `ubuntu-26.04-arm` label for the arm64 half) and merge the manifests, as Docker documents, or drop `linux/arm64` from `platforms` when nothing deploys on it.
 - `timeout-minutes` cuts off a build stuck on a pull or an emulated step: without it the job holds the runner (and bills the minutes) for up to 6 hours.
