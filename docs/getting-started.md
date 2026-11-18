@@ -355,6 +355,7 @@ steps:
 | [`check-vitepress-md`](actions/check-vitepress-md.md)               | Validate VitePress markdown                                                                      |
 | [`notify-deployment`](actions/notify-deployment.md)                 | Post a deployment status notification                                                            |
 | [`prek-home`](actions/prek-home.md)                                 | Keep prek's hook environments in a directory on the runner's node, one store per config          |
+| [`check-bot-commits`](actions/check-bot-commits.md)                 | Fail a pull request that brings commits of bots outside an allow-list                            |
 | [`cleanup-runs`](actions/cleanup-runs.md)                           | Delete the old workflow runs of the repository, keeping the recent ones                          |
 | [`cleanup-deployments`](actions/cleanup-deployments.md)             | Delete the old deployment records of the repository, keeping the recent ones of each environment |
 | [`propagate-release`](actions/propagate-release.md)                 | Open a pull request in each consumer repository that moves its pins to a release                 |
