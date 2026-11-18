@@ -24,12 +24,12 @@ on:
         required: false
         default: true
       actionlint-paths:
-        description: Space-separated paths to validate with actionlint
+        description: Space-separated paths (files, directories, globs) to validate with actionlint; an entry that matches nothing fails
         type: string
         required: false
         default: .github/workflows/
       actionlint-flags:
-        description: Extra flags passed to actionlint (e.g. -ignore 'SC2086')
+        description: Extra flags passed to actionlint, split like a shell command line (e.g. -ignore 'SC2086')
         type: string
         required: false
         default: ''
@@ -132,11 +132,11 @@ on:
         type: boolean
         default: true
       actionlint-paths:
-        description: Space-separated paths to validate with actionlint
+        description: Space-separated paths (files, directories, globs) to validate with actionlint; an entry that matches nothing fails
         type: string
         default: .github/workflows/
       actionlint-flags:
-        description: Extra flags passed to actionlint (e.g. -ignore 'SC2086')
+        description: Extra flags passed to actionlint, split like a shell command line (e.g. -ignore 'SC2086')
         type: string
         default: ''
       run-bats:
