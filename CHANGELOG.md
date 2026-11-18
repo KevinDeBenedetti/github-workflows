@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.49.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.48.0...v0.49.0) (2026-11-18)
+
+
+### Features
+
+* **image-tags:** compute image name, tags and cache ref once for cd-buildkit and cd-docker ([73c8791](https://github.com/KevinDeBenedetti/github-workflows/commit/73c879154d82499d023b8ec92c00606e596599cb))
+
 ## [0.48.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.47.0...v0.48.0) (2026-11-16)
 
 
