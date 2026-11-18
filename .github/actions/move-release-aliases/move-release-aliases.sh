@@ -5,7 +5,9 @@
 # Before 1.0 (PRE_MAJOR_ALIAS): semver gives no stability promise inside 0.x
 # and release-please (with bump-minor-pre-major) ships breaking changes as
 # minor bumps, so a moving `v0` carries callers across them. `minor` moves only
-# v0.<minor> (v0.24.3 → v0.24); `major` only v0; `both` moves both.
+# v0.<minor> (v0.24.3 → v0.24); `major` only v0; `both` moves both. A
+# component tag follows the same rule under its prefix (my-lib-v0.3.1 →
+# my-lib-v0, my-lib-v0.3).
 #
 # Why this is more than `git tag -f` and a forced push: pushing a tag is a
 # compare-and-swap against the value the *local* clone believes the remote
@@ -53,6 +55,7 @@ case "$CLASSIFY_ONLY" in
 esac
 [[ "$TAG" =~ $release_re ]] ||
   fail "unusable release tag '$TAG' — expected vMAJOR.MINOR.PATCH, optionally with a -pre-release suffix"
+component="${BASH_REMATCH[1]}" # my-lib- of my-lib-v1.2.3, empty for v1.2.3
 prerelease=false
 [[ -n "${BASH_REMATCH[2]}" ]] && prerelease=true
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -67,15 +70,18 @@ fi
 : "${GIT_USER_NAME:?GIT_USER_NAME is required}"
 : "${GIT_USER_EMAIL:?GIT_USER_EMAIL is required}"
 
-major="${TAG%%.*}" # v1.2.3 → v1 (a component tag my-lib-v1.2.3 → my-lib-v1)
+# A component tag gets the same aliases under its own prefix:
+# my-lib-v1.2.3 → my-lib-v1, my-lib-v0.3.1 → my-lib-v0 and my-lib-v0.3.
+version="${TAG#"$component"}"
+major="${component}${version%%.*}" # v1.2.3 → v1
 aliases=("$major")
-if [[ "$major" == v0 ]]; then
-  minor="${TAG#v0.}"
-  minor_alias="v0.${minor%%.*}" # v0.24.3 → v0.24
+if [[ "${version%%.*}" == v0 ]]; then
+  minor="${version#v0.}"
+  minor_alias="${component}v0.${minor%%.*}" # v0.24.3 → v0.24
   case "$PRE_MAJOR_ALIAS" in
-    both) aliases=(v0 "$minor_alias") ;;
+    both) aliases=("$major" "$minor_alias") ;;
     minor) aliases=("$minor_alias") ;;
-    major) aliases=(v0) ;;
+    major) aliases=("$major") ;;
     *) fail "unsupported pre-major-alias '$PRE_MAJOR_ALIAS' (expected both, minor or major)" ;;
   esac
 fi

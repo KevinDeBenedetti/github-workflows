@@ -13,13 +13,28 @@
 # A version that is not [v]X.Y.Z[-pre] is tagged as given, with no X.Y.
 # tests/fixtures/release-tags.tsv holds the tags this rule is tested against.
 #
+# OCI labels (org.opencontainers.image.*), the keys docker/metadata-action
+# sets, so an image carries the same labels whichever path built it:
+#   title        the image name, as given
+#   description  the repository's description (left out when empty)
+#   url, source  the repository's page
+#   version      the most specific tag: the explicit version, the release
+#                tag's X.Y.Z, pr-<number>, the branch, else sha-<7>
+#   created      the build time (UTC)
+#   revision     the commit
+#   licenses     the repository's SPDX licence (left out when empty or
+#                NOASSERTION)
+# A value is one line: control characters become spaces.
+#
 # Environment: IMAGE_NAME (default: REPO_NAME), REPO_NAME, OWNER, SHA,
 # REF_NAME, REF_TYPE, EVENT, PR_NUMBER, DEFAULT_BRANCH, VERSION, TAG_LATEST,
-# REGISTRY (default ghcr.io), GITHUB_OUTPUT.
+# REGISTRY (default ghcr.io), SERVER_URL, REPOSITORY (owner/name),
+# DESCRIPTION, LICENSE, GITHUB_OUTPUT.
 #
 # Outputs: image (registry/owner/name, lowercase), tags (space-separated),
 # names (image:tag, comma-separated), raw-tags (one `type=raw,value=` line per
-# tag, for metadata-action), cache (<image>-cache:buildcache).
+# tag, for metadata-action), cache (<image>-cache:buildcache), labels (one
+# KEY=VALUE line per label).
 set -euo pipefail
 
 # The tag of the layer cache, which cleanup-ghcr.yml keeps.
@@ -57,19 +72,28 @@ add_version() {
   fi
 }
 
+# version: the label of the most specific tag, each rule below overriding
+# the one before.
 add_tag "sha-${SHA:0:7}"
+version="sha-${SHA:0:7}"
 if [[ "${EVENT:-}" == push && "${REF_TYPE:-}" == branch ]]; then
   branch="$(printf '%s' "${REF_NAME:-}" | tr -c 'A-Za-z0-9_.-' '-' | sed 's/^[.-]*//' | cut -c1-128)"
-  [[ -z "$branch" ]] || add_tag "$branch"
+  if [[ -n "$branch" ]]; then
+    add_tag "$branch"
+    version="$branch"
+  fi
 fi
 if [[ "${EVENT:-}" == pull_request && -n "${PR_NUMBER:-}" ]]; then
   add_tag "pr-${PR_NUMBER}"
+  version="pr-${PR_NUMBER}"
 fi
 if [[ "${EVENT:-}" == push && "${REF_TYPE:-}" == tag && "${REF_NAME:-}" =~ $tag_re ]]; then
   add_version "${REF_NAME#v}"
+  version="${REF_NAME#v}"
 fi
 if [[ -n "${VERSION:-}" ]]; then
   add_version "$VERSION"
+  version="$VERSION"
 fi
 if [[ "${TAG_LATEST:-false}" == true && -n "${REF_NAME:-}" && "${REF_NAME:-}" == "${DEFAULT_BRANCH:-}" ]]; then
   add_tag latest
@@ -82,6 +106,22 @@ for tag in "${tags[@]}"; do
   raw+="type=raw,value=${tag}"$'\n'
 done
 
+# one_line TEXT: TEXT with its control characters turned into spaces.
+one_line() { printf '%s' "$1" | tr '\000-\037\177' ' '; }
+repo_url="${SERVER_URL:-https://github.com}/${REPOSITORY:-${OWNER}/${REPO_NAME:-$name}}"
+labels="org.opencontainers.image.title=$(one_line "$name")"$'\n'
+if [[ -n "${DESCRIPTION:-}" ]]; then
+  labels+="org.opencontainers.image.description=$(one_line "$DESCRIPTION")"$'\n'
+fi
+labels+="org.opencontainers.image.url=$(one_line "$repo_url")"$'\n'
+labels+="org.opencontainers.image.source=$(one_line "$repo_url")"$'\n'
+labels+="org.opencontainers.image.version=$(one_line "$version")"$'\n'
+labels+="org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"$'\n'
+labels+="org.opencontainers.image.revision=${SHA}"$'\n'
+if [[ -n "${LICENSE:-}" && "${LICENSE}" != NOASSERTION ]]; then
+  labels+="org.opencontainers.image.licenses=$(one_line "$LICENSE")"$'\n'
+fi
+
 echo "Image: ${image}"
 echo "Tags:  ${tags[*]}"
 if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
@@ -93,5 +133,9 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "raw-tags<<RAW_TAGS_EOF"
     printf '%s' "$raw"
     echo "RAW_TAGS_EOF"
+    # Every line starts with org.opencontainers.: none can be the delimiter.
+    echo "labels<<LABELS_EOF"
+    printf '%s' "$labels"
+    echo "LABELS_EOF"
   } >> "$GITHUB_OUTPUT"
 fi

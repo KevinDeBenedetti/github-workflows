@@ -100,6 +100,36 @@ setup() {
   [ "$(remote_alias my-lib-v2)" = "$(remote_tag my-lib-v2.0.1)" ]
 }
 
+@test "a component tag before 1.0 follows pre-major-alias like a plain one" {
+  release my-lib-v0.3.1
+  TAG=my-lib-v0.3.1 run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(remote_alias my-lib-v0)" = "$(remote_tag my-lib-v0.3.1)" ]
+  [ "$(remote_alias my-lib-v0.3)" = "$(remote_tag my-lib-v0.3.1)" ]
+
+  release my-lib-v0.4.0
+  TAG=my-lib-v0.4.0 PRE_MAJOR_ALIAS=minor run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(remote_alias my-lib-v0.4)" = "$(remote_tag my-lib-v0.4.0)" ]
+  [ "$(remote_alias my-lib-v0)" = "$(remote_tag my-lib-v0.3.1)" ]
+
+  # A component whose name holds a v and a dash keeps its whole prefix.
+  release dev-v2-tools-v0.5.0
+  TAG=dev-v2-tools-v0.5.0 PRE_MAJOR_ALIAS=major run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(remote_alias dev-v2-tools-v0)" = "$(remote_tag dev-v2-tools-v0.5.0)" ]
+  run remote_alias dev-v2-tools-v0.5
+  [ "$status" -ne 0 ]
+  # Plain v0 aliases are not touched by a component's release.
+  run remote_alias v0
+  [ "$status" -ne 0 ]
+
+  release my-lib-v0.6.0
+  TAG=my-lib-v0.6.0 PRE_MAJOR_ALIAS=all run bash "$SCRIPT"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"::error::unsupported pre-major-alias 'all'"* ]]
+}
+
 @test "fails on an unusable tag, a tag missing from the remote, or a bad pre-major-alias" {
   TAG='' run bash "$SCRIPT"
   [ "$status" -eq 1 ]

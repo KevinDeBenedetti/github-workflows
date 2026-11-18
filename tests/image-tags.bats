@@ -9,12 +9,16 @@ SHA=0123456789abcdef0123456789abcdef01234567
 setup() {
   cd "$BATS_TEST_TMPDIR"
   export OWNER=Owner REPO_NAME=App SHA DEFAULT_BRANCH=main GITHUB_OUTPUT="$BATS_TEST_TMPDIR/out"
-  unset IMAGE_NAME VERSION TAG_LATEST REGISTRY REF_NAME REF_TYPE EVENT PR_NUMBER
+  export SERVER_URL=https://github.test REPOSITORY=Owner/App
+  unset IMAGE_NAME VERSION TAG_LATEST REGISTRY REF_NAME REF_TYPE EVENT PR_NUMBER DESCRIPTION LICENSE
   : > "$GITHUB_OUTPUT"
 }
 
 # out KEY: the single-line output KEY.
 out() { sed -n "s/^$1=//p" "$GITHUB_OUTPUT"; }
+
+# labels: the labels output, one KEY=VALUE per line, without the created one.
+labels() { sed -n '/^labels<<LABELS_EOF$/,/^LABELS_EOF$/p' "$GITHUB_OUTPUT" | sed '1d;$d' | grep -v '^org.opencontainers.image.created='; }
 
 @test "a push to a branch: sha, sanitised branch, lowercase image, cache" {
   EVENT=push REF_TYPE=branch REF_NAME=feat/New_thing run bash "$SCRIPT"
@@ -58,6 +62,45 @@ out() { sed -n "s/^$1=//p" "$GITHUB_OUTPUT"; }
     esac
     [ "$(out tags)" = "$expected" ] || { echo "$tag ($kind): $(out tags)"; return 1; }
   done < <(grep -v '^#' "$BATS_TEST_DIRNAME/fixtures/release-tags.tsv")
+}
+
+@test "the OCI labels: one set for every build path, the version its most specific tag" {
+  EVENT=push REF_TYPE=tag REF_NAME=v1.4.2 DESCRIPTION='An app' LICENSE=MIT run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(labels)" = "$(printf '%s\n' \
+    org.opencontainers.image.title=App \
+    org.opencontainers.image.description='An app' \
+    org.opencontainers.image.url=https://github.test/Owner/App \
+    org.opencontainers.image.source=https://github.test/Owner/App \
+    org.opencontainers.image.version=1.4.2 \
+    org.opencontainers.image.revision=$SHA \
+    org.opencontainers.image.licenses=MIT)" ]
+  grep -qE '^org\.opencontainers\.image\.created=[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$' "$GITHUB_OUTPUT"
+
+  # The version follows the tags: explicit version, pull request, branch, commit.
+  local case expected
+  for case in "VERSION=v2.0.0 EVENT=push REF_TYPE=branch REF_NAME=main|v2.0.0" \
+    "EVENT=pull_request PR_NUMBER=5 REF_NAME=5/merge|pr-5" \
+    "EVENT=push REF_TYPE=branch REF_NAME=feat/x|feat-x" \
+    "EVENT=workflow_dispatch|sha-0123456"; do
+    expected="${case#*|}"
+    : > "$GITHUB_OUTPUT"
+    env ${case%|*} bash "$SCRIPT" > /dev/null
+    labels | grep -qx "org.opencontainers.image.version=$expected" || { echo "${case%|*}: $(labels)"; return 1; }
+  done
+}
+
+@test "the OCI labels leave out an empty description or an unknown licence, and stay one line each" {
+  : > "$GITHUB_OUTPUT"
+  LICENSE=NOASSERTION DESCRIPTION='' run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  refute_label() { ! labels | grep -q "^org.opencontainers.image.$1="; }
+  refute_label description
+  refute_label licenses
+  : > "$GITHUB_OUTPUT"
+  DESCRIPTION=$'two\nlines\tand LABELS_EOF' run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  labels | grep -qx 'org.opencontainers.image.description=two lines and LABELS_EOF'
 }
 
 @test "fails without an owner, a commit or a name" {

@@ -20,23 +20,23 @@ jobs:
 
 ## Inputs
 
-| Input                 | Type    | Default | Description                                                                      |
-| --------------------- | ------- | ------- | -------------------------------------------------------------------------------- |
-| `node-version`        | string  | `'24'`  | Node.js version                                                                  |
-| `working-directory`   | string  | `'.'`   | Path to the app root (e.g. `apps/web`)                                           |
-| `package-manager`     | string  | `auto`  | `pnpm` \| `bun` \| `npm` \| `auto` — auto-detects from lockfile                  |
-| `framework`           | string  | `auto`  | `next` \| `nuxt` \| `vite` \| `auto` — picks the build output path to upload and turns on the Next.js build cache |
-| `run-lint`            | boolean | `true`  | Run `lint` script                                                                |
-| `run-typecheck`       | boolean | `true`  | Run `typecheck` script                                                           |
-| `run-test`            | boolean | `true`  | Run `test` script                                                                |
-| `test-args`           | string  | `--passWithNoTests` | Extra arguments for the `test` script (pnpm/npm) — set `''` for runners rejecting unknown flags |
-| `run-build`           | boolean | `true`  | Run `build` script                                                               |
-| `upload-build`        | boolean | `false` | Upload build output as a workflow artifact                                       |
-| `build-artifact-name` | string  | `build` | Name of the uploaded artifact                                                    |
-| `run-link-check`      | boolean | `false` | Check markdown files for broken relative links (offline, no HTTP requests)       |
-| `link-check-paths`    | string  | `docs/` | Space-separated paths or directories of markdown files to check                  |
-| `runner`              | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set)  |
-| `timeout-minutes`     | number  | `30`    | Minutes before the job is cancelled (GitHub's default is 360) — raise it for a slow build |
+| Input                 | Type    | Default             | Description                                                                                                       |
+| --------------------- | ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `node-version`        | string  | `'24'`              | Node.js version                                                                                                   |
+| `working-directory`   | string  | `'.'`               | Path to the app root (e.g. `apps/web`)                                                                            |
+| `package-manager`     | string  | `auto`              | `pnpm` \| `bun` \| `npm` \| `auto` — auto-detects from lockfile                                                   |
+| `framework`           | string  | `auto`              | `next` \| `nuxt` \| `vite` \| `auto` — picks the build output path to upload and turns on the Next.js build cache |
+| `run-lint`            | boolean | `true`              | Run `lint` script                                                                                                 |
+| `run-typecheck`       | boolean | `true`              | Run `typecheck` script                                                                                            |
+| `run-test`            | boolean | `true`              | Run `test` script                                                                                                 |
+| `test-args`           | string  | `--passWithNoTests` | Extra arguments for the `test` script (pnpm/npm/bun) — set `''` for runners rejecting unknown flags               |
+| `run-build`           | boolean | `true`              | Run `build` script                                                                                                |
+| `upload-build`        | boolean | `false`             | Upload build output as a workflow artifact                                                                        |
+| `build-artifact-name` | string  | `build`             | Name of the uploaded artifact                                                                                     |
+| `run-link-check`      | boolean | `false`             | Check markdown files for broken relative links (offline, no HTTP requests)                                        |
+| `link-check-paths`    | string  | `docs/`             | Space-separated paths or directories of markdown files to check                                                   |
+| `runner`              | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set)       |
+| `timeout-minutes`     | number  | `30`                | Minutes before the job is cancelled (GitHub's default is 360) — raise it for a slow build                         |
 
 ## Secrets
 
@@ -50,7 +50,7 @@ jobs:
 2. Setup Node.js + package manager (via [`setup-node`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/setup-node))
 3. Lint
 4. Typecheck
-5. Test (with `test-args`, default `--passWithNoTests`, for pnpm/npm)
+5. Test (with `test-args`, default `--passWithNoTests`)
 6. Build
 7. Upload artifact *(only when `upload-build: true`)*
 8. Link check *(only when `run-link-check: true`)*; Markdown without any link passes
