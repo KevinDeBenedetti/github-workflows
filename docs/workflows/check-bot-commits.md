@@ -1,6 +1,12 @@
-# `check-bot-commits` workflow
+---
+title: Check Bot Commits
+---
 
-Guards pull requests against commits authored by bot accounts. Any commit whose author login ends with `[bot]` (GitHub's convention) fails the check unless that bot is explicitly allow-listed.
+# Check Bot Commits
+
+Guards pull requests against commits authored by bot accounts. A bot commit fails the
+check unless the bot's account login is allow-listed. The job is the
+[`check-bot-commits`](../actions/check-bot-commits.md) action, whose page holds the rules.
 
 ## Usage
 
@@ -39,21 +45,24 @@ jobs:
 
 ## Inputs
 
-| Input | Type | Default | Description |
-|---|---|---|---|
-| `allowed-bots` | string | `'[]'` | JSON array of bot logins whose commits are permitted |
-| `fail-on-bot-commits` | boolean | `true` | Fail the job when bot commits are found (false = warning only) |
+| Input                 | Type    | Default            | Description                                                                                                 |
+| --------------------- | ------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `allowed-bots`        | string  | `'[]'`             | JSON array of bot account logins whose commits are permitted                                                |
+| `fail-on-bot-commits` | boolean | `true`             | Fail the job when bot commits are found (false = warning only)                                              |
+| `runner`              | string  | `'"ubuntu-26.04"'` | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
 
 ## Behaviour
 
-The workflow:
-1. Lists all commits in the PR via the GitHub API (paginated; an API error fails the job instead of passing unchecked)
-2. Checks each commit's author login for the `[bot]` suffix
-3. Passes if no bot authors are found (or all found bots are in `allowed-bots`)
-4. Fails (or warns) otherwise, printing each unauthorised bot author
+1. Lists every commit of the pull request through the GitHub API
+2. Flags a commit as a bot's by its account type, its login, its no-reply e-mail, or, for a commit linked to no account, its author name
+3. Passes when no bot commit is found, or when each one is linked to an account in `allowed-bots`
+4. Fails (or warns) otherwise, listing each blocked commit in the log and the job summary
 
 ## Notes
 
-- The check is skipped on non-PR events (push, workflow_dispatch, etc.).
+- The job runs on `pull_request` and `pull_request_target` events only.
+- It fails closed: an API error, or a pull request with more than the 250 commits GitHub lists, fails the job even with `fail-on-bot-commits: false`.
+- `allowed-bots` matches account logins only: a commit whose author name is `renovate[bot]` but that is linked to no account stays blocked.
 - To allow a bot's commits, add it to `allowed-bots` — e.g. `dependabot[bot]` or `github-actions[bot]` for release-please PRs.
 - Bot commits that have already landed on the default branch are not checked — this only covers incoming PR commits.
+- Needs runner 2.336.0 or newer: the workflow calls the action with `uses: $/…`.

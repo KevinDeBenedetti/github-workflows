@@ -1,0 +1,48 @@
+name: Check bot commits
+description: >
+  Fail a pull request that brings commits authored by a bot account, unless
+  the bot's account login is in allowed-bots. Fails closed: an API error, or a
+  pull request with more commits than GitHub lists (250), fails the step. On
+  any other event, nothing is checked. Runs on any Linux runner with bash,
+  curl and jq: no GitHub CLI, no checkout. The rules are at the top of
+  check-bot-commits.sh.
+
+inputs:
+  allowed-bots:
+    description: >
+      JSON array of bot account logins whose commits are permitted
+      (e.g. '["dependabot[bot]","renovate[bot]"]')
+    required: false
+    default: '[]'
+  fail-on-bot-commits:
+    description: "'true' fails on a bot commit; 'false' only warns"
+    required: false
+    default: 'true'
+  github-token:
+    description: Token with pull-requests read
+    required: false
+    default: ${{ github.token }}
+
+outputs:
+  checked:
+    description: Commits checked
+    value: ${{ steps.check.outputs.checked }}
+  blocked:
+    description: Bot commits whose account is not in allowed-bots
+    value: ${{ steps.check.outputs.blocked }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check the commit authors
+      id: check
+      shell: bash
+      # Inputs and event fields go through env, never interpolated into the
+      # script body.
+      env:
+        ALLOWED_BOTS: ${{ inputs.allowed-bots }}
+        FAIL_ON_BOT_COMMITS: ${{ inputs.fail-on-bot-commits }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+        PR_COMMITS: ${{ github.event.pull_request.commits }}
+      run: bash "$GITHUB_ACTION_PATH/check-bot-commits.sh"
