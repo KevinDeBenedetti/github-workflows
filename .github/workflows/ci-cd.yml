@@ -134,6 +134,16 @@ jobs:
         with:
           apps-directory: .github/actions
 
+      # No workflow of this repository runs kubeconform: installed here so
+      # that its entry of install-tool's tools.json is proven like the others.
+      - name: kubeconform install (local action)
+        uses: ./.github/actions/install-tool
+        with:
+          tool: kubeconform
+
+      - name: kubeconform runs
+        run: kubeconform -v
+
       # The pinned Claude Code binary: a Renovate PR that bumps its version
       # must prove that the pinned SHA-256 values were refreshed with it.
       - name: setup-claude-code (local action)
@@ -218,11 +228,10 @@ jobs:
 
   # ── CI — Pinned tool checksums ───────────────────────────────────────────────
   # The SHA-256 pinned next to each downloaded tool must match its release
-  # asset: a version bump (Renovate) with a stale checksum would pass here, as
-  # not every tool is executed by this CI, and fail in the callers. Every asset
-  # is downloaded again, so the check runs only when .github/tools.json, a file
-  # holding a pin, the script or this workflow changed, and on a run with no
-  # change base.
+  # asset, for both architectures: the installs of this CI prove amd64 only.
+  # Every asset is downloaded again, so the check runs only when the
+  # install-tool action's tools.json, the script or this workflow changed, and
+  # on a run with no change base.
   ci-checksums:
     name: CI — Tool checksums
     runs-on: ubuntu-26.04

@@ -28,31 +28,12 @@ inputs:
 runs:
   using: composite
   steps:
+    # Pinned in ../install-tool/tools.json and checked against its SHA-256
+    # before it is installed.
     - name: Install kubeconform
-      shell: bash
-      run: | # zizmor: ignore[github-env] -- only appends a $RUNNER_TEMP tool dir to GITHUB_PATH
-        # Copy of .github/tools.json, where Renovate bumps it: scripts/update-tool-checksums.py
-        # writes the version and its pins here, and CI fails while they differ.
-        KUBECONFORM_VERSION="0.7.0"
-        # SHA-256 of the release asset per architecture, for the version above.
-        # Refresh after a version bump: scripts/update-tool-checksums.py
-        KUBECONFORM_SHA256_amd64="c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3"
-        KUBECONFORM_SHA256_arm64="cc907ccf9e3c34523f0f32b69745265e0a6908ca85b92f41931d4537860eb83c"
-        case "$(uname -m)" in
-          x86_64)        ARCH=amd64; KEY=amd64 ;;
-          aarch64|arm64) ARCH=arm64; KEY=arm64 ;;
-          *) echo "::error::unsupported arch: $(uname -m)"; exit 1 ;;
-        esac
-        INSTALL_DIR="$RUNNER_TEMP/kubeconform"
-        mkdir -p "$INSTALL_DIR"
-        curl -sSfL --retry 5 --retry-delay 5 --retry-all-errors \
-          -o "$RUNNER_TEMP/kubeconform.tar.gz" \
-          "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-${ARCH}.tar.gz"
-        if [ "$KEY" = amd64 ]; then WANT="$KUBECONFORM_SHA256_amd64"; else WANT="$KUBECONFORM_SHA256_arm64"; fi
-        echo "$WANT  $RUNNER_TEMP/kubeconform.tar.gz" | sha256sum --check --strict --quiet - \
-          || { echo "::error::kubeconform ${KUBECONFORM_VERSION} ($(uname -m)) does not match its pinned SHA-256 — after a version bump, run scripts/update-tool-checksums.py"; exit 1; }
-        tar xz -C "$INSTALL_DIR" kubeconform < "$RUNNER_TEMP/kubeconform.tar.gz"
-        echo "$INSTALL_DIR" >> "$GITHUB_PATH"
+      uses: $/.github/actions/install-tool
+      with:
+        tool: kubeconform
 
     - name: Validate Kubernetes manifests
       shell: bash

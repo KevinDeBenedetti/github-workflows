@@ -348,6 +348,7 @@ steps:
 | [`kubeconform`](actions/kubeconform.md)                             | Validate Kubernetes manifests                                                                    |
 | [`check-commit-msg`](actions/check-commit-msg.md)                   | Conventional Commits on commit messages (CI + commit-msg hook)                                   |
 | [`setup-claude-code`](actions/setup-claude-code.md)                 | Install the Claude Code CLI, pinned and checked against a SHA-256                                |
+| [`install-tool`](actions/install-tool.md)                           | Install one of the tools the actions download, pinned and checked (internal)                     |
 | [`pr-description`](actions/pr-description.md)                       | Write the PR description with Claude Code into a managed block of the PR body                    |
 | [`check-docs-links`](actions/check-docs-links.md)                   | Check for broken links in docs                                                                   |
 | [`check-docs-external-links`](actions/check-docs-external-links.md) | Check the `http(s)` links of changed docs pages with lychee                                      |

@@ -72,8 +72,9 @@ in the log; the SARIF report holds their file and line.
 - Pass `base` from `change-base` **without** `fetch-base`: the scan walks the
   commits between the base and `HEAD`, which a fetched single commit does not
   provide. A `base` that is not in the clone fails the step.
-- Gitleaks is downloaded from its GitHub release and checked against a
-  SHA-256 pinned in `.github/tools.json` and copied into the action. After a
-  version bump, refresh both with `scripts/update-tool-checksums.py`.
+- Gitleaks is installed by [`install-tool`](install-tool.md): downloaded from
+  its GitHub release and checked against the SHA-256 pinned in that action's
+  `tools.json`. It needs `python3` on the runner, and runner 2.336.0 or newer
+  for the nested `uses: $/…` call.
 - Locally, with `gitleaks` on the `PATH`:
   `BASE=<sha> bash .github/actions/secret-scan/secret-scan.sh`.

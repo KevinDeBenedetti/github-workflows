@@ -25,7 +25,7 @@ steps:
 
 ## Steps
 
-1. Install a pinned Bats release from the upstream repository into `$RUNNER_TEMP` (no `sudo`, no npm)
+1. Install a pinned Bats release from the upstream repository into `$RUNNER_TEMP` (no `sudo`, no npm) with [`install-tool`](install-tool.md)
 2. Run `bats [--recursive] <tests-dir>`
 
 ## Notes

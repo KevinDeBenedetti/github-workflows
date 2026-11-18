@@ -65,14 +65,6 @@ files = "^(\\.github/workflows/.*\\.ya?ml|\\.github/actions/.*/action\\.ya?ml|ex
 pass_filenames = false
 
 [[repos.hooks]]
-id = "tool-manifest"
-name = "Downloaded tools hold the pins of .github/tools.json"
-language = "python"
-entry = "python scripts/update-tool-checksums.py --consistency"
-files = "^(\\.github/tools\\.json|\\.github/actions/.*/action\\.ya?ml|scripts/update-tool-checksums\\.py)$"
-pass_filenames = false
-
-[[repos.hooks]]
 id = "check-commit-msg"
 name = "Conventional Commits message"
 language = "script"
