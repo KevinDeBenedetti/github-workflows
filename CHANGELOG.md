@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.50.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.49.0...v0.50.0) (2026-11-18)
+
+
+### Features
+
+* **check-bot-commits:** add action to check for bot commits in pull requests ([d13cac7](https://github.com/KevinDeBenedetti/github-workflows/commit/d13cac78f008fbe5f33653738ed6f4380f4012bd))
+* **image-tags:** compute OCI labels once for every container build ([da484bf](https://github.com/KevinDeBenedetti/github-workflows/commit/da484bfd754a6bb61da57288f76697392c172b53))
+
+
+### Bug Fixes
+
+* **actionlint:** honour shell quoting in flags ([cb024ac](https://github.com/KevinDeBenedetti/github-workflows/commit/cb024acba6c6448c7ae480d788b7bf7d2af0f836))
+
 ## [0.49.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.48.0...v0.49.0) (2026-11-18)
 
 
