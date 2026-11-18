@@ -1,7 +1,7 @@
 name: Image tags
 description: >
-  Image name, tags and layer-cache reference of a container build, from the
-  event that triggered it: sha-<7>, the branch, pr-<number>, the release tag
+  Image name, tags, OCI labels and layer-cache reference of a container
+  build, from the event that triggered it: sha-<7>, the branch, pr-<number>, the release tag
   and an explicit version (with their X.Y alias), latest on the default
   branch. Shared by cd-buildkit.yml and cd-docker.yml; the rules are at the top
   of image-tags.sh. Needs bash: no checkout.
@@ -40,6 +40,9 @@ outputs:
   cache:
     description: Registry layer-cache reference, <image>-cache:buildcache
     value: ${{ steps.tags.outputs.cache }}
+  labels:
+    description: OCI labels (org.opencontainers.image.*), one KEY=VALUE line each
+    value: ${{ steps.tags.outputs.labels }}
 
 runs:
   using: composite
@@ -61,4 +64,8 @@ runs:
         EVENT: ${{ github.event_name }}
         PR_NUMBER: ${{ github.event.number }}
         DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        SERVER_URL: ${{ github.server_url }}
+        REPOSITORY: ${{ github.repository }}
+        DESCRIPTION: ${{ github.event.repository.description }}
+        LICENSE: ${{ github.event.repository.license.spdx_id }}
       run: bash "$GITHUB_ACTION_PATH/image-tags.sh"

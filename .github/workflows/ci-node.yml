@@ -43,7 +43,7 @@ on:
         default: true
       test-args:
         description: >
-          Extra arguments appended to the test script (pnpm and npm only).
+          Extra arguments appended to the test script (pnpm, npm and bun).
           The default suits Jest/Vitest; set it to '' for runners that reject
           unknown flags (e.g. `node --test`).
         type: string
@@ -124,7 +124,7 @@ on:
         type: boolean
         default: true
       test-args:
-        description: Extra arguments appended to the test script (pnpm and npm only)
+        description: Extra arguments appended to the test script (pnpm, npm and bun)
         type: string
         default: --passWithNoTests
       run-build:
@@ -215,7 +215,7 @@ jobs:
           # TEST_ARGS is intentionally word-split into separate arguments.
           # shellcheck disable=SC2086
           case "$PM" in
-            bun) bun run test ;;
+            bun) bun run test $TEST_ARGS ;;
             npm) npm test -- $TEST_ARGS ;;
             *)   pnpm test $TEST_ARGS ;;
           esac

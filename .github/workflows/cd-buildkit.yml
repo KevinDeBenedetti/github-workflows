@@ -189,6 +189,7 @@ jobs:
       tags: ${{ steps.tags.outputs.tags }}
       names: ${{ steps.tags.outputs.names }}
       cache: ${{ steps.tags.outputs.cache }}
+      labels: ${{ steps.tags.outputs.labels }}
     steps:
       - name: Compute the image tags
         id: tags
@@ -236,6 +237,7 @@ jobs:
         env:
           NAMES: ${{ needs.tags.outputs.names }}
           CACHE: ${{ needs.tags.outputs.cache }}
+          LABELS: ${{ needs.tags.outputs.labels }}
           BUILD_ARGS: ${{ inputs.build-args }}
           BUILD_SECRETS: ${{ secrets.BUILD_SECRETS }}
           TARGET: ${{ inputs.target }}
@@ -290,6 +292,10 @@ jobs:
               set -- "$@" --opt "build-arg:$arg"
             fi
           done
+          # OCI labels from the tags job: one KEY=VALUE per line.
+          for label in $LABELS; do
+            set -- "$@" --opt "label:$label"
+          done
           IFS="$OLD_IFS"
 
           if [ -n "$TARGET" ]; then
@@ -314,8 +320,6 @@ jobs:
             --frontend dockerfile.v0 \
             --opt "context=${GIT_CONTEXT}" \
             --opt "filename=${DOCKERFILE}" \
-            --opt "label:org.opencontainers.image.revision=${SHA}" \
-            --opt "label:org.opencontainers.image.source=${SERVER_URL}/${REPO}" \
             --import-cache "type=registry,ref=${CACHE}" \
             --export-cache "type=registry,ref=${CACHE},mode=max,ignore-error=true" \
             --output "type=image,\"name=${NAMES}\",push=${PUSH}" \
@@ -397,9 +401,7 @@ jobs:
           file: ${{ inputs.context }}/${{ inputs.dockerfile }}
           push: ${{ inputs.push }}
           tags: ${{ needs.tags.outputs.names }}
-          labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          labels: ${{ needs.tags.outputs.labels }}
           target: ${{ inputs.target }}
           build-args: ${{ inputs.build-args }}
           secrets: ${{ secrets.BUILD_SECRETS }}

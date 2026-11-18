@@ -126,8 +126,8 @@ jobs:
         with:
           persist-credentials: false
 
-      # The tag rules shared with cd-buildkit.yml (actions/image-tags);
-      # metadata-action only adds the OCI labels and lowercases the names.
+      # The tags and OCI labels shared with cd-buildkit.yml (actions/image-tags);
+      # metadata-action only turns the tags into the image's full names.
       - name: Image tags
         id: image
         uses: $/.github/actions/image-tags
@@ -137,7 +137,7 @@ jobs:
           tag-latest: ${{ inputs.tag-latest }}
           registry: ${{ env.REGISTRY }}
 
-      - name: Docker meta (labels)
+      - name: Docker meta (names)
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
@@ -170,7 +170,7 @@ jobs:
           platforms: ${{ inputs.platforms }}
           push: ${{ inputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          labels: ${{ steps.image.outputs.labels }}
           target: ${{ inputs.target }}
           build-args: ${{ inputs.build-args }}
           secrets: ${{ secrets.BUILD_SECRETS }}

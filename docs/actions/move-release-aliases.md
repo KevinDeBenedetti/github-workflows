@@ -52,7 +52,7 @@ steps:
 - The alias is an annotated tag on the **release commit**, whatever the
   checkout sits on. The release tag is fetched, so a shallow checkout is
   enough.
-- A component tag works too: `my-lib-v2.0.1` moves `my-lib-v2`.
+- A component tag works too: `my-lib-v2.0.1` moves `my-lib-v2`, and before 1.0 `pre-major-alias` applies under the component's prefix (`my-lib-v0.3.1` moves `my-lib-v0` and `my-lib-v0.3` with `both`).
 - **A pre-release moves nothing**: `v1.3.0-rc.2` leaves `v1` on the last final
   release. A tag that is not `vMAJOR.MINOR.PATCH[-pre]` (`v1.2`,
   `v1.2.3+build`) fails the step. `release.yml` computes its `prerelease`

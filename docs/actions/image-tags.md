@@ -4,10 +4,10 @@ title: Action — image-tags
 
 # Action — image-tags
 
-Computes the image name, tags and layer-cache reference of a container build
-from the event that triggered it. [`cd-buildkit`](../workflows/cd-buildkit.md)
+Computes the image name, tags, OCI labels and layer-cache reference of a
+container build from the event that triggered it. [`cd-buildkit`](../workflows/cd-buildkit.md)
 (both build paths) and [`cd-docker`](../workflows/cd-docker.md) use it, so
-every image of these workflows is tagged alike. It needs bash and no checkout.
+every image of these workflows is tagged and labelled alike. It needs bash and no checkout.
 
 ## Usage
 
@@ -42,6 +42,7 @@ steps:
 | `names`    | `image:tag` for each tag, comma-separated                             |
 | `raw-tags` | One `type=raw,value=<tag>` line per tag, for `docker/metadata-action` |
 | `cache`    | Registry layer-cache reference, `<image>-cache:buildcache`            |
+| `labels`   | OCI labels, one `KEY=VALUE` line each (see [Labels](#labels))         |
 
 ## Tags
 
@@ -54,6 +55,24 @@ steps:
 | Push of a pre-release tag `vX.Y.Z-pre` | `X.Y.Z-pre`                                     |
 | `version` set                          | the version as given, `X.Y` for a final release |
 | `tag-latest` on the default branch     | `latest`                                        |
+
+## Labels
+
+The `org.opencontainers.image.*` keys `docker/metadata-action` sets, computed once
+so that both `cd-buildkit` paths and `cd-docker` label an image alike:
+
+| Label         | Value                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| `title`       | The image name, as given                                                                          |
+| `description` | The repository's description, left out when empty                                                 |
+| `url`         | The repository's page                                                                             |
+| `source`      | The repository's page                                                                             |
+| `version`     | The most specific tag: `version`, the release tag's `X.Y.Z`, `pr-<n>`, the branch, else `sha-<7>` |
+| `created`     | The build time, UTC                                                                               |
+| `revision`    | The commit                                                                                        |
+| `licenses`    | The repository's SPDX licence, left out when empty or `NOASSERTION`                               |
+
+Each value is one line: control characters become spaces.
 
 ## Notes
 

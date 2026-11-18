@@ -64,7 +64,7 @@ same rules as [`cd-buildkit`](./cd-buildkit.md):
 
 ## Notes
 
-- `docker/metadata-action` adds the OCI labels; the tags come from `image-tags`.
+- The tags and the OCI labels come from [`image-tags`](../actions/image-tags.md), shared with `cd-buildkit`; `docker/metadata-action` only turns the tags into full image names.
 - Build cache is scoped per `context` using GitHub Actions cache (`type=gha`).
 - QEMU is registered only when `platforms` names something other than `linux/amd64`, the runner's own architecture. An `arm64` image built this way runs under emulation, several times slower than a native build: for a large image, build each platform on its own runner (GitHub's `ubuntu-26.04-arm` label for the arm64 half) and merge the manifests, as Docker documents, or drop `linux/arm64` from `platforms` when nothing deploys on it.
 - `timeout-minutes` cuts off a build stuck on a pull or an emulated step: without it the job holds the runner (and bills the minutes) for up to 6 hours.
