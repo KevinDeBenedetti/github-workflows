@@ -30,8 +30,8 @@ jobs:
 | `shellcheck-severity`      | string  | `warning`                      | Minimum severity: `error` \| `warning` \| `info` \| `style`                  |
 | `shellcheck-exclude-paths` | string  | `*/test_helper/*`              | Glob passed to `find -not -path` to exclude from analysis                    |
 | `run-actionlint`           | boolean | `true`                         | Run actionlint on GitHub Actions workflow files                              |
-| `actionlint-paths`         | string  | `.github/workflows/`           | Space-separated paths to validate                                            |
-| `actionlint-flags`         | string  | `''`                           | Extra flags passed to actionlint                                             |
+| `actionlint-paths`         | string  | `.github/workflows/`           | Space-separated files, directories and globs; one matching nothing fails     |
+| `actionlint-flags`         | string  | `''`                           | Extra flags passed to actionlint, split like a shell command line            |
 | `run-bats`                 | boolean | `true`                         | Run Bats unit tests                                                          |
 | `bats-tests-dir`           | string  | `tests/`                       | Directory (or file) containing `.bats` test files                            |
 | `bats-submodules`          | boolean | `true`                         | Checkout git submodules required by Bats helpers                             |
