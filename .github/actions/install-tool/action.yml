@@ -1,0 +1,23 @@
+name: Install tool
+description: >
+  Install one of the tools this repository's actions download (actionlint,
+  bats, claude-code, gitleaks, kubeconform, lychee, shellcheck), at the version
+  pinned in tools.json and checked against the SHA-256 (or commit) pinned next
+  to it, and put it on the PATH. Internal: it installs the manifest's tools
+  only. The rules are at the top of install-tool.sh. Needs bash, python3, curl
+  and tar: no checkout.
+
+inputs:
+  tool:
+    description: The tool to install, an entry of tools.json
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install the pinned tool
+      shell: bash
+      # The input goes through env, never interpolated into the script body.
+      env:
+        TOOL: ${{ inputs.tool }}
+      run: bash "$GITHUB_ACTION_PATH/install-tool.sh"

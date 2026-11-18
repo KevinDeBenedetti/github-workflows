@@ -17,3 +17,13 @@ _Avoid_: merge base
 **Trusted commit**:
 The commit whose secret-scan configuration and ignore list a scan applies. It is never among the commits under scan, so a change cannot silence its own findings.
 _Avoid_: trusted ref, config ref
+
+### Downloaded tools
+
+**Pinned tool**:
+A program an action downloads at one fixed version and installs only after the download matches the SHA-256, or the commit, recorded with that version.
+_Avoid_: dependency, binary
+
+**Tool manifest**:
+The file that lists every pinned tool with its version, its download and its pins. It is the only place a pin lives; the install reads it at run time.
+_Avoid_: tool list, lockfile

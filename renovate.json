@@ -15,7 +15,7 @@
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, terraform, pnpm). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots. The tools the actions download and verify are pinned in .github/tools.json instead (next manager).",
+      "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, terraform, pnpm). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots. The tools the actions download and verify are pinned in .github/actions/install-tool/tools.json instead (next manager).",
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^\\.github/actions/.+\\.(ya?ml|sh)$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+(?:default|version): (?<currentValue>v?[\\d][^\\s]*)",
@@ -24,9 +24,9 @@
     },
     {
       "customType": "jsonata",
-      "description": "The tools the composite actions download and verify (actionlint, kubeconform, shellcheck, lychee, gitleaks, claude-code, bats): one entry each in .github/tools.json, with its datasource and tag format. scripts/update-tool-checksums.py then refreshes the checksums and copies the version into the action.",
+      "description": "The tools the composite actions download and verify (actionlint, kubeconform, shellcheck, lychee, gitleaks, claude-code, bats): one entry each in the install-tool action's tools.json, with its datasource and tag format; the action reads it at run time. scripts/update-tool-checksums.py then refreshes the checksums.",
       "fileFormat": "json",
-      "managerFilePatterns": ["/^\\.github/tools\\.json$/"],
+      "managerFilePatterns": ["/^\\.github/actions/install-tool/tools\\.json$/"],
       "matchStrings": [
         "$each($, function($v) { $v.package ? {\"depName\": $v.package, \"currentValue\": $v.version, \"datasource\": $v.datasource, \"extractVersion\": $v.extractVersion} })"
       ]
@@ -67,15 +67,15 @@
       "enabled": false
     },
     {
-      "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work. Scoped to .github/: prek.toml pins rhysd/actionlint WITH the v. The tools of .github/tools.json carry their own extractVersion.",
+      "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work. Scoped to .github/: prek.toml pins rhysd/actionlint WITH the v. The tools of install-tool's tools.json carry their own extractVersion.",
       "matchPackageNames": ["prometheus/prometheus", "j178/prek", "hashicorp/terraform"],
       "matchFileNames": [".github/**"],
       "extractVersion": "^v(?<version>.+)$"
     },
     {
-      "description": "The tools of .github/tools.json are downloaded and verified against a SHA-256 (or commit) pinned next to the version: Renovate bumps the version only, so CI fails closed until the pins are refreshed and copied into the actions.",
-      "matchFileNames": [".github/tools.json"],
-      "prBodyNotes": ["⚠️ Pinned checksums: run `scripts/update-tool-checksums.py` on this branch and commit the result (the manifest and the actions) — CI fails until then."]
+      "description": "The tools of install-tool's tools.json are downloaded and verified against a SHA-256 (or commit) pinned next to the version: Renovate bumps the version only, so CI fails closed until the pins are refreshed.",
+      "matchFileNames": [".github/actions/install-tool/tools.json"],
+      "prBodyNotes": ["⚠️ Pinned checksums: run `scripts/update-tool-checksums.py` on this branch and commit the result (`tools.json` only) — CI fails until then."]
     },
     {
       "description": "actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3 (false positives on `client-id`): callers of the actionlint action that do not pass `-ignore create-github-app-token` would break. Bumps need a deliberate approval from the dependency dashboard.",

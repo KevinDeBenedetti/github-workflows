@@ -26,7 +26,7 @@ steps:
 
 ## Steps
 
-1. Download and install `actionlint` `1.7.11` into `$RUNNER_TEMP/actionlint`
+1. Install the pinned `actionlint` (`1.7.11`) into `$RUNNER_TEMP/actionlint` with [`install-tool`](install-tool.md)
 2. Collect all `.yml` / `.yaml` files from the given paths
 3. Run `actionlint [flags] <files>`
 

@@ -26,4 +26,4 @@ steps:
 - Finds all `*.sh` files recursively under the current directory (excluding `exclude-paths`, and never descending into `.git`, `node_modules` or `.venv`).
 - Each script is checked as the shell its shebang (or `# shellcheck shell=` directive) declares, so `#!/bin/sh` scripts get POSIX checks; only undeclared scripts, and scripts whose shebang names a shell ShellCheck does not support (`zsh`, `fish`…), fall back to `default-shell`.
 - Reports issues in GCC format for clean integration with GitHub annotations.
-- Installs a pinned ShellCheck release (x86_64 or aarch64) — nothing needs to be preinstalled on the runner.
+- Installs a pinned ShellCheck release (x86_64 or aarch64) with [`install-tool`](install-tool.md), which needs `python3` on the runner.

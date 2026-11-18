@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-"""Keep the downloaded tools' pins in step with .github/tools.json.
+"""Refresh and verify the pins of the tools the actions download.
 
-.github/tools.json is the one place a tool's pin lives: version, release asset
-URL ({v} the version, {a} the asset's arch name), arch map, upstream checksums,
-and the SHA-256 per arch (or, for a git install, the tag's commit). Renovate
-bumps the version there (JSONata custom manager, renovate.json). The composite
-actions cannot read it at run time, so each install block holds a copy:
-
-    ACTIONLINT_VERSION="1.7.11"
-    ACTIONLINT_SHA256_amd64="<sha256>"
-    ACTIONLINT_SHA256_arm64="<sha256>"
+.github/actions/install-tool/tools.json is the one place a tool's pin lives:
+version, release asset URL ({v} the version, {a} the asset's arch name), arch
+map, how the asset is extracted, upstream checksums, and the SHA-256 per arch
+(or, for a git install, the tag's commit). Renovate bumps the version there
+(JSONata custom manager, renovate.json), and the install-tool action reads the
+file at run time: nothing else holds a copy.
 
 After a version bump, run from the repository root:
 
-    scripts/update-tool-checksums.py                 # refresh the manifest, copy it into the actions
+    scripts/update-tool-checksums.py                 # refresh the manifest's pins
     scripts/update-tool-checksums.py --check         # verify only (exit 1 on drift)
     scripts/update-tool-checksums.py --check --since <commit>
                                                      # CI: only when a pin changed since
-    scripts/update-tool-checksums.py --consistency   # offline: the actions agree with the manifest
-    scripts/update-tool-checksums.py --list-files    # the manifest and the files holding a pin
 
 Where the project publishes checksums (one file per release, or one per asset
 for lychee), the computed value is also cross-checked against them (Claude
@@ -36,9 +31,8 @@ import sys
 import urllib.request
 from pathlib import Path
 
-MANIFEST = ".github/tools.json"
-# Besides the manifest and the files holding a pin, a change to these re-runs
-# the check (--since).
+MANIFEST = ".github/actions/install-tool/tools.json"
+# Besides the manifest, a change to these re-runs the check (--since).
 WATCHED = ["scripts/update-tool-checksums.py", ".github/workflows/ci-cd.yml"]
 
 
@@ -60,77 +54,18 @@ def sha256_of(url: str) -> str:
     return digest.hexdigest()
 
 
-def replace_value(text: str, var: str, value: str, path: str) -> str:
-    pattern = re.compile(rf'^(\s*{var}=")[^"]*(")', re.M)
-    if not pattern.search(text):
-        sys.exit(f"{path}: {var} not found")
-    return pattern.sub(rf"\g<1>{value}\g<2>", text, count=1)
-
-
-def current_value(text: str, var: str) -> str | None:
-    m = re.search(rf'^\s*{var}="([^"]*)"', text, re.M)
-    return m.group(1) if m else None
-
-
-def consistency(tools: dict, texts: dict[str, str]) -> list[str]:
-    """What each install block gets wrong against the manifest (no network)."""
-    problems = []
-    for prefix, tool in tools.items():
-        path = tool["file"]
-        if not Path(path).is_file():
-            problems.append(f"{path}: missing ({prefix})")
-            continue
-        text = texts.setdefault(path, Path(path).read_text())
-        expected = {f"{prefix}_VERSION": tool["version"]}
-        if "git" in tool:
-            expected[f"{prefix}_COMMIT"] = tool["commit"]
-        else:
-            expected.update({f"{prefix}_SHA256_{key}": value for key, value in tool["sha256"].items()})
-            url = tool["url"].replace("{v}", f"${{{prefix}_VERSION}}").replace("{a}", f"${{{tool['archVar']}}}")
-            if url not in text:
-                problems.append(f"{path}: downloads another URL than the manifest's {url}")
-            for key, arch in tool["arch"].items():
-                if not re.search(rf"\b{tool['archVar']}={re.escape(arch)}\b", text):
-                    problems.append(f"{path}: no {tool['archVar']}={arch} for {key}")
-        for var, value in expected.items():
-            found = current_value(text, var)
-            if found is None:
-                problems.append(f"{path}: {var} not found")
-            elif found != value:
-                problems.append(f"{path}: {var}=\"{found}\", the manifest says \"{value}\"")
-        if re.search(rf"# renovate: .*depName={re.escape(tool['package'])}\s", text):
-            problems.append(f"{path}: a renovate comment pins {tool['package']} here too — the manifest is its only pin")
-    return problems
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--check", action="store_true", help="verify only, do not rewrite files")
-    parser.add_argument("--consistency", action="store_true", help="offline: check that the actions hold the manifest's pins, and exit")
-    parser.add_argument("--list-files", action="store_true", help="print the manifest and the files holding a pin, one per line, and exit")
-    parser.add_argument("--since", metavar="COMMIT", help="do nothing unless the manifest, a file holding a pin, this script or ci-cd.yml changed since COMMIT")
+    parser.add_argument("--since", metavar="COMMIT", help="do nothing unless the manifest, this script or ci-cd.yml changed since COMMIT")
     args = parser.parse_args()
 
     tools = load_manifest()
-    pinned_files = sorted({MANIFEST, *(tool["file"] for tool in tools.values())})
-    if args.list_files:
-        print("\n".join(pinned_files))
-        return 0
-    texts: dict[str, str] = {}
-    if args.consistency:
-        problems = consistency(tools, texts)
-        for problem in problems:
-            print(problem)
-        if problems:
-            print(f"\n{len(problems)} problem(s): run scripts/update-tool-checksums.py to copy the manifest into the actions (a URL or an arch is fixed by hand).")
-            return 1
-        print(f"✔ {len(tools)} tool(s): the actions hold the pins of {MANIFEST}.")
-        return 0
     if args.since:
-        # CI: every asset is downloaded again, so skip when nothing that
-        # holds or checks a pin changed since the given commit.
+        # CI: every asset is downloaded again, so skip when neither the pins
+        # nor what checks them changed since the given commit.
         changed = subprocess.run(
-            ["git", "diff", "--name-only", args.since, "HEAD", "--", *pinned_files, *WATCHED],
+            ["git", "diff", "--name-only", args.since, "HEAD", "--", MANIFEST, *WATCHED],
             check=True, capture_output=True, text=True,
         ).stdout.split()
         if not changed:
@@ -182,34 +117,15 @@ def main() -> int:
             else:
                 print(f"{MANIFEST}: {prefix} sha256 {key} up to date ({v})")
 
-    # The actions' copies, against the manifest as refreshed above.
-    problems = consistency(tools, texts)
     if args.check:
-        for problem in problems:
-            print(problem)
-        if drift or problems:
-            print(f"\n{drift + len(problems)} pinned value(s) out of date — run without --check to refresh.")
+        if drift:
+            print(f"\n{drift} pinned value(s) out of date — run without --check to refresh.")
             return 1
         return 0
-    for prefix, tool in tools.items():
-        path = tool["file"]
-        text = texts[path]
-        text = replace_value(text, f"{prefix}_VERSION", tool["version"], path)
-        if "git" in tool:
-            text = replace_value(text, f"{prefix}_COMMIT", tool["commit"], path)
-        else:
-            for key, value in tool["sha256"].items():
-                text = replace_value(text, f"{prefix}_SHA256_{key}", value, path)
-        texts[path] = text
-    Path(MANIFEST).write_text(json.dumps(tools, indent=2) + "\n")
-    for path, text in texts.items():
-        Path(path).write_text(text)
-    # What the copy cannot fix (a URL or an arch map): the action is edited by hand.
-    remaining = consistency(tools, {})
-    for problem in remaining:
-        print(problem)
+    if drift:
+        Path(MANIFEST).write_text(json.dumps(tools, indent=2) + "\n")
     print("\nDone." if drift else "\nAll pinned values already up to date.")
-    return 1 if remaining else 0
+    return 0
 
 
 if __name__ == "__main__":

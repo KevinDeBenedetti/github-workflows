@@ -23,11 +23,11 @@ on:
 | Job              | Runs when       | Calls                               | Purpose                                                                                 |
 | ---------------- | --------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
 | `ci-shell`       | push + PR       | `ci-shell.yml`                      | ShellCheck, actionlint, Bats and docs checks, with the actions of this commit           |
-| `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus the pinned Claude Code binary            |
+| `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus the pinned kubeconform and Claude Code   |
 | `ci-zizmor`      | push + PR       | `zizmorcore/zizmor-action`          | GitHub Actions security lint, pedantic persona                                          |
 | `ci-prek`        | push + PR       | `ci-prek.yml`                       | This repo's prek hooks                                                                  |
 | `security`       | push + PR       | `security.yml`                      | Gitleaks, dependency review and CodeQL (`actions`, `python`)                            |
-| `ci-checksums`   | push + PR       | `scripts/update-tool-checksums.py`  | `.github/tools.json` matches the release assets and the actions, when a pin changed     |
+| `ci-checksums`   | push + PR       | `scripts/update-tool-checksums.py`  | `install-tool`'s `tools.json` matches the release assets, when a pin changed            |
 | `ci-commits`     | push + PR       | `change-base`, `check-commit-msg`   | Conventional Commits on every commit since the change base                              |
 | `ci-gate`        | push + PR       | —                                   | The ruleset's single required check: every job above succeeded                          |
 | `pr-description` | PR              | `./…/pr-description.yml` (local)    | Pull request description written by Claude Code, outside the gate                       |

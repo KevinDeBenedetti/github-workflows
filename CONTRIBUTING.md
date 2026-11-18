@@ -16,8 +16,7 @@ prek install                 # pre-commit and commit-msg hooks (prek.toml)
 ```
 
 The hooks check whitespace, YAML/JSON, actionlint, the Renovate config, the
-docs, the consistency of the reusable workflows, the tool pins, and the commit
-message.
+docs, the consistency of the reusable workflows, and the commit message.
 
 ## Make a change
 
@@ -37,9 +36,9 @@ message.
    `README.md` and `docs/getting-started.md`: the same script checks them, and
    the `with:` keys passed to this repository's actions.
 6. **Downloaded tools** (actionlint, Gitleaks, lychee, …) are pinned in
-   `.github/tools.json`. After changing one there, run
-   `scripts/update-tool-checksums.py`: it refreshes the checksums and copies
-   the pins into the action, and a hook fails while the two differ.
+   `.github/actions/install-tool/tools.json`, the only place a pin lives: the
+   `install-tool` action reads it at run time. After changing a version
+   there, run `scripts/update-tool-checksums.py` to refresh the checksums.
 
 ## Review
 
