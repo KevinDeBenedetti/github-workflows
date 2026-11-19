@@ -360,7 +360,9 @@ steps:
 | [`cleanup-deployments`](actions/cleanup-deployments.md)             | Delete the old deployment records of the repository, keeping the recent ones of each environment |
 | [`propagate-release`](actions/propagate-release.md)                 | Open a pull request in each consumer repository that moves its pins to a release                 |
 | [`move-release-aliases`](actions/move-release-aliases.md)           | Move the `v<major>` (and `v0.<minor>`) alias tags to a release                                   |
+| [`notify-release-reviewers`](actions/notify-release-reviewers.md)   | Request a review on the release PR from each listed user, once per user and PR                   |
 | [`image-tags`](actions/image-tags.md)                               | Image name, tags and layer-cache reference of a container build                                  |
+| [`buildkit-build`](actions/buildkit-build.md)                       | Build and push an image with rootless BuildKit from the repository's git context                 |
 
 ---
 
