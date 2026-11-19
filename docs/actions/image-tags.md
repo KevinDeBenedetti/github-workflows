@@ -59,7 +59,7 @@ steps:
 ## Labels
 
 The `org.opencontainers.image.*` keys `docker/metadata-action` sets, computed once
-so that both `cd-buildkit` paths and `cd-docker` label an image alike:
+so that `cd-buildkit` and `cd-docker` label an image alike:
 
 | Label         | Value                                                                                             |
 | ------------- | ------------------------------------------------------------------------------------------------- |

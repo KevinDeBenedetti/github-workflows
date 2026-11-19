@@ -31,7 +31,7 @@
 # runs per query, so a larger backlog takes several runs.
 #
 # Talks to the REST API with curl, the token in a header file, never on a
-# command line: self-hosted runner images often ship no GitHub CLI.
+# command line: runner images outside GitHub's often ship no GitHub CLI.
 #
 # Env: KEEP_RUNS          most recent runs kept per workflow, 0-100 (default 10)
 #      OLDER_THAN_DAYS    age in days before a run can go, 1 or more (default 30)

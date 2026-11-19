@@ -8,7 +8,7 @@
 
 - CI pipelines for Node.js (lint → typecheck → test → build), Python (lint → format → test), and shell (ShellCheck → actionlint → Bats)
 - CI pipelines for **Kubernetes** (kubeconform validation), **Terraform** (validate + fmt check) and **Prometheus** (PromQL check + alert unit tests)
-- CD workflows for Docker/GHCR, BuildKit (rootless on self-hosted runners, Buildx on GitHub-hosted ones), and centralized docs sync
+- CD workflows for Docker/GHCR, BuildKit through Docker Buildx, and centralized docs sync
 - Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, and a checksum-pinned Claude Code setup
 - Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
 - Scheduled GHCR cleanup that keeps releases and recent images, safe for multi-arch images and attestations
@@ -21,7 +21,6 @@
 
 - A GitHub repository
 - Appropriate secrets configured in your repo or organization (see each workflow's docs)
-- Self-hosted runners on **2.336.0 or newer**: the workflows reach their own composite actions with GitHub's self-repository syntax (`uses: $/…`); GitHub-hosted runners already qualify
 
 ## Usage
 
@@ -64,7 +63,7 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `ci-prometheus.yml` | Prometheus CI (PromQL check + alert unit tests) | [→](docs/workflows/ci-prometheus.md) |
 | `ci-prek.yml` | prek / pre-commit hooks run server-side (`prek run --all-files`) | [→](docs/workflows/ci-prek.md) |
 | `cd-docker.yml` | Build & push multi-platform Docker image to GHCR | [→](docs/workflows/cd-docker.md) |
-| `cd-buildkit.yml` | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones | [→](docs/workflows/cd-buildkit.md) |
+| `cd-buildkit.yml` | Build & push a single-platform image with BuildKit (Docker Buildx) | [→](docs/workflows/cd-buildkit.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
 | `cleanup-deployments.yml` | Scheduled cleanup of old deployment records, keeping the recent ones of each environment | [→](docs/workflows/cleanup-deployments.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |

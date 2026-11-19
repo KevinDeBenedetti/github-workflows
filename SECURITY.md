@@ -29,8 +29,6 @@ strategy in the [README](README.md).
   `secrets: inherit`: each workflow receives only what it declares.
 - Grant the calling job **only the permissions** the called workflow needs
   (each workflow documents them); a called workflow can never get more.
-- Do not run pull-request workflows of a public repository on **persistent
-  self-hosted runners** (`runner` input): fork PRs would execute on them.
 
 ## Hardening in this repository
 

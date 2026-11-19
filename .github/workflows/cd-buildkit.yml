@@ -1,36 +1,18 @@
-name: Deploy — BuildKit (rootless on self-hosted, Buildx on hosted VMs)
+name: Deploy — BuildKit (Docker Buildx)
 
-# The image build of this repository's callers: the same inputs and tags,
-# built by BuildKit on whichever runner the `runner` input selects, so a caller
-# switching runners changes nothing else — both paths compute the same tags,
-# attach the same provenance and SBOM, and share one registry cache.
+# The image build of this repository's callers, for one platform: Docker
+# Buildx drives BuildKit with the runner's Docker daemon, from a checkout of
+# the triggering commit. The `runner` input takes any Linux VM runner that has
+# Docker — GitHub's or Ubicloud's — and the image is built for that runner's
+# native platform: pick an x86_64 runner for an x86_64 host.
 #
-#   - Self-hosted runner (ARC `containerMode: kubernetes`): the
-#     `buildkit` job runs INSIDE the moby/buildkit rootless image as an
-#     unprivileged user; buildctl-daemonless.sh starts a throw-away buildkitd
-#     for the single build. Rootless BuildKit creates its own user namespace,
-#     which the default seccomp/AppArmor profiles forbid: the workflow pod
-#     needs the dedicated setup described in the docs (seccomp + AppArmor
-#     Unconfined, runAsUser 1000) — a cluster-side change. Status: EXPERIMENTAL
-#     until validated on the cluster — see docs/workflows/cd-buildkit.md.
-#     The rootless image has no glibc Node.js: NO JavaScript actions;
-#     BuildKit fetches the source itself (git context), and the build runs
-#     the sh script of actions/buildkit-build.
-#   - Hosted VM runner (a label starting with `ubuntu-`, the default, or
-#     with `ubicloud-`): the `buildx` job
-#     runs the same build through Docker Buildx, which drives BuildKit with the
-#     runner's Docker daemon, from a checkout of the same commit.
-# Both build for the runner's native platform: pick an x86_64 runner for an
-# x86_64 cluster.
-#
-# What both paths provide:
-#   - On the cluster, the builder process runs as non-root (rootless)
+# What it provides:
+#   - Tags and OCI labels from actions/image-tags, the rules cd-docker.yml uses
 #   - `digest` output (from the build metadata)
 #   - BUILD_SECRETS secret (BuildKit secret mounts), provenance + SBOM inputs
 #   - Layer cache in GHCR (<image>-cache:buildcache, mode=max)
 #
-# Its predecessor cd-kaniko.yml (upstream Kaniko is archived) was removed on
-# 2026-11-01, after the cluster dropped the Kaniko executor and its push config.
+# cd-docker.yml is the multi-platform build.
 
 on:
   workflow_call:
@@ -86,7 +68,7 @@ on:
         required: false
         default: true
       runner:
-        description: Runner labels as JSON — a hosted VM label, GitHub's ubuntu-… (e.g. '"ubuntu-26.04"') or Ubicloud's ubicloud-…, runs Docker Buildx, any other label (the name of an ARC runner scale set set up for image builds) runs rootless BuildKit
+        description: Runner labels as JSON — a Linux VM runner with a Docker daemon, GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
         type: string
         required: false
         default: '"ubuntu-26.04"'
@@ -108,10 +90,10 @@ on:
     outputs:
       image:
         description: Image name (without tag)
-        value: ${{ jobs.buildkit.outputs.image || jobs.buildx.outputs.image }}
+        value: ${{ jobs.buildx.outputs.image }}
       digest:
         description: Image digest
-        value: ${{ jobs.buildkit.outputs.digest || jobs.buildx.outputs.digest }}
+        value: ${{ jobs.buildx.outputs.digest }}
 
   workflow_dispatch:
     inputs:
@@ -175,22 +157,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Image name, tags and cache reference, once for both build jobs: the
-  # rootless BuildKit container runs busybox sh with no checkout, so the shared
-  # script (actions/image-tags) runs here, on the same runner, and the build
-  # only reads its outputs.
-  tags:
-    name: Image tags
+  buildx:
+    name: Buildx build & push (${{ inputs.context }})
     runs-on: ${{ fromJson(inputs.runner) }}
-    timeout-minutes: 5
-    permissions: {}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    defaults:
+      run:
+        shell: sh
+    permissions:
+      contents: read   # check out the source
+      packages: write  # push the image and the layer cache to GHCR
+
     outputs:
       image: ${{ steps.tags.outputs.image }}
-      tags: ${{ steps.tags.outputs.tags }}
-      names: ${{ steps.tags.outputs.names }}
-      cache: ${{ steps.tags.outputs.cache }}
-      labels: ${{ steps.tags.outputs.labels }}
+      digest: ${{ steps.build.outputs.digest }}
+
     steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Image name, tags, cache reference and OCI labels (actions/image-tags).
       - name: Compute the image tags
         id: tags
         uses: $/.github/actions/image-tags
@@ -200,112 +188,10 @@ jobs:
           tag-latest: ${{ inputs.tag-latest }}
           registry: ${{ env.REGISTRY }}
 
-  # Self-hosted runners (ARC): rootless BuildKit inside the job container.
-  buildkit:
-    name: BuildKit build & push (${{ inputs.context }})
-    needs: tags
-    # Not a hosted VM (see the buildx job): the rootless image's user cannot
-    # even write the runner's step files there ("Permission denied" on the
-    # first `>> "$GITHUB_OUTPUT"`), let alone start its user namespace.
-    if: ${{ !contains(inputs.runner, '"ubuntu-') && !contains(inputs.runner, '"ubicloud-') }}
-    runs-on: ${{ fromJson(inputs.runner) }}
-    timeout-minutes: ${{ inputs.timeout-minutes }}
-    container:
-      # Pinned by digest: the tag is mutable, and this container holds a
-      # packages: write token.
-      image: moby/buildkit:v0.34.1-rootless@sha256:f68752a5a94acfcdad2d07867b7075601a421638e17fc5f28efc1c814d0c4f89
-      env:
-        # Kubernetes has no equivalent of `--security-opt systempaths=unconfined`:
-        # BuildKit's own Kubernetes examples run the worker without a process
-        # sandbox (no separate PID namespace / fresh /proc for RUN steps).
-        BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
-    defaults:
-      run:
-        # Alpine-based image: busybox sh, no bash.
-        shell: sh
-    permissions:
-      contents: read   # BuildKit clones the source (git context) with the job token
-      packages: write  # push the image and the layer cache to GHCR
-
-    outputs:
-      image: ${{ needs.tags.outputs.image }}
-      digest: ${{ steps.build.outputs.digest }}
-
-    steps:
-      - name: Build and push with BuildKit
-        id: build
-        uses: $/.github/actions/buildkit-build
-        with:
-          names: ${{ needs.tags.outputs.names }}
-          cache: ${{ needs.tags.outputs.cache }}
-          labels: ${{ needs.tags.outputs.labels }}
-          build-args: ${{ inputs.build-args }}
-          build-secrets: ${{ secrets.BUILD_SECRETS }}
-          target: ${{ inputs.target }}
-          push: ${{ inputs.push }}
-          provenance: ${{ inputs.provenance }}
-          sbom: ${{ inputs.sbom }}
-          context: ${{ inputs.context }}
-          dockerfile: ${{ inputs.dockerfile }}
-          registry: ${{ env.REGISTRY }}
-
-      - name: Job summary
-        if: always()
-        env:
-          IMAGE: ${{ needs.tags.outputs.image }}
-          TAGS: ${{ needs.tags.outputs.tags }}
-          CONTEXT: ${{ inputs.context }}
-          DIGEST: ${{ steps.build.outputs.digest }}
-        run: |
-          {
-            echo "### BuildKit Build"
-            echo ""
-            echo "| Key | Value |"
-            echo "|-----|-------|"
-            echo "| Image | \`${IMAGE}\` |"
-            echo "| Digest | \`${DIGEST}\` |"
-            echo "| Context | \`${CONTEXT}\` |"
-            echo "| SHA | \`${GITHUB_SHA}\` |"
-            echo ""
-            echo "**Tags:**"
-            for tag in $TAGS; do
-              echo "- \`${IMAGE}:${tag}\`"
-            done
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  # Hosted VM runners (a label starting with ubuntu- for GitHub's, ubicloud-
-  # for Ubicloud's): no ARC pod to relax, but a Docker daemon. The same build runs through Docker Buildx, which drives
-  # BuildKit, from a checkout of the same commit. Image name, tags and summary
-  # come from steps identical to the buildkit job's: change them in both jobs.
-  buildx:
-    name: Buildx build & push (${{ inputs.context }})
-    needs: tags
-    if: ${{ contains(inputs.runner, '"ubuntu-') || contains(inputs.runner, '"ubicloud-') }}
-    runs-on: ${{ fromJson(inputs.runner) }}
-    timeout-minutes: ${{ inputs.timeout-minutes }}
-    defaults:
-      run:
-        # Same shell as the buildkit job, for the steps the two jobs share.
-        shell: sh
-    permissions:
-      contents: read   # check out the source
-      packages: write  # push the image and the layer cache to GHCR
-
-    outputs:
-      image: ${{ needs.tags.outputs.image }}
-      digest: ${{ steps.build.outputs.digest }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      # Always, like the buildkit job: the layer cache lives in GHCR even when
-      # nothing is pushed.
+      # Always: the layer cache lives in GHCR even when nothing is pushed.
       - name: Login to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -320,21 +206,21 @@ jobs:
           context: ${{ inputs.context }}
           file: ${{ inputs.context }}/${{ inputs.dockerfile }}
           push: ${{ inputs.push }}
-          tags: ${{ needs.tags.outputs.names }}
-          labels: ${{ needs.tags.outputs.labels }}
+          tags: ${{ steps.tags.outputs.names }}
+          labels: ${{ steps.tags.outputs.labels }}
           target: ${{ inputs.target }}
           build-args: ${{ inputs.build-args }}
           secrets: ${{ secrets.BUILD_SECRETS }}
           provenance: ${{ inputs.provenance }}
           sbom: ${{ inputs.sbom }}
-          cache-from: type=registry,ref=${{ needs.tags.outputs.cache }}
-          cache-to: type=registry,ref=${{ needs.tags.outputs.cache }},mode=max,ignore-error=true
+          cache-from: type=registry,ref=${{ steps.tags.outputs.cache }}
+          cache-to: type=registry,ref=${{ steps.tags.outputs.cache }},mode=max,ignore-error=true
 
       - name: Job summary
         if: always()
         env:
-          IMAGE: ${{ needs.tags.outputs.image }}
-          TAGS: ${{ needs.tags.outputs.tags }}
+          IMAGE: ${{ steps.tags.outputs.image }}
+          TAGS: ${{ steps.tags.outputs.tags }}
           CONTEXT: ${{ inputs.context }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |

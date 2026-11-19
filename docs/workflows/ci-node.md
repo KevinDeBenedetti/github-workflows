@@ -35,7 +35,7 @@ jobs:
 | `build-artifact-name` | string  | `build`             | Name of the uploaded artifact                                                                                     |
 | `run-link-check`      | boolean | `false`             | Check markdown files for broken relative links (offline, no HTTP requests)                                        |
 | `link-check-paths`    | string  | `docs/`             | Space-separated paths or directories of markdown files to check                                                   |
-| `runner`              | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set)       |
+| `runner`              | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"ubicloud-standard-2"'`       |
 | `timeout-minutes`     | number  | `30`                | Minutes before the job is cancelled (GitHub's default is 360) — raise it for a slow build                         |
 
 ## Secrets

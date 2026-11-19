@@ -15,7 +15,7 @@
 # lists (250 at most), fails the step whatever FAIL_ON_BOT_COMMITS says.
 #
 # Talks to the REST API with curl, the token in a header file, never on a
-# command line: self-hosted runner images often ship no GitHub CLI.
+# command line: runner images outside GitHub's often ship no GitHub CLI.
 #
 # Env: ALLOWED_BOTS          JSON array of account logins (default [])
 #      FAIL_ON_BOT_COMMITS   true: fail on a bot commit; false: warn (default true)

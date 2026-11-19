@@ -26,7 +26,7 @@ Pass a workflow only the secrets it declares (a `secrets:` block naming each one
 
 > **Production tip:** Pin to a release tag (`@vX.Y.Z`) or the minor alias (`@v0.<minor>`) instead of `@main`. The workflows call their composite actions with `uses: $/…`, resolved to the workflow's own commit, so a pin covers the actions too.
 
-GitHub-hosted jobs run on `ubuntu-26.04`, a pinned image rather than `ubuntu-latest`: when GitHub moves `ubuntu-latest` to a new Ubuntu release, your jobs only change image with a release of these workflows, like any other change. A workflow with a `runner` input runs on any other label — another image (`runner: '["ubuntu-24.04"]'`), an arm64 runner or a self-hosted scale set.
+GitHub-hosted jobs run on `ubuntu-26.04`, a pinned image rather than `ubuntu-latest`: when GitHub moves `ubuntu-latest` to a new Ubuntu release, your jobs only change image with a release of these workflows, like any other change. A workflow with a `runner` input runs on any other label — another image (`runner: '["ubuntu-24.04"]'`), an arm64 runner or an Ubicloud runner (`runner: '"ubicloud-standard-2"'`).
 
 > **Important:** All workflow files must live at the flat root of `.github/workflows/`.
 > GitHub Actions does not support reusable workflows in subdirectories.
@@ -148,7 +148,7 @@ Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
 
 ---
 
-### BuildKit (self-hosted or GitHub-hosted)
+### BuildKit (Docker Buildx)
 
 ```yaml
 jobs:
@@ -159,10 +159,9 @@ jobs:
       packages: write  # push the image and its layer cache to GHCR
     with:
       image-name: my-app
-      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-26.04
 ```
 
-Builds and pushes an image to GHCR with rootless BuildKit inside the job container on a self-hosted runner (no Docker daemon), or with Docker Buildx on a GitHub-hosted one.
+Builds and pushes a single-platform image to GHCR with BuildKit, driven by Docker Buildx, on a GitHub-hosted or Ubicloud runner.
 → [Full reference](workflows/cd-buildkit.md)
 
 ---
@@ -311,7 +310,7 @@ jobs:
 | `ci-prometheus.yml`       | Prometheus CI (PromQL check + alert unit tests)                                                                                        | [→](workflows/ci-prometheus.md)       |
 | `ci-prek.yml`             | prek / pre-commit hooks run server-side (`prek run --all-files`)                                                                       | [→](workflows/ci-prek.md)             |
 | `cd-docker.yml`           | Build & push multi-platform Docker image to GHCR                                                                                       | [→](workflows/cd-docker.md)           |
-| `cd-buildkit.yml`         | Build & push image with BuildKit: rootless on self-hosted runners (experimental), Buildx on GitHub-hosted ones                         | [→](workflows/cd-buildkit.md)         |
+| `cd-buildkit.yml`         | Build & push a single-platform image with BuildKit (Docker Buildx)                                                                     | [→](workflows/cd-buildkit.md)         |
 | `cd-docs.yml`             | Sync docs to a centralized docs repository                                                                                             | [→](workflows/cd-docs.md)             |
 | `release.yml`             | Automated releases via release-please                                                                                                  | [→](workflows/release.md)             |
 | `propagate-release.yml`   | A pull request in each consumer repository moves its pins to the new release                                                           | [→](workflows/propagate-release.md)   |
@@ -354,7 +353,6 @@ steps:
 | [`check-docs-external-links`](actions/check-docs-external-links.md) | Check the `http(s)` links of changed docs pages with lychee                                      |
 | [`check-vitepress-md`](actions/check-vitepress-md.md)               | Validate VitePress markdown                                                                      |
 | [`notify-deployment`](actions/notify-deployment.md)                 | Post a deployment status notification                                                            |
-| [`prek-home`](actions/prek-home.md)                                 | Keep prek's hook environments in a directory on the runner's node, one store per config          |
 | [`check-bot-commits`](actions/check-bot-commits.md)                 | Fail a pull request that brings commits of bots outside an allow-list                            |
 | [`cleanup-runs`](actions/cleanup-runs.md)                           | Delete the old workflow runs of the repository, keeping the recent ones                          |
 | [`cleanup-deployments`](actions/cleanup-deployments.md)             | Delete the old deployment records of the repository, keeping the recent ones of each environment |
@@ -362,7 +360,6 @@ steps:
 | [`move-release-aliases`](actions/move-release-aliases.md)           | Move the `v<major>` (and `v0.<minor>`) alias tags to a release                                   |
 | [`notify-release-reviewers`](actions/notify-release-reviewers.md)   | Request a review on the release PR from each listed user, once per user and PR                   |
 | [`image-tags`](actions/image-tags.md)                               | Image name, tags and layer-cache reference of a container build                                  |
-| [`buildkit-build`](actions/buildkit-build.md)                       | Build and push an image with rootless BuildKit from the repository's git context                 |
 
 ---
 

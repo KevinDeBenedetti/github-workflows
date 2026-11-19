@@ -101,7 +101,7 @@ on:
         required: false
         default: docs
       runner:
-        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
         type: string
         required: false
         default: '"ubuntu-26.04"'
@@ -193,7 +193,7 @@ on:
         default: docs
 
       runner:
-        description: Runner labels as JSON — use '"ubuntu-26.04"' or '"my-scale-set"' (the name of an ARC runner scale set)
+        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
         type: string
         required: false
         default: '"ubuntu-26.04"'
