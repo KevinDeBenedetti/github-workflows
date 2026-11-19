@@ -72,6 +72,7 @@ jobs:
 - When using a monorepo, prefer `config-file` + `manifest-file` over `release-type`.
 - With `notify-reviewers` set, a listed user is requested as a reviewer only when the PR's timeline has no `review_requested` event for them yet. Later runs (on any push while the PR stays open) skip users already asked, even once they have reviewed or been removed, so nobody is pinged twice.
 - Notification also fires on release PRs that release-please left untouched this run (e.g. `notify-reviewers` was added after the PR opened): the workflow falls back to finding the open PR by `release-pending-label`.
+- The notification is the [`notify-release-reviewers`](../actions/notify-release-reviewers.md) action. It never fails the job, so it cannot keep the alias tags from moving: a failed lookup or review request is a `::warning::` in the run.
 - Only a review request is sent — no @mention comment — so each user gets a single notification per release PR. When a listed user owns the release PR's files through CODEOWNERS, GitHub requests their review itself as the PR opens, and the workflow leaves them alone.
 - That fallback only looks at release PRs into `target-branch` (else the default branch): with a pre-release branch, both release PRs carry the pending label.
 

@@ -245,95 +245,20 @@ jobs:
           tag: ${{ steps.rp.outputs.tag_name }}
           classify-only: 'true'
 
-      - name: Find release PRs to notify
-        id: find-prs
-        # release-please only sets `prs`/`prs_created` when it created or updated
-        # a PR this run. An existing release PR left untouched (no new commits)
-        # yields neither, yet may still need its (first-time) notification — e.g.
-        # notify-reviewers was added after the PR opened, or the first attempt
-        # failed. So prefer the `prs` output, but fall back to querying open
-        # release PRs by the configured pending label. Duplicate notifications
-        # are still prevented by the review-request check below.
+      - name: Notify reviewers on release PR
+        # One review request per listed user and release PR — the PR
+        # release-please touched, or the open one found by its pending label.
+        # Never fails: a failed step here would keep tag-workflows from moving
+        # the aliases. The rules are at the top of the action's script.
         if: inputs.notify-reviewers != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PRS: ${{ steps.rp.outputs.prs }}
-          PENDING_LABEL: ${{ inputs.release-pending-label }}
+        uses: $/.github/actions/notify-release-reviewers
+        with:
+          reviewers: ${{ inputs.notify-reviewers }}
+          prs: ${{ steps.rp.outputs.prs }}
+          pending-label: ${{ inputs.release-pending-label }}
           # The release PR of this flow only: with a target-branch flow next to
           # the default branch's, both PRs carry the pending label.
-          BASE_BRANCH: ${{ inputs.target-branch || github.event.repository.default_branch }}
-        shell: bash
-        run: |
-          BASE_ARGS=()
-          if [ -n "$BASE_BRANCH" ]; then
-            BASE_ARGS=(--base "$BASE_BRANCH")
-          fi
-          if [ -n "$PRS" ] && [ "$PRS" != "null" ]; then
-            NUMBERS=$(echo "$PRS" | jq -r '.[].number')
-          else
-            NUMBERS=$(gh pr list \
-              --repo "$GITHUB_REPOSITORY" \
-              --label "$PENDING_LABEL" \
-              --state open \
-              "${BASE_ARGS[@]}" \
-              --json number --jq '.[].number' \
-              || true)
-          fi
-          {
-            echo "numbers<<EOF"
-            echo "$NUMBERS"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
-          echo "ℹ️ Release PRs to notify: ${NUMBERS:-none}"
-
-      - name: Notify reviewers on release PR
-        # Requests a review from each listed user who hasn't been asked to
-        # review that PR yet: one notification per user and release PR, with
-        # no @mention comment on top. "Asked" means any review_requested event
-        # on the PR's timeline — from an earlier run of this step, or from
-        # GitHub itself when the user owns the changed files (CODEOWNERS), in
-        # which case the step leaves that user alone. Later runs (on any push
-        # while the PR stays open) skip users already asked, even once they
-        # have reviewed or been removed, so nobody is pinged twice.
-        if: inputs.notify-reviewers != '' && steps.find-prs.outputs.numbers != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          NUMBERS: ${{ steps.find-prs.outputs.numbers }}
-          REVIEWERS: ${{ inputs.notify-reviewers }}
-        shell: bash
-        run: |
-          USERS=()
-          IFS=',' read -ra ENTRIES <<< "$REVIEWERS"
-          for u in "${ENTRIES[@]}"; do
-            u="$(echo "$u" | xargs)"
-            [ -n "$u" ] && USERS+=("$u")
-          done
-
-          echo "$NUMBERS" | while read -r pr; do
-            [ -n "$pr" ] || continue
-            # Every login ever asked to review the PR, by anyone.
-            if ! ASKED=$(gh api --paginate \
-                "repos/${GITHUB_REPOSITORY}/issues/${pr}/timeline" \
-                --jq '.[] | select(.event == "review_requested") | .requested_reviewer.login // empty'); then
-              echo "⚠️ Could not read the timeline of PR #$pr, skipping"
-              continue
-            fi
-            MISSING=()
-            for u in "${USERS[@]}"; do
-              if grep -qixF -- "$u" <<< "$ASKED"; then
-                echo "ℹ️ $u was already asked to review PR #$pr, skipping"
-              else
-                MISSING+=("$u")
-              fi
-            done
-            [ "${#MISSING[@]}" -gt 0 ] || continue
-            LIST="$(IFS=','; echo "${MISSING[*]}")"
-            echo "ℹ️ Requesting review from $LIST on PR #$pr"
-            gh pr edit "$pr" \
-              --repo "$GITHUB_REPOSITORY" \
-              --add-reviewer "$LIST" \
-              || echo "⚠️ Could not request review on PR #$pr"
-          done
+          base-branch: ${{ inputs.target-branch || github.event.repository.default_branch }}
 
   tag-workflows:
     name: Tag @v<major> alias (@v0.<minor> before 1.0)
