@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.50.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.50.0...v0.50.1) (2026-11-19)
+
+
+### Bug Fixes
+
+* **ci-node:** let a bun project with no tests pass ([dcf9f55](https://github.com/KevinDeBenedetti/github-workflows/commit/dcf9f55b2b4f6e0daefee58864472d8839d6eee3))
+
 ## [0.50.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.49.0...v0.50.0) (2026-11-18)
 
 
