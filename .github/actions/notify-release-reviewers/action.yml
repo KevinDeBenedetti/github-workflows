@@ -1,0 +1,42 @@
+name: Notify release reviewers
+description: >
+  Request a review on the open release PR from each listed user who was never
+  asked to review it, so each gets one GitHub notification per release PR.
+  Takes the PRs from release-please's `prs` output, or finds the open one by
+  its pending label. Never fails the job: problems are warnings. The rules are
+  at the top of notify-release-reviewers.sh.
+
+inputs:
+  reviewers:
+    description: Comma-separated GitHub logins
+    required: true
+  prs:
+    description: release-please's `prs` output (JSON array); empty looks the PR up by its label
+    required: false
+    default: ''
+  pending-label:
+    description: release-please's pending label
+    required: false
+    default: 'autorelease: pending'
+  base-branch:
+    description: Base branch of the release PR; empty matches any
+    required: false
+    default: ''
+  token:
+    description: Token with pull-requests write (request reviews) and read access to the PR timeline
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - name: Notify reviewers on release PR
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        REVIEWERS: ${{ inputs.reviewers }}
+        PRS: ${{ inputs.prs }}
+        PENDING_LABEL: ${{ inputs.pending-label }}
+        BASE_BRANCH: ${{ inputs.base-branch }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: bash "$GITHUB_ACTION_PATH/notify-release-reviewers.sh"
