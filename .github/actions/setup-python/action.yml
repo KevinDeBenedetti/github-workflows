@@ -30,7 +30,7 @@ runs:
   steps:
     # setup-uv owns the uv cache end to end. It exports UV_CACHE_DIR, so a
     # separate actions/cache step on ~/.cache/uv (what this action used to do)
-    # only ever matched on self-hosted runners: on github-hosted, uv writes to
+    # only ever matched on runners GitHub does not host: on github-hosted, uv writes to
     # $RUNNER_TEMP/setup-uv-cache instead and the manual cache archived an
     # untouched directory — which also made the cache-hit output above wrong.
     - name: Install uv
@@ -44,8 +44,8 @@ runs:
         version: ${{ inputs.uv-version }}
         working-directory: ${{ inputs.working-directory }}
         # Explicitly true rather than the 'auto' default: 'auto' resolves to
-        # RUNNER_ENVIRONMENT == 'github-hosted', so on a self-hosted runner
-        # (reachable through the `runner` input of the calling workflows) it
+        # RUNNER_ENVIRONMENT == 'github-hosted', so on any other runner
+        # (Ubicloud's, through the `runner` input of the calling workflows) it
         # would silently disable caching altogether.
         enable-cache: true
         # Keeps the python-version dimension the previous manual cache key had;

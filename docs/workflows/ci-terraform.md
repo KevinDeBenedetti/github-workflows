@@ -41,4 +41,4 @@ jobs:
 
 - All steps run in `tf-dir` via `defaults.run.working-directory`.
 - `init` always runs with `-backend=false` so no remote backend credentials are required for validation.
-- The Terraform wrapper is disabled (`terraform_wrapper: false`) since self-hosted runners may lack a system Node.js and no step consumes the wrapper outputs.
+- The Terraform wrapper is disabled (`terraform_wrapper: false`) since a runner image may lack a system Node.js and no step consumes the wrapper outputs.

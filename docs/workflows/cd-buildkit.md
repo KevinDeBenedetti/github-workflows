@@ -4,12 +4,7 @@ title: CD — BuildKit
 
 # CD — BuildKit
 
-Builds a container image with **BuildKit** and pushes it to **GHCR**: rootless inside the job container on a self-hosted Kubernetes (ARC) runner, or through **Docker Buildx** on a hosted VM runner (GitHub's or Ubicloud's). The `runner` input picks the path, and the caller changes nothing else: tags, provenance, SBOM and the registry layer cache are the same on both.
-On the cluster the builder runs as a non-root user; both paths expose a `digest` output and take build secrets, provenance and SBOM inputs. Its predecessor `cd-kaniko.yml` (upstream Kaniko is archived) was removed from this repository once the cluster dropped the Kaniko executor.
-
-::: warning Experimental on the cluster
-The self-hosted path is not yet validated on the cluster: it needs the cluster-side setup below. The GitHub-hosted path needs no setup and is the one in production: it has built production images since 2026-10-31.
-:::
+Builds a container image with **BuildKit**, driven by **Docker Buildx**, and pushes it to **GHCR**. The image is built for the runner's native platform, from a checkout of the triggering commit, with provenance, an SBOM and a registry layer cache. For a multi-platform image, use [`cd-docker`](./cd-docker.md).
 
 ## Usage
 
@@ -25,7 +20,6 @@ jobs:
       context: apps/api
       version: ${{ needs.release.outputs.version }}
       tag-latest: true
-      runner: '"my-build-scale-set"'  # omit for Docker Buildx on ubuntu-26.04
     secrets:
       BUILD_SECRETS: |
         npm_token=${{ secrets.NPM_TOKEN }}
@@ -33,16 +27,13 @@ jobs:
 
 ## Runners
 
-| `runner` input                                                         | Job        | Builder                                                                                             |
-| ---------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------------- |
-| A hosted VM label: GitHub's `ubuntu-…`, e.g. `'"ubuntu-26.04"'` (the default), or Ubicloud's `ubicloud-…`, e.g. `'"ubicloud-standard-2"'` | `buildx`   | Docker Buildx on the runner's Docker daemon: nothing to set up                                     |
-| Any other label, the ARC scale set set up for image builds               | `buildkit` | Rootless BuildKit in the job container: needs the [cluster prerequisites](#cluster-prerequisites) |
+The `runner` input takes any Linux VM runner with a Docker daemon: GitHub's `ubuntu-…` labels, e.g. `'"ubuntu-26.04"'` (the default), or Ubicloud's `ubicloud-…` labels, e.g. `'"ubicloud-standard-2"'`. Nothing has to be set up on either.
 
-Both paths build for the runner's native platform: use an x86_64 runner for an x86_64 cluster. One repository variable can then move every job, image builds included:
+The image is built for the runner's native platform: use an x86_64 runner for an x86_64 host. One repository variable can move every job, image builds included:
 
 ```yaml
     with:
-      runner: ${{ vars.CI_RUNNER || '"my-scale-set"' }}
+      runner: ${{ vars.CI_RUNNER || '"ubuntu-26.04"' }}
 ```
 
 ## Inputs
@@ -59,7 +50,7 @@ Both paths build for the runner's native platform: use an x86_64 runner for an x
 | `build-args` | string  | `''`                                       | Build args, one per line, `KEY=VALUE`. **Never secrets** — use `BUILD_SECRETS`       |
 | `provenance` | string  | `mode=max`                                 | SLSA provenance (`mode=max`, `mode=min`, `false`). `mode=max` records the build-args |
 | `sbom`       | boolean | `true`                                     | Attach an SBOM attestation                                                           |
-| `runner`     | string  | `'"ubuntu-26.04"'`                         | Runner labels as JSON; picks the path (see [Runners](#runners))                      |
+| `runner`     | string  | `'"ubuntu-26.04"'`                         | Runner labels as JSON (see [Runners](#runners))                                      |
 | `timeout-minutes` | number | `60`                                  | Minutes before the build job is cancelled (GitHub's default is 360)                  |
 
 ## Secrets
@@ -75,167 +66,10 @@ Both paths build for the runner's native platform: use an x86_64 runner for an x
 | `image`  | Image name (without tag) |
 | `digest` | Image digest             |
 
-## Cluster prerequisites
-
-Rootless BuildKit creates its own user namespace and mounts inside it. The container runtime's default seccomp and AppArmor profiles forbid that, so the workflow pod must run with ([BuildKit rootless docs](https://github.com/moby/buildkit/blob/master/docs/rootless.md), [Kubernetes example](https://github.com/moby/buildkit/tree/master/examples/kubernetes)):
-
-```yaml
-# ARC containerMode hook template, merged into the "$job" container
-spec:
-  containers:
-    - name: "$job"
-      securityContext:
-        runAsUser: 1000
-        runAsGroup: 1000
-        # newuidmap (subuid mapping) is setuid: no_new_privs breaks it.
-        allowPrivilegeEscalation: true
-        seccompProfile:
-          type: Unconfined
-        appArmorProfile:
-          type: Unconfined
-```
-
-- **Pod Security**: `seccompProfile: Unconfined` and AppArmor `Unconfined` are refused by the **`baseline`** level, so the namespace running the build pods must enforce **`privileged`**. User namespaces (`hostUsers: false`) do not avoid it: without the unconfined profiles, BuildKit would need `CAP_SYS_ADMIN`, which `baseline` refuses too. Run the build scale set in a dedicated namespace rather than relaxing the one shared by every runner.
-- **Policy engines** (Kyverno, Gatekeeper…) that enforce `allowPrivilegeEscalation: false` or `capabilities.drop: [ALL]` reject the pod as well — dropping ALL removes the `CAP_SETUID` that `newuidmap` needs.
-- Use a **dedicated hook template** referenced only by the scale set(s) that build images, so the other `container:` jobs keep the default profiles.
-- The trade-off versus a root builder under the default profiles: rootless BuildKit runs as an **unprivileged user** in its own user namespace, without the default seccomp/AppArmor filters.
-- The workflow sets `BUILDKITD_FLAGS=--oci-worker-no-process-sandbox` (Kubernetes has no `systempaths=unconfined`): `RUN` steps share the builder's PID namespace, as in BuildKit's own Kubernetes examples.
-
-### Validate the cluster first
-
-Before changing any namespace or scale set, run this throwaway Job. It builds a Dockerfile that installs a package and `chown`s to another UID — the subuid mapping real builds rely on — with exactly the settings above:
-
-```yaml
-# BuildKit rootless smoke test — checks that the cluster's nodes can run
-# rootless BuildKit with the securityContext cd-buildkit.yml needs, BEFORE any
-# change to the ci namespace or the ARC scale sets. Throwaway: delete the
-# namespace afterwards (kubectl delete namespace buildkit-smoke).
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: buildkit-smoke
-  labels:
-    # baseline refuses seccomp/AppArmor Unconfined — the very thing under test.
-    pod-security.kubernetes.io/enforce: privileged
-    pod-security.kubernetes.io/warn: baseline
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: buildkit-smoke
-  namespace: buildkit-smoke
-data:
-  # What real image builds rely on: a package install (network, root-owned
-  # files) and a chown to another UID — that needs the subuid range, i.e.
-  # newuidmap, the step that breaks without allowPrivilegeEscalation.
-  Dockerfile: |
-    FROM alpine:3.22
-    RUN apk add --no-cache git \
-     && adduser -D -u 4242 app \
-     && install -d -o app -g app /data \
-     && stat -c 'owner of /data: %u:%g' /data
----
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: buildkit-smoke
-  namespace: buildkit-smoke
-spec:
-  backoffLimit: 0
-  activeDeadlineSeconds: 600
-  ttlSecondsAfterFinished: 3600
-  template:
-    spec:
-      restartPolicy: Never
-      containers:
-        - name: buildkit
-          image: moby/buildkit:v0.34.1-rootless@sha256:f68752a5a94acfcdad2d07867b7075601a421638e17fc5f28efc1c814d0c4f89
-          command: ["buildctl-daemonless.sh"]
-          args:
-            - build
-            - --progress
-            - plain
-            - --frontend
-            - dockerfile.v0
-            - --local
-            - context=/work
-            - --local
-            - dockerfile=/work
-            - --output
-            - type=image,name=buildkit-smoke:test,push=false
-          env:
-            # Same flag as cd-buildkit.yml (no systempaths=unconfined on k8s).
-            - name: BUILDKITD_FLAGS
-              value: --oci-worker-no-process-sandbox
-          securityContext:
-            runAsUser: 1000
-            runAsGroup: 1000
-            runAsNonRoot: true
-            # newuidmap is setuid: no_new_privs would break the UID mapping.
-            allowPrivilegeEscalation: true
-            seccompProfile:
-              type: Unconfined
-            appArmorProfile:
-              type: Unconfined
-          resources:
-            requests:
-              cpu: 200m
-              memory: 256Mi
-            limits:
-              cpu: "1"
-              memory: 1Gi
-          volumeMounts:
-            - name: work
-              mountPath: /work
-              readOnly: true
-            # One emptyDir (world-writable, exists from the start) per directory
-            # rootless BuildKit writes to: the image's own copies were not
-            # writable by UID 1000 in the pod, and rootlesskit does not create
-            # its TMPDIR. A single emptyDir on ~/.local would hide these.
-            - name: user-tmp
-              mountPath: /home/user/.local/tmp          # TMPDIR (rootlesskit state)
-            - name: buildkit-state
-              mountPath: /home/user/.local/share/buildkit
-            - name: user-runtime
-              mountPath: /run/user/1000                 # XDG_RUNTIME_DIR
-      volumes:
-        - name: work
-          configMap:
-            name: buildkit-smoke
-        - name: user-tmp
-          emptyDir: {}
-        - name: buildkit-state
-          emptyDir: {}
-        - name: user-runtime
-          emptyDir: {}
-```
-
-```bash
-kubectl apply -f buildkit-smoke-test.yaml
-kubectl -n buildkit-smoke wait --for=condition=complete job/buildkit-smoke --timeout=10m
-kubectl -n buildkit-smoke logs job/buildkit-smoke | tail -n 30
-kubectl delete namespace buildkit-smoke
-```
-
-| Outcome                                                                      | Meaning                                                                                                                                                                                                                                  |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Job completes, logs show `owner of /data: 4242:4242`                         | Rootless BuildKit works on these nodes with this securityContext                                                                                                                                                                         |
-| Pod rejected: `violates PodSecurity`                                         | The namespace label did not apply, or an admission policy refuses the pod                                                                                                                                                                |
-| `newuidmap: write to uid_map failed` / `failed to setup UID/GID map`         | Privilege escalation or `CAP_SETUID` is blocked — check `allowPrivilegeEscalation` and capability policies                                                                                                                               |
-| `rootlesskit … creating a state directory: … permission denied` or `mkdir /run: file exists`, while a shell in the same pod can write there | The **node** loads an AppArmor profile attached to the path `/usr/bin/rootlesskit` (AppArmor 4 ships one, e.g. on Debian 13): exec-ing that path switches even an `unconfined` pod to it. Check with `sudo aa-status \| grep rootlesskit` on the node — a copy of the binary under another path runs fine. Fix it on the node: adjust or disable that profile |
-| `rootlesskit … creating a state directory: … permission denied`, and the shell cannot write there either | A directory BuildKit writes to is not writable by UID 1000 — mount one `emptyDir` on each of `/home/user/.local/tmp`, `/home/user/.local/share/buildkit` and `/run/user/1000` (the hook template must add them for the workflow pod too) |
-| `rootlesskit … creating a state directory: stat … no such file or directory` | An `emptyDir` on a parent (e.g. `~/.local`) hides the directories the image created — mount on each directory instead                                                                                                                    |
-| `mount … permission denied` / `operation not permitted`                      | seccomp or AppArmor still confines the pod — check the node's AppArmor and that the profile fields are honoured                                                                                                                          |
-
-**Not covered by the smoke test — ARC integration.** In `containerMode: kubernetes` the steps run in the workflow pod (UID 1000 here) while the runner (UID 1001 in `actions-runner`) creates the files of the shared work volume, such as `$GITHUB_OUTPUT`. Check on a first `workflow_dispatch` run that the build step can read the `buildkit-build` action the runner downloaded to that volume and write those files; if it cannot, give both pods a common `fsGroup` through the hook template and the runner pod spec.
-
 ## Notes
 
-- Cluster path: the rootless BuildKit image has no glibc Node.js, so it cannot run JavaScript actions. BuildKit fetches the source itself from a git context (`<repo>.git#<sha>:<context>`) with the job token, passed as the `GIT_AUTH_TOKEN` build secret.
-- Cluster path: the build step is the [`buildkit-build`](../actions/buildkit-build.md) action, a POSIX `sh` script. Registry credentials and secrets are written to a `0700` temporary directory removed at the end of the step.
-- GitHub-hosted path: the source comes from `actions/checkout` of the same commit, and the job logs in to GHCR even when `push` is false, since the layer cache lives there.
-- Tags: a first `tags` job runs the [`image-tags`](../actions/image-tags.md) action on the same runner and passes the image name, tags and cache reference to the build job, so both paths and [`cd-docker`](./cd-docker.md) tag alike. The rootless BuildKit container (busybox `sh`, no checkout) only reads them. A push of a release tag `v1.2.3` adds `1.2.3` and `1.2`.
-- Cluster path: the `tags` job has no job container, so the scale set must allow container-less jobs (`ACTIONS_RUNNER_REQUIRE_JOB_CONTAINER=false` on the runner, which ARC's Kubernetes mode sets to `true` by default) and its runner image needs bash.
-- Layer cache: `<image>-cache:buildcache` on GHCR, shared by both paths (`mode=max`; export failures don't fail the build).
+- The source comes from `actions/checkout` of the triggering commit, and the job logs in to GHCR even when `push` is false, since the layer cache lives there.
+- Tags: the [`image-tags`](../actions/image-tags.md) action computes the image name, tags, cache reference and OCI labels, so this workflow and [`cd-docker`](./cd-docker.md) tag alike. A push of a release tag `v1.2.3` adds `1.2.3` and `1.2`.
+- Layer cache: `<image>-cache:buildcache` on GHCR (`mode=max`; export failures don't fail the build).
 - Each build leaves new versions in GHCR: the tagged image index with its untagged image and attestations, and the replaced cache manifest. [`cleanup-ghcr`](./cleanup-ghcr.md) deletes the old ones on a schedule.
 - Single architecture: the runner's native platform.

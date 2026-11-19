@@ -12,8 +12,8 @@ should use instead.
 ## Usage
 
 The job needs `contents: read` and `pull-requests: write`. The runner needs `curl`,
-`git`, `jq` and `python3`, but no GitHub CLI: GitHub-hosted runners and the
-`actions-runner` image used by self-hosted ARC runners have them.
+`git`, `jq` and `python3`, but no GitHub CLI: GitHub-hosted and Ubicloud
+runners have them.
 
 ```yaml
 steps:

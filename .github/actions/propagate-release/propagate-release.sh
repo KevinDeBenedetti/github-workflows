@@ -20,7 +20,7 @@
 # next one still runs, and the run fails at the end.
 #
 # Talks to the REST and GraphQL APIs with curl, each token in a header file,
-# never on a command line: self-hosted runner images often ship no GitHub CLI.
+# never on a command line: runner images outside GitHub's often ship no GitHub CLI.
 #
 # Env: REPOSITORIES  consumer repositories, one per line or comma-separated
 #                    (required)

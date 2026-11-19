@@ -49,7 +49,7 @@ jobs:
 | --------------------- | ------- | ------------------ | ----------------------------------------------------------------------------------------------------------- |
 | `allowed-bots`        | string  | `'[]'`             | JSON array of bot account logins whose commits are permitted                                                |
 | `fail-on-bot-commits` | boolean | `true`             | Fail the job when bot commits are found (false = warning only)                                              |
-| `runner`              | string  | `'"ubuntu-26.04"'` | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"my-scale-set"'` (the name of an ARC runner scale set) |
+| `runner`              | string  | `'"ubuntu-26.04"'` | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"ubicloud-standard-2"'` |
 
 ## Behaviour
 

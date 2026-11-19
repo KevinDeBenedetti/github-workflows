@@ -18,7 +18,7 @@ runs:
   using: composite
   steps:
     # Installed from the upstream repository into RUNNER_TEMP: no sudo and no
-    # npm needed, so it also works on minimal self-hosted runner images.
+    # npm needed, so it also works on minimal runner images.
     # Pinned in ../install-tool/tools.json and checked against its commit
     # before it is installed.
     - name: Install Bats

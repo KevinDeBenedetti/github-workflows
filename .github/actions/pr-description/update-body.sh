@@ -2,8 +2,8 @@
 # Store a generated description in the managed block of a pull request body
 # (see merge-body.py), and save the body only when it changed.
 #
-# Talks to the REST API with curl rather than gh: the actions-runner image that
-# self-hosted runners often use ships curl and jq but no GitHub CLI. The token
+# Talks to the REST API with curl rather than gh: runner images outside
+# GitHub's often ship curl and jq but no GitHub CLI. The token
 # goes through a header file, never on a command line.
 #
 # Env: GITHUB_TOKEN      token allowed to edit the pull request (required)
