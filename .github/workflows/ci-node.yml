@@ -44,7 +44,8 @@ on:
       test-args:
         description: >
           Extra arguments appended to the test script (pnpm, npm and bun).
-          The default suits Jest/Vitest; set it to '' for runners that reject
+          The default suits Jest/Vitest, and bun receives it as its own
+          `--pass-with-no-tests`; set it to '' for runners that reject
           unknown flags (e.g. `node --test`).
         type: string
         required: false
@@ -215,7 +216,16 @@ jobs:
           # TEST_ARGS is intentionally word-split into separate arguments.
           # shellcheck disable=SC2086
           case "$PM" in
-            bun) bun run test $TEST_ARGS ;;
+            bun)
+              # bun test knows only the kebab-case spelling of the flag, and
+              # fails on 0 test files without it; Jest and Vitest take both.
+              args=()
+              for arg in $TEST_ARGS; do
+                [ "$arg" = --passWithNoTests ] && arg=--pass-with-no-tests
+                args+=("$arg")
+              done
+              bun run test "${args[@]}"
+              ;;
             npm) npm test -- $TEST_ARGS ;;
             *)   pnpm test $TEST_ARGS ;;
           esac

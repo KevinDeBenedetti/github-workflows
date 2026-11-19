@@ -29,7 +29,7 @@ jobs:
 | `run-lint`            | boolean | `true`              | Run `lint` script                                                                                                 |
 | `run-typecheck`       | boolean | `true`              | Run `typecheck` script                                                                                            |
 | `run-test`            | boolean | `true`              | Run `test` script                                                                                                 |
-| `test-args`           | string  | `--passWithNoTests` | Extra arguments for the `test` script (pnpm/npm/bun) — set `''` for runners rejecting unknown flags               |
+| `test-args`           | string  | `--passWithNoTests` | Extra `test` script arguments (bun gets `--pass-with-no-tests`) — set `''` for runners rejecting unknown flags    |
 | `run-build`           | boolean | `true`              | Run `build` script                                                                                                |
 | `upload-build`        | boolean | `false`             | Upload build output as a workflow artifact                                                                        |
 | `build-artifact-name` | string  | `build`             | Name of the uploaded artifact                                                                                     |
