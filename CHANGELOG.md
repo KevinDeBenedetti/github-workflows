@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.51.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.50.1...v0.51.0) (2026-11-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* the buildkit-build and prek-home composite actions are removed. Callers that reference them must switch to another approach.
+
+### Miscellaneous Chores
+
+* remove self-hosted runner support and the buildkit-build and prek-home actions ([da2edee](https://github.com/KevinDeBenedetti/github-workflows/commit/da2edeea1b304e7eabfedfc3eb2b312620a29866))
+
 ## [0.50.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.50.0...v0.50.1) (2026-11-19)
 
 
