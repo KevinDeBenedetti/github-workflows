@@ -4,11 +4,11 @@
 
 ### Issue tracker
 
-Local Markdown: one directory per feature under `.scratch/`, one file per ticket. See `.agents/issue-tracker.md`.
+GitHub Issues of this repository, through the `gh` CLI. See `.agents/issue-tracker.md`.
 
 ### Triage labels
 
-The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), recorded as a `Status:` line in each ticket. See `.agents/triage-labels.md`.
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), as GitHub labels of the same names. See `.agents/triage-labels.md`.
 
 ### Domain docs
 
