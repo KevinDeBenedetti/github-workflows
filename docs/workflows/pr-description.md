@@ -93,17 +93,21 @@ things GitHub cannot share between the repositories of a personal account:
 
 1. The caller file from [Usage](#usage), as `.github/workflows/pr-description.yml`.
 2. The `CLAUDE_CODE_OAUTH_TOKEN` secret. Only an organization can share one secret
-   between repositories, so set it on each repository in one loop, and run the loop
-   again when the token expires after a year:
+   between repositories, so `scripts/set-secret.sh`, from a clone of this
+   repository, sets it on each of them. Run it again when the token expires after
+   a year:
 
 ```sh
-claude setup-token                # prints the token
-read -rs CLAUDE_CODE_OAUTH_TOKEN  # paste it: it is not echoed
-for repo in repo-a repo-b repo-c; do
-  printf '%s' "$CLAUDE_CODE_OAUTH_TOKEN" | gh secret set CLAUDE_CODE_OAUTH_TOKEN --repo "<owner>/$repo"
-done
-unset CLAUDE_CODE_OAUTH_TOKEN
+claude setup-token   # prints the token: copy it
+pbpaste | scripts/set-secret.sh CLAUDE_CODE_OAUTH_TOKEN repo-a repo-b <owner>/repo-c
 ```
+
+The value is read from stdin and never shown; without a pipe, the script asks for
+it at a prompt that does not echo. A bare name is a repository of the owner of the
+clone. With no repository, the script takes the clone's own repository and each
+one listed in its `PROPAGATE_REPOSITORIES` variable. It prints one line per
+repository and exits 1 when one failed. On Linux, replace `pbpaste` with
+`wl-paste` or `xclip -o -selection clipboard`.
 
 The ref in the caller decides when a change made here reaches a repository. A
 caller on `@main` picks it up at once. A caller pinned to a tag or a commit SHA
