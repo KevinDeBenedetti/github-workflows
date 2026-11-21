@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.53.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.52.0...v0.53.0) (2026-11-21)
+
+
+### Features
+
+* **cd-docs:** add a runner input, plus local hooks, tested action scripts and SHA pins in the docs ([2a0e20f](https://github.com/KevinDeBenedetti/github-workflows/commit/2a0e20f5d8ef0eddedb201209352853b8da8b250)), closes [#140](https://github.com/KevinDeBenedetti/github-workflows/issues/140) [#141](https://github.com/KevinDeBenedetti/github-workflows/issues/141) [#142](https://github.com/KevinDeBenedetti/github-workflows/issues/142) [#143](https://github.com/KevinDeBenedetti/github-workflows/issues/143)
+
 ## [0.52.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.51.0...v0.52.0) (2026-11-21)
 
 
