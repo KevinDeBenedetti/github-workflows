@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.54.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.53.0...v0.54.0) (2026-11-21)
+
+
+### Features
+
+* **ci-shell:** add shellcheck-extra-paths, and run Renovate from a workflow ([2e0aab8](https://github.com/KevinDeBenedetti/github-workflows/commit/2e0aab8cb68df5d34c360f841a5d272f4aee1685)), closes [#139](https://github.com/KevinDeBenedetti/github-workflows/issues/139) [#145](https://github.com/KevinDeBenedetti/github-workflows/issues/145)
+
 ## [0.53.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.52.0...v0.53.0) (2026-11-21)
 
 
