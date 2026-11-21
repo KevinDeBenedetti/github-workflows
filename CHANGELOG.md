@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.52.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.51.0...v0.52.0) (2026-11-21)
+
+
+### ⚠ BREAKING CHANGES
+
+* **cd-docker:** cd-buildkit.yml is removed; call cd-docker.yml as docs/workflows/cd-docker.md describes.
+
+### Features
+
+* **cd-docker:** add runner, registry-cache and deployment inputs and remove cd-buildkit ([8aa3c39](https://github.com/KevinDeBenedetti/github-workflows/commit/8aa3c39930df338cc306cfaa8e271e3e78e31314)), closes [#134](https://github.com/KevinDeBenedetti/github-workflows/issues/134)
+
 ## [0.51.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.50.1...v0.51.0) (2026-11-19)
 
 
