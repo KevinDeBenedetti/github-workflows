@@ -143,26 +143,8 @@ jobs:
       tag-latest: true
 ```
 
-Builds and pushes a multi-platform image to GHCR (`ghcr.io`).
+Builds and pushes an image to GHCR (`ghcr.io`), for one or several platforms, on a GitHub-hosted or Ubicloud runner.
 → [Full reference](workflows/cd-docker.md)
-
----
-
-### BuildKit (Docker Buildx)
-
-```yaml
-jobs:
-  deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-buildkit.yml@main
-    permissions:
-      contents: read
-      packages: write  # push the image and its layer cache to GHCR
-    with:
-      image-name: my-app
-```
-
-Builds and pushes a single-platform image to GHCR with BuildKit, driven by Docker Buildx, on a GitHub-hosted or Ubicloud runner.
-→ [Full reference](workflows/cd-buildkit.md)
 
 ---
 
@@ -309,8 +291,7 @@ jobs:
 | `ci-terraform.yml`        | Terraform CI (validate + fmt check)                                                                                                    | [→](workflows/ci-terraform.md)        |
 | `ci-prometheus.yml`       | Prometheus CI (PromQL check + alert unit tests)                                                                                        | [→](workflows/ci-prometheus.md)       |
 | `ci-prek.yml`             | prek / pre-commit hooks run server-side (`prek run --all-files`)                                                                       | [→](workflows/ci-prek.md)             |
-| `cd-docker.yml`           | Build & push multi-platform Docker image to GHCR                                                                                       | [→](workflows/cd-docker.md)           |
-| `cd-buildkit.yml`         | Build & push a single-platform image with BuildKit (Docker Buildx)                                                                     | [→](workflows/cd-buildkit.md)         |
+| `cd-docker.yml`           | Build & push a Docker image to GHCR, for one or several platforms                                                                      | [→](workflows/cd-docker.md)           |
 | `cd-docs.yml`             | Sync docs to a centralized docs repository                                                                                             | [→](workflows/cd-docs.md)             |
 | `release.yml`             | Automated releases via release-please                                                                                                  | [→](workflows/release.md)             |
 | `propagate-release.yml`   | A pull request in each consumer repository moves its pins to the new release                                                           | [→](workflows/propagate-release.md)   |

@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Tests for .github/actions/image-tags/image-tags.sh: the image name, tags and
-# cache reference of cd-buildkit.yml and cd-docker.yml.
+# cache reference of cd-docker.yml.
 
 ROOT="$BATS_TEST_DIRNAME/.."
 SCRIPT="$ROOT/.github/actions/image-tags/image-tags.sh"

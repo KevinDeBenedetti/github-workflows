@@ -3,8 +3,7 @@ description: >
   Image name, tags, OCI labels and layer-cache reference of a container
   build, from the event that triggered it: sha-<7>, the branch, pr-<number>, the release tag
   and an explicit version (with their X.Y alias), latest on the default
-  branch. Shared by cd-buildkit.yml and cd-docker.yml; the rules are at the top
-  of image-tags.sh. Needs bash: no checkout.
+  branch. Used by cd-docker.yml; the rules are at the top of image-tags.sh. Needs bash: no checkout.
 
 inputs:
   image-name:

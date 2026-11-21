@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Image name, tags and layer-cache reference of a build, for cd-buildkit.yml
-# (both build jobs) and cd-docker.yml, so every image workflow tags alike.
+# Image name, tags and layer-cache reference of a build, for cd-docker.yml.
 #
 # Tags, a subset of docker/metadata-action's defaults:
 #   sha-<7>        always

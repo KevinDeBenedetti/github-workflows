@@ -1,5 +1,21 @@
 name: Deploy — Docker
 
+# The image build of this repository's callers: Docker Buildx drives BuildKit
+# on the runner's Docker daemon, from a checkout of the triggering commit, and
+# pushes to GHCR with provenance and an SBOM.
+#
+#   - `platforms` picks what is built. Anything other than the runner's own
+#     architecture runs under QEMU: for one platform, name it and pick a runner
+#     of that architecture.
+#   - `runner` takes any Linux VM runner with Docker, GitHub's or Ubicloud's.
+#   - The layer cache is the GitHub Actions cache by default, or with
+#     `registry-cache` a `<image>-cache:buildcache` image in GHCR, which
+#     outlives the Actions cache's eviction and is shared by every runner.
+#   - `deployment: false` leaves out the production/preview environment and
+#     its deployment record.
+#
+# Tags and OCI labels come from actions/image-tags.
+
 on:
   workflow_call:
     inputs:
@@ -14,7 +30,7 @@ on:
         required: false
         default: '.'
       dockerfile:
-        description: Path to Dockerfile
+        description: Dockerfile path relative to context
         type: string
         required: false
         default: Dockerfile
@@ -71,6 +87,26 @@ on:
         type: boolean
         required: false
         default: true
+      registry-cache:
+        description: >
+          Keep the layer cache in GHCR (<image>-cache:buildcache, mode=max)
+          instead of the GitHub Actions cache. The job then logs in to GHCR
+          even when push is false.
+        type: boolean
+        required: false
+        default: false
+      deployment:
+        description: >
+          Run the build in the production (main) or preview environment, which
+          records a deployment. false runs it in no environment.
+        type: boolean
+        required: false
+        default: true
+      runner:
+        description: Runner labels as JSON — a Linux VM runner with a Docker daemon, GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
+        type: string
+        required: false
+        default: '"ubuntu-26.04"'
       timeout-minutes:
         description: >
           Minutes before the build job is cancelled (GitHub's default is 360):
@@ -90,6 +126,9 @@ on:
       image:
         description: Image tag(s) applied to the build (newline-separated, from docker/metadata-action)
         value: ${{ jobs.docker.outputs.image }}
+      image-name:
+        description: Image name without a tag (ghcr.io/<owner>/<name>)
+        value: ${{ jobs.docker.outputs.image-name }}
       digest:
         description: Image digest
         value: ${{ jobs.docker.outputs.digest }}
@@ -107,12 +146,12 @@ concurrency:
 jobs:
   docker:
     name: Docker build & push (${{ inputs.context }})
-    runs-on: ubuntu-26.04
+    runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: ${{ inputs.timeout-minutes }}
-    environment: ${{ inputs.push && (github.ref == 'refs/heads/main' && 'production' || 'preview') || '' }}
+    environment: ${{ inputs.push && inputs.deployment && (github.ref == 'refs/heads/main' && 'production' || 'preview') || '' }}
     permissions:
       contents: read
-      packages: write     # push the image to GHCR
+      packages: write     # push the image, and the layer cache with registry-cache, to GHCR
       deployments: write  # deployment record of the production/preview environment
 
     outputs:
@@ -126,7 +165,7 @@ jobs:
         with:
           persist-credentials: false
 
-      # The tags and OCI labels shared with cd-buildkit.yml (actions/image-tags);
+      # Image name, tags, cache reference and OCI labels (actions/image-tags);
       # metadata-action only turns the tags into the image's full names.
       - name: Image tags
         id: image
@@ -153,8 +192,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
+      # Also without a push when the layer cache lives in GHCR.
       - name: Login to GHCR
-        if: inputs.push
+        if: inputs.push || inputs.registry-cache
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
@@ -178,10 +218,12 @@ jobs:
           # repositories would otherwise only get mode=min, inline-only).
           provenance: ${{ inputs.provenance }}
           sbom: ${{ inputs.sbom }}
-          # Scope includes the target: two stages of one context must not
-          # overwrite each other's cache.
-          cache-from: type=gha,scope=${{ inputs.context }}-${{ inputs.target }}
-          cache-to: type=gha,scope=${{ inputs.context }}-${{ inputs.target }},mode=max
+          # GitHub Actions cache: the scope includes the target, so two
+          # stages of one context do not overwrite each other's cache.
+          # Registry cache: one reference per image; a failed export does not
+          # fail the build.
+          cache-from: ${{ inputs.registry-cache && format('type=registry,ref={0}', steps.image.outputs.cache) || format('type=gha,scope={0}-{1}', inputs.context, inputs.target) }}
+          cache-to: ${{ inputs.registry-cache && format('type=registry,ref={0},mode=max,ignore-error=true', steps.image.outputs.cache) || format('type=gha,scope={0}-{1},mode=max', inputs.context, inputs.target) }}
 
       - name: Export digest summary
         env:
@@ -205,7 +247,7 @@ jobs:
     name: Attest image provenance
     needs: docker
     if: inputs.push && inputs.attest
-    runs-on: ubuntu-26.04
+    runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 10
     permissions:
       id-token: write      # OIDC token for the Sigstore signing certificate

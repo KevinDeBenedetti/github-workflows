@@ -5,9 +5,8 @@ title: Action — image-tags
 # Action — image-tags
 
 Computes the image name, tags, OCI labels and layer-cache reference of a
-container build from the event that triggered it. [`cd-buildkit`](../workflows/cd-buildkit.md)
-(both build paths) and [`cd-docker`](../workflows/cd-docker.md) use it, so
-every image of these workflows is tagged and labelled alike. It needs bash and no checkout.
+container build from the event that triggered it. [`cd-docker`](../workflows/cd-docker.md)
+uses it, and a workflow of your own can, to tag and label an image the same way. It needs bash and no checkout.
 
 ## Usage
 
@@ -59,7 +58,7 @@ steps:
 ## Labels
 
 The `org.opencontainers.image.*` keys `docker/metadata-action` sets, computed once
-so that `cd-buildkit` and `cd-docker` label an image alike:
+for every build:
 
 | Label         | Value                                                                                             |
 | ------------- | ------------------------------------------------------------------------------------------------- |
