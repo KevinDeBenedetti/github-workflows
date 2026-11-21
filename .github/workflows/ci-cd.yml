@@ -135,15 +135,22 @@ jobs:
         with:
           apps-directory: .github/actions
 
-      # No workflow of this repository runs kubeconform: installed here so
-      # that its entry of install-tool's tools.json is proven like the others.
-      - name: kubeconform install (local action)
-        uses: ./.github/actions/install-tool
+      # No workflow of this repository runs kubeconform: the action validates
+      # a one-manifest fixture here, which also proves install-tool's
+      # kubeconform entry. The built-in schemas only: no catalog fetch.
+      - name: kubeconform (local action)
+        uses: ./.github/actions/kubeconform
         with:
-          tool: kubeconform
+          paths: tests/fixtures/kubernetes/
+          include-crds-catalog: 'false'
 
-      - name: kubeconform runs
-        run: kubeconform -v
+      # Writes its summary to this run's job summary, with placeholder values.
+      - name: notify-deployment (local action)
+        uses: ./.github/actions/notify-deployment
+        with:
+          app-name: ci-selftest
+          version: v0.0.0
+          url: app.example.com
 
       # The pinned Claude Code binary: a Renovate PR that bumps its version
       # must prove that the pinned SHA-256 values were refreshed with it.

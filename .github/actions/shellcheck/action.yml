@@ -10,6 +10,15 @@ inputs:
     description: Path glob passed to find -not -path to exclude from analysis
     required: false
     default: '*/test_helper/*'
+  extra-paths:
+    description: >
+      Space-separated path globs (each passed to find -path, relative to the
+      repository root) whose files are checked as well as the *.sh ones, for
+      extensionless scripts such as `scripts/*/*`. A matched file is checked
+      only when its shebang or a `# shellcheck shell=` directive declares a
+      supported shell; the others are skipped with a notice.
+    required: false
+    default: ''
   default-shell:
     description: >
       Dialect assumed for scripts with neither a shebang nor a
@@ -34,5 +43,6 @@ runs:
       env:
         SEVERITY: ${{ inputs.severity }}
         EXCLUDE_PATHS: ${{ inputs.exclude-paths }}
+        EXTRA_PATHS: ${{ inputs.extra-paths }}
         DEFAULT_SHELL: ${{ inputs.default-shell }}
       run: bash "$GITHUB_ACTION_PATH/shellcheck.sh"

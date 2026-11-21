@@ -18,6 +18,11 @@ on:
         type: string
         required: false
         default: '*/test_helper/*'
+      shellcheck-extra-paths:
+        description: Space-separated path globs whose files ShellCheck checks too, whatever their extension (e.g. 'scripts/*/*'); only those declaring a supported shell are checked
+        type: string
+        required: false
+        default: ''
       run-actionlint:
         description: Run actionlint on GitHub Actions workflow files
         type: boolean
@@ -127,6 +132,10 @@ on:
         description: Path glob to exclude from ShellCheck (e.g. '*/test_helper/*')
         type: string
         default: '*/test_helper/*'
+      shellcheck-extra-paths:
+        description: Space-separated path globs whose files ShellCheck checks too, whatever their extension (e.g. 'scripts/*/*'); only those declaring a supported shell are checked
+        type: string
+        default: ''
       run-actionlint:
         description: Run actionlint on GitHub Actions workflow files
         type: boolean
@@ -229,6 +238,7 @@ jobs:
         with:
           severity: ${{ inputs.shellcheck-severity }}
           exclude-paths: ${{ inputs.shellcheck-exclude-paths }}
+          extra-paths: ${{ inputs.shellcheck-extra-paths }}
 
   # ── YAML validation ──────────────────────────────────────────────────────────
   validate-yaml:

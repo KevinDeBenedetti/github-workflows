@@ -22,7 +22,7 @@
       "description": "Tool versions pinned as literals inside workflows and composite actions (promtool, yq, terraform, pnpm). The github-actions manager only sees `uses:` refs and container images — a version baked into a download URL or a workflow input default is invisible to it, so it silently rots. The tools the actions download and verify are pinned in .github/actions/install-tool/tools.json instead (next manager).",
       "managerFilePatterns": ["/^\\.github/workflows/.+\\.ya?ml$/", "/^\\.github/actions/.+\\.(ya?ml|sh)$/"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+(?:default|version): (?<currentValue>v?[\\d][^\\s]*)",
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+(?:default|version|renovate-version): (?<currentValue>v?[\\d][^\\s]*)",
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\n\\s+[A-Z_]+=\"(?<currentValue>v?[\\d][^\"]*)\""
       ]
     },
