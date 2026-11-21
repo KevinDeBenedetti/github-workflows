@@ -23,9 +23,9 @@
 #                   platform images are all gone, which nothing can pull) go.
 #                   A last pass warns about any multi-arch image left with a
 #                   platform image missing.
-#   cache-packages  registry layer caches (<image>-cache, written by
-#                   cd-buildkit): every version older than older-than goes,
-#                   except the `buildcache` tag that cd-buildkit reads.
+#   cache-packages  registry layer caches (<image>-cache, written by cd-docker
+#                   with registry-cache): every version older than older-than
+#                   goes, except the `buildcache` tag that the build reads.
 #
 # A deleted version can be restored for 30 days, from the package settings.
 name: Cleanup GHCR
@@ -37,7 +37,7 @@ on:
         description: >
           Comma-separated image packages to clean, as named in
           ghcr.io/<owner>/<name>. Empty: the repository name, the image name
-          cd-docker and cd-buildkit use when `image-name` is empty.
+          cd-docker uses when `image-name` is empty.
           List only packages that exist.
         type: string
         required: false

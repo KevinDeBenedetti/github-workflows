@@ -28,7 +28,7 @@ jobs:
       packages: write
     with:
       packages: my-app              # default: the repository name
-      cache-packages: my-app-cache  # layer cache of cd-buildkit
+      cache-packages: my-app-cache  # layer cache of cd-docker's registry-cache
       dry-run: true
 ```
 
@@ -66,9 +66,9 @@ The policy is set once, in this workflow, for every caller:
   platform images, and each one found is reported as a warning in the log. The
   check never fails the job.
 - `cache-packages` targets the registry layer caches written by
-  [`cd-buildkit`](./cd-buildkit.md), named `<image>-cache`. BuildKit reads only
-  `buildcache`; the cache manifests it replaced (and the per-layer images a
-  former Kaniko build left) are deleted once older than `older-than`.
+  [`cd-docker`](./cd-docker.md) with `registry-cache`, named `<image>-cache`.
+  BuildKit reads only `buildcache`; the cache manifests it replaced are deleted
+  once older than `older-than`.
 
 ## Inputs
 
@@ -84,8 +84,7 @@ The policy is set once, in this workflow, for every caller:
 | `runner`         | string  | `'"ubuntu-26.04"'`                | Runner labels as JSON                                                |
 
 `packages` defaults to the repository name, the name [`cd-docker`](./cd-docker.md)
-and [`cd-buildkit`](./cd-buildkit.md) give the image when their `image-name`
-input is empty. Package names are lowercased.
+gives the image when its `image-name` input is empty. Package names are lowercased.
 
 ## Permissions
 
