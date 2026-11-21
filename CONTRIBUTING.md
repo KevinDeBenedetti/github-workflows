@@ -43,5 +43,5 @@ docs, the consistency of the reusable workflows, and the commit message.
 ## Review
 
 A pull request merges once the `CI — Gate` check passes (ShellCheck, actionlint,
-Bats, zizmor, prek hooks, Conventional Commits, Gitleaks, dependency review,
-CodeQL) and a Code Owner has approved it.
+Bats, zizmor, prek hooks, a test image build, Conventional Commits, Gitleaks,
+dependency review, CodeQL) and a Code Owner has approved it.
