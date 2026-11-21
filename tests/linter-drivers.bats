@@ -22,7 +22,7 @@ SH
     chmod +x "bin/$name"
   done
   PATH="$BATS_TEST_TMPDIR/bin:$PATH"
-  unset SEVERITY EXCLUDE_PATHS DEFAULT_SHELL PATHS FLAGS FAIL_CALLS
+  unset SEVERITY EXCLUDE_PATHS EXTRA_PATHS DEFAULT_SHELL PATHS FLAGS FAIL_CALLS
   cd repo
 }
 
@@ -67,6 +67,34 @@ call() { cat "$CALLS/$1"; }
   rm "$CALLS"/*
   EXCLUDE_PATHS='./vendor/*' run bash "$SHELLCHECK"
   [ "$(call 1)" = "$(printf '%s\n' --severity=warning --format=gcc ./keep.sh ./tests/test_helper/bats.sh)" ]
+}
+
+@test "shellcheck: extra-paths adds the extensionless scripts that declare a shell" {
+  script keep.sh '#!/bin/sh'
+  script scripts/ai/ai '#!/usr/bin/env bash'
+  script scripts/ollama/setenv '# shellcheck shell=bash'
+  script scripts/ai/tool.py '#!/usr/bin/env python3'
+  script scripts/ai/README '# notes'
+  script scripts/ai/zsh-only '#!/usr/bin/env zsh'
+  script scripts/vendor/x '#!/bin/sh'
+  script other/cli '#!/bin/sh'
+  EXTRA_PATHS='scripts/*/* ./nothing/*' EXCLUDE_PATHS='./scripts/vendor/*' run bash "$SHELLCHECK"
+  [ "$status" -eq 0 ]
+  [ "$(call 1)" = "$(printf '%s\n' --severity=warning --format=gcc \
+    ./keep.sh ./scripts/ai/ai ./scripts/ollama/setenv)" ]
+  # Without a declared shell an extra file is skipped, never checked as
+  # default-shell: a Python tool or a README would fail the step.
+  [ ! -e "$CALLS/2" ]
+  [[ "$output" == *"::notice::Skipped 3 extra-paths file(s) that declare no supported shell: ./scripts/ai/README ./scripts/ai/tool.py ./scripts/ai/zsh-only"* ]]
+  [[ "$output" == *"Checked 3 script(s)."* ]]
+}
+
+@test "shellcheck: a .sh file matched by extra-paths is checked once" {
+  script scripts/a.sh '#!/bin/sh'
+  EXTRA_PATHS='scripts/*' run bash "$SHELLCHECK"
+  [ "$status" -eq 0 ]
+  [ "$(call 1)" = "$(printf '%s\n' --severity=warning --format=gcc ./scripts/a.sh)" ]
+  [[ "$output" == *"Checked 1 script(s)."* ]]
 }
 
 @test "shellcheck: severity and default-shell reach ShellCheck, and a failing pass fails the step" {

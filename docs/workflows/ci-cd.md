@@ -23,7 +23,7 @@ on:
 | Job              | Runs when       | Calls                               | Purpose                                                                                 |
 | ---------------- | --------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
 | `ci-shell`       | push + PR       | `ci-shell.yml`                      | ShellCheck, actionlint, Bats and docs checks, with the actions of this commit           |
-| `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus the pinned kubeconform and Claude Code   |
+| `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus kubeconform on a fixture, notify-deployment and the pinned Claude Code |
 | `ci-zizmor`      | push + PR       | `zizmorcore/zizmor-action`          | GitHub Actions security lint, pedantic persona                                          |
 | `ci-prek`        | push + PR       | `ci-prek.yml`                       | This repo's prek hooks                                                                  |
 | `ci-image`       | push + PR       | `./…/cd-docker.yml` (local)         | A fixture image built for `linux/amd64` without a push: the build workflow's self-test  |
@@ -41,4 +41,5 @@ on:
 - `pr-description` is not in `ci-gate`'s needs: a missing `CLAUDE_CODE_OAUTH_TOKEN` secret or a model error never blocks a merge.
 - `release` uses a local ref: GitHub validates `with:` inputs against the referenced workflow at parse time, so a remote `@main` ref would reject inputs a branch adds to `release.yml` before they are merged.
 - `propagate` runs only when the `PROPAGATE_REPOSITORIES` variable is set, with the GitHub App of `RELEASE_APP_CLIENT_ID` and `RELEASE_APP_PRIVATE_KEY`; `propagate.yml` runs it by hand as a dry run. See [`propagate-release`](./propagate-release.md).
+- Dependency updates come from `renovate.yml`, outside this pipeline: it runs Renovate every day with a token of the same GitHub App, so its pull requests run CI like any other. `renovate.json` decides what is updated and when. A manual run is a dry run unless unticked.
 - Docs are not pushed anywhere: the central docs site polls this repo on a schedule (see [`cd-docs.md`](./cd-docs.md)). `ci-shell` verifies them.

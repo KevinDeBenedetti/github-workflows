@@ -1,0 +1,8 @@
+# Fixture of ci-cd.yml's ci-actions job: one manifest the kubeconform action
+# validates against the built-in Kubernetes schemas.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ci-selftest
+data:
+  key: value

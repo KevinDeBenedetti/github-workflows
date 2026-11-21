@@ -29,6 +29,7 @@ jobs:
 | `run-shellcheck`           | boolean | `true`                         | Run ShellCheck on all `.sh` files                                            |
 | `shellcheck-severity`      | string  | `warning`                      | Minimum severity: `error` \| `warning` \| `info` \| `style`                  |
 | `shellcheck-exclude-paths` | string  | `*/test_helper/*`              | Glob passed to `find -not -path` to exclude from analysis                    |
+| `shellcheck-extra-paths`   | string  | `''`                           | Space-separated globs whose files are checked too, whatever their extension  |
 | `run-actionlint`           | boolean | `true`                         | Run actionlint on GitHub Actions workflow files                              |
 | `actionlint-paths`         | string  | `.github/workflows/`           | Space-separated files, directories and globs; one matching nothing fails     |
 | `actionlint-flags`         | string  | `''`                           | Extra flags passed to actionlint, split like a shell command line            |
