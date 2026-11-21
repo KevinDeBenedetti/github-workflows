@@ -23,6 +23,7 @@ jobs:
 | ------------------ | ------ | ----------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `docs-directory`   | string | `docs`                                          | Docs folder in the calling repo, verified by the `verify` job                       |
 | `check-external-links` | boolean | `true`                                    | Also check the `http(s)` links of the Markdown files the push changed (lychee)      |
+| `runner`           | string | `'"ubuntu-26.04"'`                              | Runner labels as JSON: GitHub's or Ubicloud's, e.g. `'"ubicloud-standard-2"'`       |
 | `client-id`        | string | `''`                                            | **Deprecated, leave empty.** When set, the legacy `docs-updated` dispatch is also sent (see below) |
 | `target-repo`      | string | `KevinDeBenedetti/kevindebenedetti.github.io`   | Legacy dispatch only: repository that receives the event                            |
 | `target-directory` | string | _(calling repo name)_                           | Legacy dispatch only: logical name sent in the payload                              |

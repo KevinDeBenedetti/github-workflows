@@ -8,7 +8,7 @@ Optionally validates CRDs against the [Datree CRDs-catalog](https://github.com/d
 
 ```yaml
 steps:
-  - uses: actions/checkout@v7
+  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/kubeconform@main
     with:
@@ -36,3 +36,4 @@ steps:
   enabling validation of common CRD types beyond the built-in Kubernetes schemas.
 - Helm values files (`*-values.yaml`) are excluded by default since they are not valid Kubernetes
   manifests.
+- The script is `kubeconform.sh`; its tests are in `tests/kubeconform.bats`.

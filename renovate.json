@@ -12,6 +12,10 @@
   "minimumReleaseAge": "3 days",
   "internalChecksFilter": "strict",
   "enabledManagers": ["github-actions", "custom.regex", "custom.jsonata"],
+  "github-actions": {
+    "description": "Also the `uses:` lines of the docs and the examples: their SHA pins are copied into other repositories, so they move with the workflows' own.",
+    "managerFilePatterns": ["/^docs/.+\\.md$/", "/^examples/.+\\.ya?ml$/"]
+  },
   "customManagers": [
     {
       "customType": "regex",

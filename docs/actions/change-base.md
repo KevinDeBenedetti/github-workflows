@@ -16,7 +16,7 @@ commit check, [`check-docs-external-links`](check-docs-external-links.md) and
 
 ```yaml
 steps:
-  - uses: actions/checkout@v7
+  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     with:
       fetch-depth: 0 # a walk of base..HEAD needs the history in between
       persist-credentials: false

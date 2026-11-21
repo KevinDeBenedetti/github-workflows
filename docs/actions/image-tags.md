@@ -17,7 +17,7 @@ steps:
     with:
       version: v1.2.3
 
-  - uses: docker/build-push-action@v7
+  - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
     with:
       tags: ${{ steps.image.outputs.names }}
       cache-from: type=registry,ref=${{ steps.image.outputs.cache }}

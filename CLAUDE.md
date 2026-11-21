@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+## Verify a change
+
+`CONTRIBUTING.md` (Set up) has the hooks and the commands of the gate. In short:
+
+- `prek run --all-files`: whitespace, YAML/JSON, actionlint, ShellCheck, the docs checks and the consistency of the workflows.
+- `bats tests/`: every script's tests (over a minute). A new or changed script ships with its suite.
+- zizmor, pedantic persona, after a change to a workflow or an action: the command is in `CONTRIBUTING.md`.
+
+Commits and pull request titles are Conventional Commits: release-please reads them.
+
 ## Agent skills
 
 ### Issue tracker

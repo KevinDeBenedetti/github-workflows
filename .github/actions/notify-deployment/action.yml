@@ -49,37 +49,4 @@ runs:
         INFRA_COMMIT_URL: ${{ inputs.infra-commit-url }}
         INFRA_LINK_LABEL: ${{ inputs.infra-link-label }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-      run: |
-        ICON="✅"
-        if [ "$STATUS" != "success" ]; then
-          ICON="❌"
-        fi
-
-        {
-          echo "### ${ICON} Deployment ${APP_NAME}"
-          echo ""
-          echo "| Property | Value |"
-          echo "| :--- | :--- |"
-          echo "| **Status** | ${ICON} ${STATUS} |"
-          echo "| **Environment** | \`${ENVIRONMENT}\` |"
-          echo "| **Version** | \`${VERSION}\` |"
-
-          if [ -n "$APP_URL" ]; then
-            case "$APP_URL" in
-              http://*|https://*) HREF="$APP_URL" ;;
-              *)                  HREF="https://${APP_URL}" ;;
-            esac
-            echo "| **URL** | [${APP_URL}](${HREF}) |"
-          fi
-
-          echo ""
-          echo "**Monitoring:**"
-
-          if [ -n "$ARGOCD_URL" ]; then
-            echo "- 🛰️ [View in ArgoCD](${ARGOCD_URL})"
-          fi
-          if [ -n "$INFRA_COMMIT_URL" ]; then
-            echo "- 📝 [${INFRA_LINK_LABEL}](${INFRA_COMMIT_URL})"
-          fi
-          echo "- 📊 [Workflow run logs](${RUN_URL})"
-        } >> "$GITHUB_STEP_SUMMARY"
+      run: bash "$GITHUB_ACTION_PATH/notify-deployment.sh"

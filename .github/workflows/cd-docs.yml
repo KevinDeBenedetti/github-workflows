@@ -39,6 +39,11 @@ on:
         type: string
         required: false
         default: ''
+      runner:
+        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
+        type: string
+        required: false
+        default: '"ubuntu-26.04"'
     outputs:
       docs-synced:
         description: '"true" when the docs-updated dispatch was sent successfully.'
@@ -64,7 +69,7 @@ jobs:
   # rebuild on the central site. If any check fails, `dispatch` is skipped.
   verify:
     name: Verify docs
-    runs-on: ubuntu-26.04
+    runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 15
     permissions:
       contents: read
@@ -98,7 +103,7 @@ jobs:
     name: Dispatch docs-updated → ${{ inputs.target-repo }}
     needs: verify
     if: inputs.client-id != ''
-    runs-on: ubuntu-26.04
+    runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 10
     permissions:
       contents: read
