@@ -43,24 +43,4 @@ runs:
         EXCLUDE: ${{ inputs.exclude }}
         INCLUDE_CRDS_CATALOG: ${{ inputs.include-crds-catalog }}
         IGNORE_MISSING_SCHEMAS: ${{ inputs.ignore-missing-schemas }}
-      run: |
-        SCHEMA_ARGS=("-schema-location" "default")
-        if [ "$INCLUDE_CRDS_CATALOG" = "true" ]; then
-          SCHEMA_ARGS+=(
-            "-schema-location"
-            "https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json"
-          )
-        fi
-
-        IGNORE_ARGS=()
-        if [ -n "$EXCLUDE" ]; then
-          IGNORE_ARGS+=("-ignore-filename-pattern" "$EXCLUDE")
-        fi
-        if [ "$IGNORE_MISSING_SCHEMAS" = "true" ]; then
-          IGNORE_ARGS+=("-ignore-missing-schemas")
-        fi
-
-        kubeconform -strict -summary \
-          "${SCHEMA_ARGS[@]}" \
-          "${IGNORE_ARGS[@]}" \
-          "$PATHS"
+      run: bash "$GITHUB_ACTION_PATH/kubeconform.sh"

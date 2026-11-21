@@ -4,7 +4,7 @@
 
 minimum_prek_version = "0.3.0"
 fail_fast = false
-default_install_hook_types = ["pre-commit", "commit-msg"]
+default_install_hook_types = ["pre-commit", "commit-msg", "pre-push"]
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
@@ -26,6 +26,17 @@ repo = "https://github.com/rhysd/actionlint"
 rev = "v1.7.11"
 hooks = [
   { id = "actionlint" },
+]
+
+# ShellCheck as a Python wheel: the pinned binary, with nothing to install.
+# Same version and severity as the CI gate (install-tool's tools.json).
+[[repos]]
+repo = "https://github.com/shellcheck-py/shellcheck-py"
+# renovate: datasource=github-tags depName=shellcheck-py/shellcheck-py
+rev = "v0.11.0.1"
+hooks = [
+  # *.sh only, like the gate: the .bats files are not ShellCheck's dialect.
+  { id = "shellcheck", args = ["--severity=warning"], files = "\\.sh$" },
 ]
 
 [[repos]]
@@ -70,3 +81,15 @@ name = "Conventional Commits message"
 language = "script"
 entry = ".github/actions/check-commit-msg/check-commit-msg.sh"
 stages = ["commit-msg"]
+
+# The whole suite takes over a minute, so it runs before a push, not on every
+# commit, and only when a script, an action or a test is among the commits.
+# Needs bats on PATH (brew install bats-core).
+[[repos.hooks]]
+id = "bats"
+name = "Bats tests"
+language = "system"
+entry = "bats tests/"
+files = "^(tests/|scripts/|\\.github/actions/)"
+pass_filenames = false
+stages = ["pre-push"]

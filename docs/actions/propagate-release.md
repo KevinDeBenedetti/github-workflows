@@ -15,7 +15,7 @@ App token, and documents which pins move and how the pull request behaves.
 ```yaml
 steps:
   - id: app-token
-    uses: actions/create-github-app-token@v3
+    uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
     with:
       client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
       private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}

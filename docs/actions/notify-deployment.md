@@ -72,3 +72,4 @@ Monitoring:
 - Use <code v-pre>${{ job.status }}</code> to automatically capture success/failure
 - Set `url` to the production endpoint for visibility
 - Link to ArgoCD for synchronization status checks
+- The script is `notify-deployment.sh`; its tests are in `tests/notify-deployment.bats`.

@@ -6,7 +6,7 @@ Installs Python with **uv** and restores the uv dependency cache.
 
 ```yaml
 steps:
-  - uses: actions/checkout@v7
+  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-python@main
     with:

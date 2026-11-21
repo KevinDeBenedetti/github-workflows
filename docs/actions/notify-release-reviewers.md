@@ -11,7 +11,7 @@ Requests a review on the open release PR from each listed user who was never ask
 ```yaml
 steps:
   - id: rp
-    uses: googleapis/release-please-action@v5
+    uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
 
   - uses: KevinDeBenedetti/github-workflows/.github/actions/notify-release-reviewers@main
     with:

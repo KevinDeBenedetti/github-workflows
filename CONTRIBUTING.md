@@ -11,12 +11,22 @@ that calls them, so every change goes through a pull request, review and CI.
 ## Set up
 
 ```sh
-brew install j178/tap/prek   # or see https://prek.j178.dev
-prek install                 # pre-commit and commit-msg hooks (prek.toml)
+brew install j178/tap/prek bats-core   # or see https://prek.j178.dev
+prek install                           # pre-commit, commit-msg and pre-push hooks (prek.toml)
 ```
 
-The hooks check whitespace, YAML/JSON, actionlint, the Renovate config, the
-docs, the consistency of the reusable workflows, and the commit message.
+On each commit the hooks check whitespace, YAML/JSON, actionlint, ShellCheck,
+the Renovate config, the docs, the consistency of the reusable workflows, and
+the commit message. Before a push that touches a script, an action or a test,
+they run the Bats suite (over a minute).
+
+The gate also runs [zizmor](https://docs.zizmor.sh), which has no hook. Run it
+by hand after changing a workflow or an action, at the version the `ci-zizmor`
+job of `ci-cd.yml` pins:
+
+```sh
+uvx zizmor==<version> --persona pedantic --config .github/zizmor.yml .
+```
 
 ## Make a change
 
