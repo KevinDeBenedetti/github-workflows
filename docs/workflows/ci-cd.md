@@ -26,6 +26,7 @@ on:
 | `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus the pinned kubeconform and Claude Code   |
 | `ci-zizmor`      | push + PR       | `zizmorcore/zizmor-action`          | GitHub Actions security lint, pedantic persona                                          |
 | `ci-prek`        | push + PR       | `ci-prek.yml`                       | This repo's prek hooks                                                                  |
+| `ci-image`       | push + PR       | `./…/cd-docker.yml` (local)         | A fixture image built for `linux/amd64` without a push: the build workflow's self-test  |
 | `security`       | push + PR       | `security.yml`                      | Gitleaks, dependency review and CodeQL (`actions`, `python`)                            |
 | `ci-checksums`   | push + PR       | `scripts/update-tool-checksums.py`  | `install-tool`'s `tools.json` matches the release assets, when a pin changed            |
 | `ci-commits`     | push + PR       | `change-base`, `check-commit-msg`   | Conventional Commits on every commit since the change base                              |

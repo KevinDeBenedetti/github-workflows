@@ -17,6 +17,8 @@
 #   ci-zizmor    — GitHub Actions security lint (zizmor)                [push + PR]
 #   ci-actions   — same checks through the local composite actions            [push + PR]
 #   ci-checksums — pinned tool checksums match their release assets      [push + PR]
+#   ci-prek      — this repo's prek hooks, server-side (ci-prek.yml)     [push + PR]
+#   ci-image     — test image built without a push (cd-docker.yml)      [push + PR]
 #   ci-commits   — Conventional Commits on every new commit             [push + PR]
 #   security     — Gitleaks + dependency review + CodeQL (security.yml)  [push + PR]
 #   ci-gate      — single required check: all CI jobs above passed      [push + PR]
@@ -204,6 +206,30 @@ jobs:
     permissions:
       contents: read
 
+  # ── CI — Image build ─────────────────────────────────────────────────────────
+  # Self-test of cd-docker.yml: builds the fixture image for the runner's own
+  # platform and pushes nothing, so a change that breaks the build (tags,
+  # labels, Buildx wiring) fails here instead of in a caller's release. With
+  # `push: false` there is no registry login, no deployment record and no
+  # attestation; the permissions below are still required, since GitHub refuses
+  # a call that grants less than the called jobs declare.
+  ci-image:
+    name: CI — Image build
+    uses: ./.github/workflows/cd-docker.yml
+    with:
+      image-name: ci-selftest
+      context: tests/fixtures/image
+      target: prod
+      platforms: linux/amd64
+      push: false
+      timeout-minutes: 10
+    permissions:
+      contents: read
+      packages: write      # declared by the build job, unused without a push
+      deployments: write   # declared by the build job, unused without a push
+      id-token: write      # declared by the attest job, skipped without a push
+      attestations: write  # declared by the attest job, skipped without a push
+
   # ── Security ─────────────────────────────────────────────────────────────────
   security:
     name: Security
@@ -315,7 +341,7 @@ jobs:
   # are named "Caller / Callee job"). Passes only when every job succeeded.
   ci-gate:
     name: CI — Gate
-    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-checksums, ci-commits, security]
+    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-image, ci-checksums, ci-commits, security]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 5
