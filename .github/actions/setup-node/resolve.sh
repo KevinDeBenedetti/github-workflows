@@ -15,12 +15,14 @@
 #   DIR                 working directory of the project (default ".")
 #   INPUT_PM            pnpm | bun | npm | auto (default auto)
 #   INPUT_PNPM_VERSION  pnpm version to install, empty to read packageManager
+#   INPUT_BUN_VERSION   bun version to install, empty to read packageManager
 #   INPUT_FRAMEWORK     next | nuxt | vite | auto (default auto)
 #   GITHUB_OUTPUT       set by the runner; receives:
 #     pm             pnpm | bun | npm
 #     pnpm-version   version for pnpm/action-setup, empty when package.json's
 #                    packageManager field names it
 #     package-json   the package.json pnpm/action-setup reads
+#     bun-version    version for oven-sh/setup-bun (bun only)
 #     npm-lockfile   package-lock.json path (npm only)
 #     npm-dir        directory `npm ci` runs in
 #     lockfile       the lockfile the dependency caches are keyed on
@@ -33,6 +35,7 @@ set -euo pipefail
 DIR="${DIR:-.}"
 INPUT_PM="${INPUT_PM:-auto}"
 INPUT_PNPM_VERSION="${INPUT_PNPM_VERSION:-}"
+INPUT_BUN_VERSION="${INPUT_BUN_VERSION:-}"
 INPUT_FRAMEWORK="${INPUT_FRAMEWORK:-auto}"
 
 fail() {
@@ -99,6 +102,26 @@ if [[ "$pm" == pnpm && -z "$pnpm_version" ]]; then
   done
 fi
 
+# bun version: explicit input > packageManager field > pinned fallback, the
+# same order as pnpm. setup-bun takes the version itself, so the field's
+# version is read here (a range or tag in it is passed on as is).
+bun_version=""
+if [[ "$pm" == bun ]]; then
+  bun_version="$INPUT_BUN_VERSION"
+  if [[ -z "$bun_version" ]]; then
+    for f in "$DIR/package.json" "package.json"; do
+      [[ -f "$f" ]] || continue
+      bun_version="$(sed -nE 's/.*"packageManager"[[:space:]]*:[[:space:]]*"bun@([^"+]+).*/\1/p' "$f" | head -n 1)"
+      [[ -n "$bun_version" ]] && break
+    done
+  fi
+  if [[ -z "$bun_version" ]]; then
+    # renovate: datasource=npm depName=bun
+    BUN_VERSION="1.4.3"
+    bun_version="$BUN_VERSION"
+  fi
+fi
+
 # The lockfile the caches are keyed on: the one the package manager reads.
 # Hashing only "$DIR/<lockfile>" hashed nothing for a workspace member (the
 # lockfile sits at the root), so every member of every dependency set shared
@@ -145,6 +168,7 @@ if [[ -n "${GITHUB_OUTPUT:-}" ]]; then
     echo "pm=$pm"
     echo "pnpm-version=$pnpm_version"
     echo "package-json=$package_json"
+    echo "bun-version=$bun_version"
     echo "npm-lockfile=$npm_lockfile"
     echo "npm-dir=$npm_dir"
     echo "lockfile=$lockfile"
@@ -157,5 +181,7 @@ fi
 echo "📦 Package manager: $pm"
 if [[ "$pm" == pnpm ]]; then
   echo "📌 pnpm version: ${pnpm_version:-from packageManager in $package_json}"
+elif [[ "$pm" == bun ]]; then
+  echo "📌 bun version: $bun_version"
 fi
 echo "🏗️ Framework: $framework → build output: $DIR/$build_output"

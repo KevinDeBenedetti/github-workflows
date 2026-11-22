@@ -30,10 +30,13 @@ inputs:
     required: false
     default: ''
   bun-version:
-    description: Bun version to install when the package manager resolves to bun
+    description: >
+      Bun version to install when the package manager resolves to bun. Leave
+      empty (default) to use the `packageManager` field of package.json
+      (working directory first, then the repository root); falls back to a
+      pinned release when neither declares one.
     required: false
-    # renovate: datasource=npm depName=bun
-    default: 1.4.3
+    default: ''
   framework:
     description: >
       Framework of the project: "next" | "nuxt" | "vite" | "auto" (default).
@@ -96,6 +99,7 @@ runs:
       env:
         INPUT_PM: ${{ inputs.package-manager }}
         INPUT_PNPM_VERSION: ${{ inputs.pnpm-version }}
+        INPUT_BUN_VERSION: ${{ inputs.bun-version }}
         INPUT_FRAMEWORK: ${{ inputs.framework }}
         DIR: ${{ inputs.working-directory }}
       run: bash "$GITHUB_ACTION_PATH/resolve.sh"
@@ -139,7 +143,7 @@ runs:
       env:
         FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       with:
-        bun-version: ${{ inputs.bun-version }}
+        bun-version: ${{ steps.resolve.outputs.bun-version }}
 
     - name: Setup Node.js (bun)
       if: steps.resolve.outputs.pm == 'bun'

@@ -6,7 +6,7 @@ SCRIPT="$BATS_TEST_DIRNAME/../.github/actions/setup-node/resolve.sh"
 setup() {
   cd "$BATS_TEST_TMPDIR"
   mkdir -p apps/web
-  unset DIR INPUT_PM INPUT_PNPM_VERSION INPUT_FRAMEWORK
+  unset DIR INPUT_PM INPUT_PNPM_VERSION INPUT_BUN_VERSION INPUT_FRAMEWORK
   export GITHUB_OUTPUT="$BATS_TEST_TMPDIR/out"
   : > "$GITHUB_OUTPUT"
 }
@@ -79,6 +79,22 @@ output_of() { sed -n "s/^$1=//p" "$GITHUB_OUTPUT"; }
   DIR=apps/web run bash "$SCRIPT"
   [ "$(output_of pnpm-version)" = "" ]
   [ "$(output_of package-json)" = apps/web/package.json ]
+}
+
+@test "bun version: the input, else packageManager, else the pinned release" {
+  touch bun.lock
+  INPUT_BUN_VERSION=1.3.0 run bash "$SCRIPT"
+  [ "$(output_of bun-version)" = 1.3.0 ]
+  printf '{"packageManager": "bun@1.4.4"}\n' > package.json && : > "$GITHUB_OUTPUT"
+  run bash "$SCRIPT"
+  [ "$(output_of bun-version)" = 1.4.4 ]
+  # The working directory's package.json first, as for pnpm.
+  printf '{"packageManager": "bun@1.4.5"}\n' > apps/web/package.json && : > "$GITHUB_OUTPUT"
+  DIR=apps/web run bash "$SCRIPT"
+  [ "$(output_of bun-version)" = 1.4.5 ]
+  rm package.json apps/web/package.json && : > "$GITHUB_OUTPUT"
+  run bash "$SCRIPT"
+  [[ "$(output_of bun-version)" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
 }
 
 @test "framework: detected from the config files, or forced" {
