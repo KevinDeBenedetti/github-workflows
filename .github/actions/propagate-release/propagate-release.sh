@@ -5,7 +5,8 @@
 #
 # For each entry of REPOSITORIES, `name` or `name:branch` (a repository of
 # SOURCE's owner; the branch defaults to the repository's default branch):
-#   1. read the .yml and .yaml files under .github/ on the branch;
+#   1. read the .yml and .yaml files under .github/, and the root prek.toml,
+#      on the branch;
 #   2. move the pins; nothing to move: on to the next repository;
 #   3. commit the changes through the API, so GitHub signs the commit, on the
 #      branch bump/<source name>, based on the branch's tip. Every release
