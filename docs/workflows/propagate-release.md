@@ -80,7 +80,7 @@ jobs:
 ## What moves
 
 Only the `.yml` and `.yaml` files under `.github/` are read: workflows and composite
-actions.
+actions. A root `prek.toml` is read too, for the hooks of this repository.
 
 | Pin in the consumer                        | Result                                                               |
 | ------------------------------------------ | -------------------------------------------------------------------- |
@@ -89,6 +89,11 @@ actions.
 | `…@main`, `…@v1`, `…@v1.2`                 | unchanged: a moving reference was chosen to follow a branch or alias |
 | `…@<commit SHA>` without a version comment | unchanged: its release is unknown, as Dependabot reads it            |
 | the release itself, or a newer one         | unchanged: never a downgrade                                         |
+
+In `prek.toml`, the first `rev = "v1.2.3"` after `repo = "https://github.com/<owner>/<name>"`
+(comment and blank lines between them allowed) moves to `rev = "<tag>"`, with the same
+rules: a moving `rev` or a newer release stays. The pull request then keeps the
+workflows and the hooks on one release.
 
 ## The pull request
 
