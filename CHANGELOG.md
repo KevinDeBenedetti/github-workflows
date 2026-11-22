@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.55.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.54.0...v0.55.0) (2026-11-22)
+
+
+### Features
+
+* **propagate-release:** move prek.toml hook revs with consumer workflow pins ([f763a35](https://github.com/KevinDeBenedetti/github-workflows/commit/f763a35ef880f120fd7d78feb86d8edf5f92ddd5))
+
 ## [0.54.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.53.0...v0.54.0) (2026-11-21)
 
 
