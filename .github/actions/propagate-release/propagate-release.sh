@@ -175,8 +175,9 @@ propagate() {
     problem "too many files to list in one request" || return
   fi
   base_tree="$(jq -r '.sha' "$dir/tree.json")"
-  # Workflows and composite actions: the .yml and .yaml files under .github/.
-  jq -r '.tree[] | select(.type == "blob" and (.path | test("^\\.github/[A-Za-z0-9._/-]+\\.ya?ml$"))
+  # Workflows and composite actions: the .yml and .yaml files under .github/;
+  # and the root prek.toml, whose hook rev follows the workflows' release.
+  jq -r '.tree[] | select(.type == "blob" and (.path | test("^(\\.github/[A-Za-z0-9._/-]+\\.ya?ml|prek\\.toml)$"))
     and (.path | split("/") | index("..") | not)) | [.path, .mode, .sha] | @tsv' "$dir/tree.json" > "$dir/files.tsv"
 
   : > "$dir/paths"

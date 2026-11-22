@@ -18,6 +18,11 @@ SOURCE/.github/actions/<name> moves to the release when it pins an older one:
 - The owner and name match whatever their case; the rest of the line (quotes,
   other comments, CRLF line ends) is kept byte for byte.
 
+The hooks of SOURCE in a prek.toml move the same way: the first `rev = ` line
+after `repo = "https://github.com/SOURCE"` (comment and blank lines between
+them allowed) moves when it is an older release, written with or without the
+v as before. Its reference is .pre-commit-hooks.yaml, SOURCE's hook manifest.
+
 FILEs are rewritten in place. Each move is printed as one tab-separated line:
 FILE, reference, old version, new version. Exit status: 0, or 2 on bad
 arguments.
@@ -54,6 +59,24 @@ def pin_pattern(source: str) -> re.Pattern:
         r"(?P<comment>[ \t]+#[ \t]*(?P<version>v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)(?![0-9A-Za-z.-]))?",
         re.IGNORECASE,
     )
+
+
+def hook_pattern(source: str) -> re.Pattern:
+    """The rev of SOURCE's hooks in a prek.toml [[repos]] entry."""
+    return re.compile(
+        r"(?P<head>^[ \t]*repo[ \t]*=[ \t]*([\"'])https://github\.com/" + re.escape(source) + r"(?:\.git)?\2[ \t]*\r?\n"
+        r"(?:[ \t]*(?:#[^\r\n]*)?\r?\n)*"
+        r"[ \t]*rev[ \t]*=[ \t]*(?P<quote>[\"']))(?P<ref>[0-9A-Za-z._/-]+)(?P=quote)",
+        re.IGNORECASE | re.MULTILINE,
+    )
+
+
+def bump_hook(match: re.Match, tag: str, moves: list) -> str:
+    old = match["ref"]
+    if release_key(old) is None or release_key(old) >= release_key(tag):
+        return match[0]
+    moves.append((".pre-commit-hooks.yaml", old, tag))
+    return f"{match['head']}{same_style(old, tag)}{match['quote']}"
 
 
 def same_style(version: str, tag: str) -> str:
@@ -107,10 +130,13 @@ def main(argv: list[str]) -> int:
         print(f"error: SHA must be a full commit SHA, not '{sha}'", file=sys.stderr)
         return 2
     pattern = pin_pattern(source)
+    hooks = hook_pattern(source)
     for path in files:
         text = read(path)
         moves: list = []
         new_text = pattern.sub(lambda m: bump(m, source, tag, sha, moves), text)
+        if path.endswith("prek.toml"):
+            new_text = hooks.sub(lambda m: bump_hook(m, tag, moves), new_text)
         if new_text != text:
             write(path, new_text)
         for reference, old, new in moves:

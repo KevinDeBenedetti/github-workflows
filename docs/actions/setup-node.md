@@ -26,7 +26,7 @@ steps:
 | `working-directory` | string | `'.'` | Directory to look for lockfile and run install |
 | `package-manager` | string | `auto` | `pnpm` \| `bun` \| `npm` \| `auto` — auto-detects from lockfile |
 | `pnpm-version` | string | `''` | pnpm version. Empty → the `packageManager` field of `package.json` (working directory, then repo root), else a pinned release (bumped by Renovate) |
-| `bun-version` | string | pinned | Bun version installed when the package manager resolves to bun |
+| `bun-version` | string | `''` | Bun version installed when the package manager resolves to bun. Empty → the `packageManager` field of `package.json` (working directory, then repo root), else a pinned release (bumped by Renovate) |
 | `framework` | string | `auto` | `next` \| `nuxt` \| `vite` \| `auto` — auto-detects from the config files (`next.config.*`, `nuxt.config.*`, otherwise `vite`); only sets the `framework` and `build-output` outputs |
 | `install` | boolean | `true` | Run install after setup |
 | `cache` | boolean | `true` | Restore and save the dependency cache. `'false'` skips it, for a job that installs nothing (the Node.js audit of [security.yml](../workflows/security.md)) |
@@ -46,7 +46,7 @@ steps:
 ## Steps
 
 1. Resolve package manager from the nearest lockfile — `working-directory` first, then the repository root, so workspace members work (`bun.lockb` / `bun.lock` → bun, `package-lock.json` → npm, otherwise → pnpm)
-2. Setup pnpm, bun or npm (with Node.js)
+2. Setup pnpm, bun or npm (with Node.js); pnpm and bun at the version the `packageManager` field names, unless an input sets one
 3. Restore cache (pnpm store, `~/.bun/install/cache`, or `~/.npm` via setup-node), keyed on the hash of the resolved lockfile — the repository root's for a workspace member, so a monorepo app's cache follows its dependency set instead of sharing one never-refreshed entry. Skipped with `cache: 'false'`
 4. Install dependencies (`pnpm install --frozen-lockfile`, `bun install --frozen-lockfile` or `npm ci`, the latter run where `package-lock.json` lives)
 

@@ -171,6 +171,37 @@ EOF
   cmp w.yml expected.yml
 }
 
+@test "the prek.toml rev of the source's hooks moves to the release; other repositories and moving revs stay" {
+  cat > prek.toml <<'EOF'
+[[repos]]
+repo = "https://github.com/O/src"
+# Same release as the workflows.
+
+rev = "v1.0.0"
+hooks = [{ id = "check" }]
+
+[[repos]]
+repo = "https://github.com/o/src2"
+rev = "v1.0.0"
+
+[[repos]]
+repo = 'https://github.com/o/src.git'
+rev = '1.0.0'
+
+[[repos]]
+repo = "https://github.com/o/src"
+rev = "main"
+EOF
+  pins prek.toml
+  [ "$status" -eq 0 ]
+  [ "$(sed -n 5p prek.toml)" = 'rev = "v1.1.0"' ]
+  [ "$(sed -n 10p prek.toml)" = 'rev = "v1.0.0"' ]
+  [ "$(sed -n 14p prek.toml)" = "rev = '1.1.0'" ]
+  [ "$(sed -n 18p prek.toml)" = 'rev = "main"' ]
+  [ "$(printf '%s\n' "$output" | sed -n 1p)" = "$(printf 'prek.toml\t.pre-commit-hooks.yaml\tv1.0.0\tv1.1.0')" ]
+  [ "$(printf '%s\n' "$output" | wc -l | tr -d ' ')" -eq 2 ]
+}
+
 @test "bump-pins.py refuses a bad source, tag or commit" {
   echo x > w.yml
   run python3 "$BUMP" o v1.1.0 "$SHA" w.yml
@@ -205,6 +236,20 @@ EOF
   # Files are read raw, blob by blob.
   grep -q '^Accept: application/vnd.github.raw$' "$STUB_DIR/curl-headers.log"
   [[ "$output" == *"o/app: pull request, merges once its checks pass https://github.test/o/app/pull/7"* ]]
+}
+
+@test "a root prek.toml is read too: its hook rev moves in the same commit as the workflows" {
+  file app .github/workflows/ci.yml "    uses: o/src/.github/workflows/ci.yml@v1.0.0"
+  file app prek.toml "$(printf '[[repos]]\nrepo = "https://github.com/o/src"\nrev = "v1.0.0"')"
+  file app docs/prek.toml "$(printf '[[repos]]\nrepo = "https://github.com/o/src"\nrev = "v1.0.0"')"
+  consumer app
+  REPOSITORIES=app run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  sent 'POST /repos/o/app/git/trees' | jq -e '[.tree[].path] | sort == [".github/workflows/ci.yml", "prek.toml"]'
+  # Every blob sent, decoded: the prek.toml one carries the new rev.
+  for f in "$STUB_DIR"/sent/*.json; do jq -r '.content // empty' "$f"; done | base64 --decode > blobs
+  grep -qx 'rev = "v1.1.0"' blobs
+  sent 'POST /repos/o/app/pulls' | jq -e '.body | contains("| `prek.toml` | `.pre-commit-hooks.yaml` | v1.0.0 | v1.1.0 |")'
 }
 
 @test "the next release updates the open pull request and force-moves its branch" {
