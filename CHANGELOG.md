@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.56.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.55.0...v0.56.0) (2026-11-23)
+
+
+### Features
+
+* **renovate:** share the Renovate preset and make renovate.yml reusable ([c93fe85](https://github.com/KevinDeBenedetti/github-workflows/commit/c93fe852a3345812af185140aa934e24984052e9))
+* **setup-promtool:** add a tested promtool + yq installer, and stop repeating Renovate pins ([6f5f7cd](https://github.com/KevinDeBenedetti/github-workflows/commit/6f5f7cd595979e0ed5538ffdadc6be71c5ff418d)), closes [#151](https://github.com/KevinDeBenedetti/github-workflows/issues/151) [#154](https://github.com/KevinDeBenedetti/github-workflows/issues/154)
+
 ## [0.55.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.54.0...v0.55.0) (2026-11-22)
 
 
