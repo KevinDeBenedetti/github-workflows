@@ -8,22 +8,30 @@ SCRIPT="$BATS_TEST_DIRNAME/../.github/actions/check-docs-external-links/check-do
 setup() {
   cd "$BATS_TEST_TMPDIR"
   mkdir -p bin docs/guide
-  # Records its arguments (one per line) and GITHUB_TOKEN, writes a report to
-  # --output, exits with $STUB_STATUS.
+  # Counts its runs in lychee.runs, records the arguments of the last one (one
+  # per line) and GITHUB_TOKEN, writes "stub report <run>" to --output, and
+  # exits with $STUB_STATUS: one status per run, the last one repeated, so
+  # "2 0" fails the first run and passes the next.
   cat > bin/lychee <<EOF
 #!/usr/bin/env bash
+n=\$(( \$(cat "$BATS_TEST_TMPDIR/lychee.runs" 2>/dev/null || echo 0) + 1 ))
+echo "\$n" > "$BATS_TEST_TMPDIR/lychee.runs"
 printf '%s\n' "\$@" > "$BATS_TEST_TMPDIR/lychee.args"
 printf '%s\n' "\${GITHUB_TOKEN-<unset>}" > "$BATS_TEST_TMPDIR/lychee.token"
 while [[ \$# -gt 0 ]]; do
-  if [[ "\$1" == --output ]]; then printf 'stub report\n' > "\$2"; fi
+  if [[ "\$1" == --output ]]; then printf 'stub report %s\n' "\$n" > "\$2"; fi
   shift
 done
-exit "\${STUB_STATUS:-0}"
+read -ra statuses <<< "\${STUB_STATUS:-0}"
+i=\$(( n <= \${#statuses[@]} ? n - 1 : \${#statuses[@]} - 1 ))
+exit "\${statuses[i]}"
 EOF
   chmod +x bin/lychee
   PATH="$BATS_TEST_TMPDIR/bin:$PATH"
   # Never write to the real job summary when the suite itself runs in CI.
   unset GITHUB_STEP_SUMMARY GITHUB_TOKEN CHANGED_ONLY BASE
+  # No test waits for the pause before lychee runs again.
+  export RETRY_DELAY=0
   printf '[a](https://example.com/a)\n' > docs/a.md
   printf '[b](https://example.com/b)\n' > docs/guide/b.md
 }
@@ -108,12 +116,36 @@ checked() { sed '1,/^--$/d' "$BATS_TEST_TMPDIR/lychee.args"; }
   [ "$(checked)" = "site/s.md" ]
 }
 
-@test "fails with lychee's status and writes its report to the job summary" {
+@test "broken links: checks the same files again, and passes if they pass then" {
+  # A sleep that only logs the seconds it was asked to wait.
+  printf '#!/usr/bin/env bash\necho "$1" >> "%s/sleep.log"\n' "$BATS_TEST_TMPDIR" > bin/sleep
+  chmod +x bin/sleep
+  STUB_STATUS='2 0' RETRY_DELAY=7 GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [ "$(cat lychee.runs)" -eq 2 ]
+  [ "$(cat sleep.log)" = 7 ]
+  [ "$(checked)" = "$(printf 'docs/a.md\ndocs/guide/b.md')" ]
+  [[ "$output" == *"stub report 1"*"::notice::"*"checking again"* ]]
+  [[ "$output" != *"::error::"* ]]
+  [ "$(cat summary.md)" = "stub report 2" ]
+}
+
+@test "links still broken the second time: fails with lychee's status and the second report" {
   STUB_STATUS=2 GITHUB_STEP_SUMMARY="$BATS_TEST_TMPDIR/summary.md" run bash "$SCRIPT"
   [ "$status" -eq 2 ]
-  [[ "$output" == *"stub report"* ]]
-  [[ "$output" == *"::error::"* ]]
-  grep -qx 'stub report' summary.md
+  [ "$(cat lychee.runs)" -eq 2 ]
+  [[ "$output" == *"stub report 2"*"::error::Broken external links in docs/"* ]]
+  [ "$(cat summary.md)" = "stub report 2" ]
+}
+
+@test "any other lychee failure (1, 3) fails at once, without a second run" {
+  for code in 1 3; do
+    rm -f lychee.runs
+    STUB_STATUS=$code run bash "$SCRIPT"
+    [ "$status" -eq "$code" ]
+    [ "$(cat lychee.runs)" -eq 1 ]
+    [[ "$output" != *"checking again"* ]]
+  done
 }
 
 @test "an empty GITHUB_TOKEN is unset rather than passed to lychee" {
