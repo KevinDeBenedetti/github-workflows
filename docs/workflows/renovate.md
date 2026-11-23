@@ -7,7 +7,7 @@ title: '`renovate` workflow'
 Runs Renovate on the calling repository from GitHub Actions, with the token of a GitHub
 App: no Marketplace app to install, and the update pull requests run CI like any other
 (those of a `GITHUB_TOKEN` would not). The repository's `renovate.json` decides what is
-updated and when; it extends the [shared preset](#the-shared-preset) of this repository.
+updated and when; it extends the [shared preset](#the-shared-preset).
 
 ## Usage
 
@@ -41,36 +41,25 @@ jobs:
 ```json
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>KevinDeBenedetti/github-workflows//renovate/default#vX.Y.Z"]
+  "extends": ["github>KevinDeBenedetti/renovate-config"]
 }
 ```
 
-`renovate.json` goes at the root of the repository, `vX.Y.Z` being a release of this
-repository: the one your workflow pins, when it pins one rather than `@main`. The
-config's `schedule` decides when pull requests open: the daily
+`renovate.json` goes at the root of the repository. The config's `schedule` decides
+when pull requests open: the daily
 run only keeps the Dependency Dashboard's checkboxes and the open pull requests current
 in between. Keep the cron well inside the schedule: GitHub starts a scheduled run late
 under load, and a run after 6am Paris time opens nothing that week.
 
 ## The shared preset
 
-`renovate/default.json`, at the root of this repository:
-
-| Setting                                                 | Effect                                                                                         |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `config:recommended`, `:separateMultipleMajorReleases`  | Renovate's defaults; one pull request per major release                                        |
-| `:dependencyDashboard`                                  | One issue lists every update, pending or open                                                  |
-| `schedule`, `timezone`                                  | Pull requests open on Monday before 6am, Paris time                                            |
-| `prHourlyLimit: 0`                                      | The week's pull requests all open in the one run inside the schedule, not 2 of them            |
-| `minimumReleaseAge`, `internalChecksFilter`             | Nothing published less than 3 days ago: no branch before then                                  |
-| `helpers:pinGitHubActionDigests`                        | Actions pinned to a commit SHA, the release in a trailing comment                              |
-| prek custom manager                                     | The `rev` of each `prek.toml` hook that carries a `# renovate: datasource=… depName=…` comment |
-| `KevinDeBenedetti/github-workflows` disabled            | [`propagate-release`](./propagate-release.md) moves it, with every release                     |
-| `dependencies`, `github-actions` labels                 | On the GitHub Actions updates                                                                  |
-
-Pin the preset to a release, as the workflows: `propagate-release` moves its tag in the
-same pull request as the workflow pins. Without a tag, Renovate reads the preset from
-`main`, so a change reaches the repository before it is released.
+[`KevinDeBenedetti/renovate-config`](https://github.com/KevinDeBenedetti/renovate-config),
+a public repository, so the App token minted for the calling repository can read it.
+Its README lists what it sets: Renovate's best practices, the Monday-morning window in
+Paris time, a 3-day release age, OSV security updates, prek hook revs, labels, majors
+of data-owning images held for approval, and `KevinDeBenedetti/github-workflows` left
+to [`propagate-release`](./propagate-release.md). Without a tag, Renovate reads it from
+its `main` branch.
 
 The repository's `renovate.json` adds what is its own: the base branch, groups, commit
 types. Its `packageRules` come after the preset's, so they win.

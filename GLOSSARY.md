@@ -27,9 +27,3 @@ _Avoid_: dependency, binary
 **Tool manifest**:
 The file that lists every pinned tool with its version, its download and its pins. It is the only place a pin lives; the install reads it at run time.
 _Avoid_: tool list, lockfile
-
-### Dependency updates
-
-**Shared preset**:
-The Renovate config every repository that uses these workflows extends, `renovate/default.json`: the schedule, the release age, the SHA-pinned actions. A consumer pins it to a release, and release propagation moves that tag with its workflow pins.
-_Avoid_: base config, shared config, Renovate template

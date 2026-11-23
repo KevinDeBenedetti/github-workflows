@@ -67,7 +67,7 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `cleanup-deployments.yml` | Scheduled cleanup of old deployment records, keeping the recent ones of each environment | [→](docs/workflows/cleanup-deployments.md) |
 | `release.yml` | Automated releases via release-please | [→](docs/workflows/release.md) |
 | `propagate-release.yml` | Release propagation: a pull request in each consumer repository moves its pins to the new release, merged once its checks pass | [→](docs/workflows/propagate-release.md) |
-| `renovate.yml` | Renovate run with a GitHub App's token, and the shared preset `renovate/default.json` | [→](docs/workflows/renovate.md) |
+| `renovate.yml` | Renovate run with a GitHub App's token, on a repository that extends the shared preset `KevinDeBenedetti/renovate-config` | [→](docs/workflows/renovate.md) |
 | `security.yml` | Secret scan + CodeQL SAST + dependency audit | [→](docs/workflows/security.md) |
 | `check-bot-commits.yml` | Guard PRs against bot-authored commits | [→](docs/workflows/check-bot-commits.md) |
 | `pr-description.yml` | PR description written by Claude Code on every push (Claude subscription) | [→](docs/workflows/pr-description.md) |

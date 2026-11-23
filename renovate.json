@@ -1,7 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "This repository's own updates, on top of the shared preset renovate/default.json (schedule, release age, SHA-pinned actions, prek hooks). This repository releases the preset, so it reads it from main, with no tag. ignorePaths is config:recommended's without `**/examples/**`: the examples are copied into other repositories, so their pins move with the workflows' own.",
-  "extends": ["github>KevinDeBenedetti/github-workflows//renovate/default"],
+  "description": "This repository's own updates, on top of the shared preset KevinDeBenedetti/renovate-config (schedule, release age, SHA-pinned actions, prek hooks, labels). ignorePaths is config:best-practices' without `**/examples/**`: the examples are copied into other repositories, so their pins move with the workflows' own.",
+  "extends": ["github>KevinDeBenedetti/renovate-config"],
   "ignorePaths": [
     "**/node_modules/**",
     "**/bower_components/**",
