@@ -70,7 +70,8 @@ jobs:
        - dependency-name: "KevinDeBenedetti/github-workflows*"
      ```
 
-     Renovate: a `packageRules` entry with
+     Renovate: the [shared preset](./renovate.md#the-shared-preset) already holds it;
+     without the preset, a `packageRules` entry with
      `"matchPackageNames": ["KevinDeBenedetti/github-workflows"], "enabled": false`.
 4. Check the setup with a dry run: here, **Actions → Propagate release (manual) → Run
    workflow**; elsewhere, a call with `dry-run: true`. The log lists, for each
@@ -80,7 +81,10 @@ jobs:
 ## What moves
 
 Only the `.yml` and `.yaml` files under `.github/` are read: workflows and composite
-actions. A root `prek.toml` is read too, for the hooks of this repository.
+actions. A root `prek.toml` is read too, for the hooks of this repository, and the
+Renovate config file, for the [shared preset](./renovate.md#the-shared-preset):
+`renovate.json` at the root or under `.github/`, or a root `.renovaterc` or
+`.renovaterc.json`, each also as `.jsonc` or `.json5`.
 
 | Pin in the consumer                        | Result                                                               |
 | ------------------------------------------ | -------------------------------------------------------------------- |
@@ -92,8 +96,12 @@ actions. A root `prek.toml` is read too, for the hooks of this repository.
 
 In `prek.toml`, the first `rev = "v1.2.3"` after `repo = "https://github.com/<owner>/<name>"`
 (comment and blank lines between them allowed) moves to `rev = "<tag>"`, with the same
-rules: a moving `rev` or a newer release stays. The pull request then keeps the
-workflows and the hooks on one release.
+rules: a moving `rev` or a newer release stays.
+
+In the Renovate config file, a quoted preset of this repository with a release tag,
+`"github>KevinDeBenedetti/github-workflows//renovate/default#v1.2.3"` (or
+`github>…:name#v1.2.3`, `github>…#v1.2.3`), moves to `#<tag>`, with the same rules.
+The pull request then keeps the workflows, the hooks and the preset on one release.
 
 ## The pull request
 
