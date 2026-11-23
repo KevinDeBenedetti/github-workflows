@@ -31,14 +31,15 @@ jobs:
 | `run-test`         | boolean | `true`                      | Run the alert unit-test script (skipped if the script is absent) |
 | `check-script`     | string  | `scripts/promtool-check.sh` | Path to the syntax-check script in the calling repo          |
 | `test-script`      | string  | `scripts/promtool-test.sh`  | Path to the unit-test script in the calling repo             |
-| `promtool-version` | string  | `3.13.2`                    | Prometheus release providing promtool (no leading `v`)       |
-| `yq-version`       | string  | `v4.53.3`                   | `mikefarah/yq` release tag (with leading `v`)                |
+| `promtool-version` | string  | pinned (Renovate)           | Prometheus release providing promtool (no leading `v`)       |
+| `yq-version`       | string  | pinned (Renovate)           | `mikefarah/yq` release tag (with leading `v`)                |
 | `runner`           | string  | `'"ubuntu-26.04"'`          | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array  |
 
 ## Steps
 
 1. Checkout
-2. Install `promtool` + `yq` from pinned GitHub releases into `RUNNER_TEMP/bin`
+2. Install `promtool` + `yq` from their GitHub releases into `RUNNER_TEMP/bin`, each checked
+   against its release's SHA-256 list ([`setup-promtool`](../actions/setup-promtool.md))
 3. _(if `run-check`)_ run `check-script`
 4. _(if `run-test`)_ run `test-script`, or emit a notice when it does not exist
 
@@ -56,4 +57,5 @@ jobs:
   repo may legitimately ship rules before it has a test suite.
 - Both tools are installed from pinned versions rather than a package manager:
   the runner image ships neither, and pinning keeps CI reproducible. Renovate
-  can bump them via the `# renovate:` comments in the calling workflow.
+  bumps the defaults through the `# renovate:` comments of `ci-prometheus.yml`;
+  a caller that sets a version pins it itself.

@@ -57,8 +57,8 @@
     },
     {
       "customType": "regex",
-      "description": "prek hook revs (prek.toml) — inline renovate comments (datasource=github-tags). No manager understands prek/pre-commit TOML, so without this the hook pins only move when someone remembers to run `prek autoupdate`.",
-      "managerFilePatterns": ["/^prek\\.toml$/"],
+      "description": "prek hook revs (prek.toml, and the one examples/prek.toml copies into other repositories) — inline renovate comments (datasource=github-tags). No manager understands prek/pre-commit TOML, so without this the hook pins only move when someone remembers to run `prek autoupdate`.",
+      "managerFilePatterns": ["/^(examples/)?prek\\.toml$/"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\nrev = \"(?<currentValue>v?[\\d][^\"]*)\""
       ]

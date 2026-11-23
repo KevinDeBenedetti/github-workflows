@@ -1,0 +1,21 @@
+name: setup-promtool
+description: Install promtool and yq, each verified against its release's SHA-256 list
+
+inputs:
+  promtool-version:
+    description: Prometheus release providing promtool (without the leading v)
+    required: true
+  yq-version:
+    description: mikefarah/yq release tag (with the leading v)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Install promtool + yq
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        PROMTOOL_VERSION: ${{ inputs.promtool-version }}
+        YQ_VERSION: ${{ inputs.yq-version }}
+      run: bash "$GITHUB_ACTION_PATH/setup-promtool.sh"
