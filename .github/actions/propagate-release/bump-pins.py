@@ -23,28 +23,15 @@ after `repo = "https://github.com/SOURCE"` (comment and blank lines between
 them allowed) moves when it is an older release, written with or without the
 v as before. Its reference is .pre-commit-hooks.yaml, SOURCE's hook manifest.
 
-So do the Renovate presets of SOURCE in a Renovate config file (renovate.json,
-.renovaterc or .renovaterc.json, each also as .jsonc or .json5): a quoted
-"github>SOURCE#v1.2.3", "github>SOURCE:name#v1.2.3" or
-"github>SOURCE//path/name#v1.2.3" moves its tag. Its reference is the preset
-file Renovate reads in SOURCE (default.json, name.json, path/name.json).
-
 FILEs are rewritten in place. Each move is printed as one tab-separated line:
 FILE, reference, old version, new version. Exit status: 0, or 2 on bad
 arguments.
 """
 from __future__ import annotations
 
-import os
 import re
 import sys
 
-# The config files Renovate reads that can extend a preset (package.json
-# aside: a `renovate` key there is not worth parsing for one pin).
-RENOVATE_CONFIGS = {
-    "renovate.json", "renovate.jsonc", "renovate.json5",
-    ".renovaterc", ".renovaterc.json", ".renovaterc.jsonc", ".renovaterc.json5",
-}
 RELEASE = re.compile(r"v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?")
 COMMIT = re.compile(r"[0-9a-f]{40}(?:[0-9a-f]{24})?")
 SOURCE = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
@@ -84,35 +71,12 @@ def hook_pattern(source: str) -> re.Pattern:
     )
 
 
-def bump_rev(match: re.Match, tag: str, moves: list, reference: str) -> str:
-    """A release written alone (a hook rev, a preset tag) moved to TAG."""
+def bump_hook(match: re.Match, tag: str, moves: list) -> str:
     old = match["ref"]
     if release_key(old) is None or release_key(old) >= release_key(tag):
         return match[0]
-    moves.append((reference, old, tag))
+    moves.append((".pre-commit-hooks.yaml", old, tag))
     return f"{match['head']}{same_style(old, tag)}{match['quote']}"
-
-
-def preset_pattern(source: str) -> re.Pattern:
-    """A Renovate preset of SOURCE pinned to a ref, as a quoted string."""
-    return re.compile(
-        r"(?P<head>(?P<quote>[\"'])github>" + re.escape(source)
-        + r"(?P<preset>//[A-Za-z0-9._/-]+|:[A-Za-z0-9._+/-]+)?#)"
-        r"(?P<ref>[0-9A-Za-z._/-]+)(?P=quote)",
-        re.IGNORECASE,
-    )
-
-
-def preset_file(preset: str | None) -> str:
-    """The file of SOURCE a preset names, as Renovate resolves it."""
-    if not preset:
-        name = "default"
-    elif preset.startswith("//"):
-        name = preset[2:]
-    else:
-        # `:name/sub` is the preset `sub` inside name.json.
-        name = preset[1:].split("/", 1)[0]
-    return name if name.endswith((".json", ".json5")) else f"{name}.json"
 
 
 def same_style(version: str, tag: str) -> str:
@@ -167,15 +131,12 @@ def main(argv: list[str]) -> int:
         return 2
     pattern = pin_pattern(source)
     hooks = hook_pattern(source)
-    presets = preset_pattern(source)
     for path in files:
         text = read(path)
         moves: list = []
         new_text = pattern.sub(lambda m: bump(m, source, tag, sha, moves), text)
         if path.endswith("prek.toml"):
-            new_text = hooks.sub(lambda m: bump_rev(m, tag, moves, ".pre-commit-hooks.yaml"), new_text)
-        if os.path.basename(path) in RENOVATE_CONFIGS:
-            new_text = presets.sub(lambda m: bump_rev(m, tag, moves, preset_file(m["preset"])), new_text)
+            new_text = hooks.sub(lambda m: bump_hook(m, tag, moves), new_text)
         if new_text != text:
             write(path, new_text)
         for reference, old, new in moves:

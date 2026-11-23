@@ -1,7 +1,7 @@
 # Runs Renovate on the calling repository, from GitHub Actions, with a token
 # of a GitHub App: no Marketplace app to install. Renovate reads the
 # repository's config file (renovate.json), which extends the shared preset
-# renovate/default.json; it opens the update pull requests and keeps the
+# github>KevinDeBenedetti/renovate-config; it opens the update pull requests and keeps the
 # Dependency Dashboard issue. A repository without a config file is skipped:
 # no onboarding pull request.
 #

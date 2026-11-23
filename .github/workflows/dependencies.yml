@@ -1,7 +1,8 @@
 # Runs Renovate on this repository every day, through the reusable
 # renovate.yml of the same commit, with a token of the release GitHub App
 # (RELEASE_APP_CLIENT_ID / RELEASE_APP_PRIVATE_KEY). renovate.json, on top of
-# the shared preset renovate/default.json, decides what is updated and when.
+# the shared preset KevinDeBenedetti/renovate-config, decides what is updated
+# and when.
 # A manual run is a dry run unless unticked. Not a reusable workflow: it serves
 # this repository only.
 name: Renovate (this repository)
