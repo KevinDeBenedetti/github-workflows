@@ -20,10 +20,15 @@
 # lychee also reads a .lycheeignore (one regex per line) from the repository
 # root. $GITHUB_TOKEN, when set, lifts github.com's rate limit; a link to a
 # private repository still fails, as it does for readers.
+#
+# Broken links (lychee's exit 2) get a second check of the same files,
+# $RETRY_DELAY seconds later (default 30), and only its report counts: lychee
+# does not retry a server error itself (see the second check below).
 set -euo pipefail
 
 DOCS_DIR="${DOCS_DIR:-docs}"
 DOCS_DIR="${DOCS_DIR%/}"
+RETRY_DELAY="${RETRY_DELAY:-30}"
 
 files=()
 if [[ $# -gt 0 ]]; then
@@ -76,6 +81,27 @@ echo "Checking the external links of ${#files[@]} file(s):"
 printf '  %s\n' "${files[@]}"
 status=0
 lychee "${args[@]}" -- "${files[@]}" || status=$?
+
+# The second check. lychee 0.24.2 retries a timeout, a dropped connection or a
+# 429 itself, but never a 5xx, so one server error, often gone seconds later,
+# fails the check. lycheeverse/lychee#2324, merged after 0.24.2, retries a 5xx
+# and a 408 too: drop this second check once the lychee pinned in
+# ../install-tool/tools.json includes it. The rule is `impl RetryExt for
+# ErrorKind` in lychee-lib/src/retry.rs:
+#   https://github.com/lycheeverse/lychee/blob/lychee-v0.24.2/lychee-lib/src/retry.rs#L84-L104
+if (( status == 2 )); then
+  # Without -v lychee logs no link, and the second check overwrites the
+  # report: this is the only record of what failed the first time.
+  echo "::group::lychee report of the first check"
+  cat "$report"
+  echo "::endgroup::"
+  echo "::notice::Broken external links on the first check — checking again in ${RETRY_DELAY} s, in case a server only failed for a moment."
+  sleep "$RETRY_DELAY"
+  # Never show the first report as the second, should lychee write none.
+  : > "$report"
+  status=0
+  lychee "${args[@]}" -- "${files[@]}" || status=$?
+fi
 
 cat "$report"
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
