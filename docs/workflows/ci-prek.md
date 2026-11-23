@@ -35,7 +35,7 @@ Run a single hook instead of the whole suite:
 | ------------------- | ------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `extra-args`        | string  | `--all-files`      | Arguments passed to `prek run` — e.g. `--all-files` or a hook id                                                                            |
 | `working-directory` | string  | `.`                | Directory holding the prek config                                                                                                           |
-| `prek-version`      | string  | `0.4.12`           | prek release to install, without the leading `v` (or `latest`)                                                                              |
+| `prek-version`      | string  | pinned (Renovate)  | prek release to install, without the leading `v` (or `latest`)                                                                              |
 | `cache`             | boolean | `true`             | Cache the prek hook environments between runs, in the GitHub cache                                                                          |
 | `timeout-minutes`   | number  | `20`               | Minutes before the job is cancelled                                                                                                         |
 | `runner`            | string  | `'"ubuntu-26.04"'` | Runner labels as JSON — `'"ubuntu-26.04"'` or a label array                                                                                 |
