@@ -5,8 +5,9 @@ title: Action — propagate-release
 # Action — propagate-release
 
 Opens a pull request in each consumer repository that moves its pins of this
-repository's workflows and actions to a release, and turns on auto-merge. Talks to the
-REST and GraphQL APIs with curl and jq: no GitHub CLI needed, no checkout.
+repository's workflows, actions, prek hooks and Renovate preset to a release, and turns
+on auto-merge. Talks to the REST and GraphQL APIs with curl and jq: no GitHub CLI
+needed, no checkout.
 [`propagate-release.yml`](../workflows/propagate-release.md) wraps it with the GitHub
 App token, and documents which pins move and how the pull request behaves.
 

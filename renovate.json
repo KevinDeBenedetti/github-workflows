@@ -1,16 +1,18 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    ":dependencyDashboard",
-    ":separateMultipleMajorReleases",
-    "helpers:pinGitHubActionDigests"
+  "description": "This repository's own updates, on top of the shared preset renovate/default.json (schedule, release age, SHA-pinned actions, prek hooks). This repository releases the preset, so it reads it from main, with no tag. ignorePaths is config:recommended's without `**/examples/**`: the examples are copied into other repositories, so their pins move with the workflows' own.",
+  "extends": ["github>KevinDeBenedetti/github-workflows//renovate/default"],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/tests/**",
+    "**/__fixtures__/**",
+    "**/.mise/locks/**",
+    "**/.config/mise/locks/**"
   ],
-  "timezone": "Europe/Paris",
-  "schedule": ["before 6am on monday"],
-  "configMigration": true,
-  "minimumReleaseAge": "3 days",
-  "internalChecksFilter": "strict",
   "enabledManagers": ["github-actions", "custom.regex", "custom.jsonata"],
   "github-actions": {
     "description": "Also the `uses:` lines of the docs and the examples: their SHA pins are copied into other repositories, so they move with the workflows' own.",
@@ -54,22 +56,9 @@
       "matchStrings": [
         "runs-on: (?<depName>ubuntu)-(?<currentValue>\\d+\\.\\d+(?:-arm)?)"
       ]
-    },
-    {
-      "customType": "regex",
-      "description": "prek hook revs (prek.toml, and the one examples/prek.toml copies into other repositories) — inline renovate comments (datasource=github-tags). No manager understands prek/pre-commit TOML, so without this the hook pins only move when someone remembers to run `prek autoupdate`.",
-      "managerFilePatterns": ["/^(examples/)?prek\\.toml$/"],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\nrev = \"(?<currentValue>v?[\\d][^\"]*)\""
-      ]
     }
   ],
   "packageRules": [
-    {
-      "description": "Self-references (`KevinDeBenedetti/github-workflows/...`) are this very repo — the workflows reach their own actions with `uses: $/…` (no ref), and the examples' pins are bumped by release-please (x-release-please-version), never by Renovate.",
-      "matchPackageNames": ["KevinDeBenedetti/github-workflows"],
-      "enabled": false
-    },
     {
       "description": "These versions are stored WITHOUT the leading v (the download URL adds it back), while the upstream tags carry it — strip it so comparisons work. Scoped to .github/: prek.toml pins rhysd/actionlint WITH the v. The tools of install-tool's tools.json carry their own extractVersion.",
       "matchPackageNames": ["prometheus/prometheus", "j178/prek", "hashicorp/terraform"],
@@ -91,11 +80,6 @@
       "matchPackageNames": ["prometheus/prometheus", "mikefarah/yq"],
       "groupName": "prometheus tooling",
       "addLabels": ["dependencies", "prometheus"]
-    },
-    {
-      "description": "Label GitHub Actions updates",
-      "matchManagers": ["github-actions"],
-      "addLabels": ["dependencies", "github-actions"]
     },
     {
       "description": "A runner image bump moves every label at once — the literal `runs-on` (github-actions manager), the `runner` input defaults and the docs (custom managers above) — in one pull request, since callers get the image of the release they pin.",

@@ -1,0 +1,40 @@
+# Runs Renovate on this repository every day, through the reusable
+# renovate.yml of the same commit, with a token of the release GitHub App
+# (RELEASE_APP_CLIENT_ID / RELEASE_APP_PRIVATE_KEY). renovate.json, on top of
+# the shared preset renovate/default.json, decides what is updated and when.
+# A manual run is a dry run unless unticked. Not a reusable workflow: it serves
+# this repository only.
+name: Renovate (this repository)
+
+on:
+  schedule:
+    # Every day, 01:17 UTC: inside the preset's Monday-morning schedule (before
+    # 6am Paris time) with room for GitHub to start a scheduled run late.
+    - cron: '17 1 * * *'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Look the updates up and log them, change nothing on GitHub
+        type: boolean
+        default: true
+      log-level:
+        description: Renovate log level (debug, info, warn)
+        type: string
+        default: info
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+jobs:
+  renovate:
+    name: Renovate
+    uses: ./.github/workflows/renovate.yml
+    # Renovate works with the App's token, not with this job's.
+    permissions: {}
+    with:
+      app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+      # False on a schedule, where there are no inputs.
+      dry-run: ${{ inputs.dry-run == true }}
+      log-level: ${{ inputs.log-level || 'info' }}
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}

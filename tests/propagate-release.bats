@@ -202,6 +202,44 @@ EOF
   [ "$(printf '%s\n' "$output" | wc -l | tr -d ' ')" -eq 2 ]
 }
 
+@test "the Renovate preset tags of the source move to the release; other presets, moving and newer refs stay" {
+  cat > renovate.json <<'EOF'
+{
+  "extends": [
+    "github>O/src//renovate/default#v1.0.0",
+    "github>o/src:base#1.0.0",
+    "github>o/src#v1.0.0",
+    "github>o/src2//renovate/default#v1.0.0",
+    "github>o/src//renovate/default#main",
+    "github>o/src//renovate/default",
+    "github>o/src//renovate/default#v1.2.0",
+    "config:recommended"
+  ]
+}
+EOF
+  pins renovate.json
+  [ "$status" -eq 0 ]
+  [ "$(sed -n 3p renovate.json)" = '    "github>O/src//renovate/default#v1.1.0",' ]
+  [ "$(sed -n 4p renovate.json)" = '    "github>o/src:base#1.1.0",' ]
+  [ "$(sed -n 5p renovate.json)" = '    "github>o/src#v1.1.0",' ]
+  [ "$(sed -n 6p renovate.json)" = '    "github>o/src2//renovate/default#v1.0.0",' ]
+  [ "$(sed -n 7p renovate.json)" = '    "github>o/src//renovate/default#main",' ]
+  [ "$(sed -n 8p renovate.json)" = '    "github>o/src//renovate/default",' ]
+  [ "$(sed -n 9p renovate.json)" = '    "github>o/src//renovate/default#v1.2.0",' ]
+  [ "$(printf '%s\n' "$output" | sed -n 1p)" = "$(printf 'renovate.json\trenovate/default.json\tv1.0.0\tv1.1.0')" ]
+  [ "$(printf '%s\n' "$output" | sed -n 2p)" = "$(printf 'renovate.json\tbase.json\t1.0.0\tv1.1.0')" ]
+  [ "$(printf '%s\n' "$output" | sed -n 3p)" = "$(printf 'renovate.json\tdefault.json\tv1.0.0\tv1.1.0')" ]
+  [ "$(printf '%s\n' "$output" | wc -l | tr -d ' ')" -eq 3 ]
+  # JSON5 quotes too; a file Renovate does not read as its config stays.
+  echo "{ extends: ['github>o/src//renovate/default#v1.0.0'] }" > renovate.json5
+  pins renovate.json5
+  [ "$(cat renovate.json5)" = "{ extends: ['github>o/src//renovate/default#v1.1.0'] }" ]
+  echo '{ "extends": ["github>o/src//renovate/default#v1.0.0"] }' > preset.json
+  pins preset.json
+  [ -z "$output" ]
+  [ "$(cat preset.json)" = '{ "extends": ["github>o/src//renovate/default#v1.0.0"] }' ]
+}
+
 @test "bump-pins.py refuses a bad source, tag or commit" {
   echo x > w.yml
   run python3 "$BUMP" o v1.1.0 "$SHA" w.yml
@@ -250,6 +288,20 @@ EOF
   for f in "$STUB_DIR"/sent/*.json; do jq -r '.content // empty' "$f"; done | base64 --decode > blobs
   grep -qx 'rev = "v1.1.0"' blobs
   sent 'POST /repos/o/app/pulls' | jq -e '.body | contains("| `prek.toml` | `.pre-commit-hooks.yaml` | v1.0.0 | v1.1.0 |")'
+}
+
+@test "the Renovate config file is read too: its preset tag moves in the same commit as the workflows" {
+  file app .github/workflows/ci.yml "    uses: o/src/.github/workflows/ci.yml@v1.0.0"
+  file app renovate.json '{ "extends": ["github>o/src//renovate/default#v1.0.0"] }'
+  file app docs/renovate.json '{ "extends": ["github>o/src//renovate/default#v1.0.0"] }'
+  consumer app
+  REPOSITORIES=app run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  sent 'POST /repos/o/app/git/trees' | jq -e '[.tree[].path] | sort == [".github/workflows/ci.yml", "renovate.json"]'
+  # Every blob sent, decoded: the renovate.json one carries the new tag.
+  for f in "$STUB_DIR"/sent/*.json; do jq -r '.content // empty' "$f"; done | base64 --decode > blobs
+  grep -qF '"github>o/src//renovate/default#v1.1.0"' blobs
+  sent 'POST /repos/o/app/pulls' | jq -e '.body | contains("| `renovate.json` | `renovate/default.json` | v1.0.0 | v1.1.0 |")'
 }
 
 @test "the next release updates the open pull request and force-moves its branch" {

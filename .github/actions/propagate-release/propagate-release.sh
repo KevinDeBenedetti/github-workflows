@@ -5,8 +5,9 @@
 #
 # For each entry of REPOSITORIES, `name` or `name:branch` (a repository of
 # SOURCE's owner; the branch defaults to the repository's default branch):
-#   1. read the .yml and .yaml files under .github/, and the root prek.toml,
-#      on the branch;
+#   1. read the .yml and .yaml files under .github/, the root prek.toml and
+#      the Renovate config file (renovate.json at the root or under .github/,
+#      or a root .renovaterc), on the branch;
 #   2. move the pins; nothing to move: on to the next repository;
 #   3. commit the changes through the API, so GitHub signs the commit, on the
 #      branch bump/<source name>, based on the branch's tip. Every release
@@ -177,8 +178,9 @@ propagate() {
   fi
   base_tree="$(jq -r '.sha' "$dir/tree.json")"
   # Workflows and composite actions: the .yml and .yaml files under .github/;
-  # and the root prek.toml, whose hook rev follows the workflows' release.
-  jq -r '.tree[] | select(.type == "blob" and (.path | test("^(\\.github/[A-Za-z0-9._/-]+\\.ya?ml|prek\\.toml)$"))
+  # the root prek.toml, whose hook rev follows the workflows' release; and the
+  # Renovate config file, whose shared preset tag follows it too.
+  jq -r '.tree[] | select(.type == "blob" and (.path | test("^(\\.github/[A-Za-z0-9._/-]+\\.ya?ml|prek\\.toml|(\\.github/)?renovate\\.json[c5]?|\\.renovaterc(\\.json[c5]?)?)$"))
     and (.path | split("/") | index("..") | not)) | [.path, .mode, .sha] | @tsv' "$dir/tree.json" > "$dir/files.tsv"
 
   : > "$dir/paths"

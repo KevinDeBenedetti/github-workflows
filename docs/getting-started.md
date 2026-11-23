@@ -295,6 +295,7 @@ jobs:
 | `cd-docs.yml`             | Sync docs to a centralized docs repository                                                                                             | [→](workflows/cd-docs.md)             |
 | `release.yml`             | Automated releases via release-please                                                                                                  | [→](workflows/release.md)             |
 | `propagate-release.yml`   | A pull request in each consumer repository moves its pins to the new release                                                           | [→](workflows/propagate-release.md)   |
+| `renovate.yml`            | Renovate run with a GitHub App's token, and the shared preset `renovate/default.json`                                                  | [→](workflows/renovate.md)            |
 | `security.yml`            | Secret scan + CodeQL SAST + dependency audit                                                                                           | [→](workflows/security.md)            |
 | `check-bot-commits.yml`   | Guard PRs against bot-authored commits                                                                                                 | [→](workflows/check-bot-commits.md)   |
 | `pr-description.yml`      | PR description written by Claude Code on every push (Claude subscription)                                                              | [→](workflows/pr-description.md)      |

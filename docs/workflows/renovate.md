@@ -1,0 +1,134 @@
+---
+title: '`renovate` workflow'
+---
+
+# `renovate` workflow
+
+Runs Renovate on the calling repository from GitHub Actions, with the token of a GitHub
+App: no Marketplace app to install, and the update pull requests run CI like any other
+(those of a `GITHUB_TOKEN` would not). The repository's `renovate.json` decides what is
+updated and when; it extends the [shared preset](#the-shared-preset) of this repository.
+
+## Usage
+
+```yaml
+# .github/workflows/renovate.yml  (in your repo)
+name: Renovate
+
+on:
+  schedule:
+    - cron: "17 1 * * *"  # every day, 01:17 UTC: well inside the Monday-morning schedule
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Look the updates up and log them, change nothing on GitHub
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  renovate:
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/renovate.yml@main
+    permissions: {}
+    with:
+      app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+      dry-run: ${{ inputs.dry-run == true }}  # false on a schedule
+    secrets:
+      APP_PRIVATE_KEY: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+```
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["github>KevinDeBenedetti/github-workflows//renovate/default#vX.Y.Z"]
+}
+```
+
+`renovate.json` goes at the root of the repository, `vX.Y.Z` being a release of this
+repository: the one your workflow pins, when it pins one rather than `@main`. The
+config's `schedule` decides when pull requests open: the daily
+run only keeps the Dependency Dashboard's checkboxes and the open pull requests current
+in between. Keep the cron well inside the schedule: GitHub starts a scheduled run late
+under load, and a run after 6am Paris time opens nothing that week.
+
+## The shared preset
+
+`renovate/default.json`, at the root of this repository:
+
+| Setting                                                 | Effect                                                                                         |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `config:recommended`, `:separateMultipleMajorReleases`  | Renovate's defaults; one pull request per major release                                        |
+| `:dependencyDashboard`                                  | One issue lists every update, pending or open                                                  |
+| `schedule`, `timezone`                                  | Pull requests open on Monday before 6am, Paris time                                            |
+| `prHourlyLimit: 0`                                      | The week's pull requests all open in the one run inside the schedule, not 2 of them            |
+| `minimumReleaseAge`, `internalChecksFilter`             | Nothing published less than 3 days ago: no branch before then                                  |
+| `helpers:pinGitHubActionDigests`                        | Actions pinned to a commit SHA, the release in a trailing comment                              |
+| prek custom manager                                     | The `rev` of each `prek.toml` hook that carries a `# renovate: datasource=… depName=…` comment |
+| `KevinDeBenedetti/github-workflows` disabled            | [`propagate-release`](./propagate-release.md) moves it, with every release                     |
+| `dependencies`, `github-actions` labels                 | On the GitHub Actions updates                                                                  |
+
+Pin the preset to a release, as the workflows: `propagate-release` moves its tag in the
+same pull request as the workflow pins. Without a tag, Renovate reads the preset from
+`main`, so a change reaches the repository before it is released.
+
+The repository's `renovate.json` adds what is its own: the base branch, groups, commit
+types. Its `packageRules` come after the preset's, so they win.
+
+::: warning Release dates
+With `minimumReleaseAge`, an update whose datasource gives no release date never
+passes: `minimumReleaseAgeBehaviour` defaults to `timestamp-required`. Docker images
+get one on Docker Hub only. For an image of another registry, such as
+`mcr.microsoft.com`, set `"minimumReleaseAgeBehaviour": "timestamp-optional"` in a
+`packageRules` entry that matches it.
+:::
+
+## Set up
+
+1. A GitHub App with **Contents**, **Issues**, **Pull requests**, **Workflows** and
+   **Commit statuses** set to *Read and write*, installed on the repository. Commit
+   statuses carry Renovate's `renovate/stability-days` check: without them the token is
+   refused, with "The permissions requested are not granted to this installation".
+   After adding a permission to the App, accept it on the installation.
+2. In the repository, the App's client ID as a variable and its private key as a
+   secret. The usage above takes those of the App of
+   [`propagate-release`](./propagate-release.md).
+3. The `renovate.json` above, on the default branch: Renovate reads its config from
+   there only. A repository without one is skipped, with no onboarding pull request.
+4. A manual run, a dry run by default in the usage above: its log lists the updates
+   Renovate found. A run with the box unticked still opens pull requests only inside
+   the `schedule`, or for the updates ticked in the Dependency Dashboard.
+5. When the repository runs [`check-bot-commits`](./check-bot-commits.md), add the App's
+   bot, `<app-slug>[bot]`, to `allowed-bots`.
+
+## Inputs
+
+| Input           | Type    | Default            | Description                                                  |
+| --------------- | ------- | ------------------ | ------------------------------------------------------------ |
+| `app-client-id` | string  | required           | Client ID of the GitHub App installed on the repository      |
+| `dry-run`       | boolean | `false`            | Look the updates up and log them, change nothing on GitHub   |
+| `log-level`     | string  | `info`             | Renovate log level: `debug`, `info`, `warn`                  |
+| `runner`        | string  | `'"ubuntu-26.04"'` | Runner labels as JSON; Linux with a Docker daemon            |
+
+## Secrets
+
+| Secret            | Required | Description                   |
+| ----------------- | -------- | ----------------------------- |
+| `APP_PRIVATE_KEY` | yes      | Private key of the GitHub App |
+
+## Permissions
+
+- The calling job grants nothing: Renovate works with the App's token, created for the
+  calling repository only, with `contents`, `issues`, `pull-requests`, `statuses` and
+  `workflows` write, and expiring with the job.
+
+## Notes
+
+- Renovate runs in its container image, pinned in the workflow and bumped by this
+  repository's own Renovate, which reads the version from Renovate's GitHub releases
+  (the image itself has no release date). The runner needs a Docker daemon.
+- Commits go through the API (`platformCommit`), so GitHub signs them; the App is their
+  author.
+- One run at a time per repository: a manual run waits for the scheduled one.
+- The `renovate-config-validator` hook of `renovatebot/pre-commit-hooks` checks
+  `renovate.json` before a commit, and [`ci-prek`](./ci-prek.md) runs it in CI.

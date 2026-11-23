@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Shared Renovate preset of the repositories that use these workflows: weekly updates on Monday morning, nothing published less than 3 days ago, actions pinned to a commit SHA. A consumer extends it pinned to a release, `github>KevinDeBenedetti/github-workflows//renovate/default#vX.Y.Z`, and propagate-release moves that tag with its workflow pins. See docs/workflows/renovate.md.",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":separateMultipleMajorReleases",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "timezone": "Europe/Paris",
+  "schedule": ["before 6am on monday"],
+  "prHourlyLimit": 0,
+  "configMigration": true,
+  "minimumReleaseAge": "3 days",
+  "internalChecksFilter": "strict",
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "prek hook revs in a prek.toml, each under an inline `# renovate: datasource=… depName=…` comment. No manager understands prek's TOML, so without this the hook pins only move when someone remembers to run `prek autoupdate`.",
+      "managerFilePatterns": ["/(^|/)prek\\.toml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)\\nrev = \"(?<currentValue>v?[\\d][^\"]*)\""
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "KevinDeBenedetti/github-workflows moves with its own releases: in each consumer, propagate-release opens the pull request that moves its workflow pins, its prek.toml hooks and this preset's tag together; in this repository, the workflows reach their own actions with `uses: $/…` and release-please bumps the examples. Renovate would only duplicate them.",
+      "matchPackageNames": ["KevinDeBenedetti/github-workflows"],
+      "enabled": false
+    },
+    {
+      "description": "Label GitHub Actions updates",
+      "matchManagers": ["github-actions"],
+      "addLabels": ["dependencies", "github-actions"]
+    }
+  ]
+}

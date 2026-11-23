@@ -1,57 +1,72 @@
-# Runs Renovate on this repository, from GitHub Actions, with a token of the
-# release GitHub App (RELEASE_APP_CLIENT_ID / RELEASE_APP_PRIVATE_KEY): no
-# Marketplace app to install. Renovate reads renovate.json, opens the update
-# pull requests and keeps the Dependency Dashboard issue.
+# Runs Renovate on the calling repository, from GitHub Actions, with a token
+# of a GitHub App: no Marketplace app to install. Renovate reads the
+# repository's config file (renovate.json), which extends the shared preset
+# renovate/default.json; it opens the update pull requests and keeps the
+# Dependency Dashboard issue. A repository without a config file is skipped:
+# no onboarding pull request.
 #
 # Pull requests opened with the App's token run CI, unlike those of
 # GITHUB_TOKEN. Commits go through the GitHub API (platformCommit), so they are
 # signed by GitHub and authored by the App.
 #
-# renovate.json's `schedule` decides when pull requests open; this workflow
-# only has to run inside that window and on the days in between, for the
-# dashboard's checkboxes. A manual run can be a dry run.
-#
-# Not a reusable workflow: it updates this repository only.
+# The config file's `schedule` decides when pull requests open; the caller
+# only has to run this inside that window and on the days in between, for the
+# dashboard's checkboxes. Renovate runs in a container: the runner needs a
+# Docker daemon.
 name: Renovate
 
 on:
-  schedule:
-    - cron: '17 3 * * *'  # every day, 03:17 UTC
-  workflow_dispatch:
+  workflow_call:
     inputs:
+      app-client-id:
+        description: Client ID of the GitHub App installed on the calling repository
+        type: string
+        required: true
       dry-run:
         description: Look the updates up and log them, change nothing on GitHub
         type: boolean
-        default: true
+        required: false
+        default: false
       log-level:
         description: Renovate log level (debug, info, warn)
         type: string
+        required: false
         default: info
+      runner:
+        description: Runner labels as JSON — '"ubuntu-26.04"' or '"ubicloud-standard-2"' (Linux with a Docker daemon)
+        type: string
+        required: false
+        default: '"ubuntu-26.04"'
+    secrets:
+      APP_PRIVATE_KEY:
+        description: Private key of the GitHub App
+        required: true
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
 
+# One run at a time per repository: a manual run waits for the scheduled one.
 concurrency:
-  group: renovate
+  group: renovate-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:
   renovate:
     name: Renovate
-    runs-on: ubuntu-26.04
+    runs-on: ${{ fromJson(inputs.runner) }}
     timeout-minutes: 30
     # The job token is not used: Renovate works with the App's token below.
     permissions: {}
     steps:
-      # The App must hold these permissions on this repository, or the token
+      # The App must hold these permissions on the repository, or the token
       # is refused here. workflows: write lets Renovate update the pinned
       # actions inside .github/workflows/.
       - name: Mint the App token
         id: app
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
         with:
-          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          client-id: ${{ inputs.app-client-id }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
           repositories: ${{ github.event.repository.name }}
           permission-contents: write        # branches and commits of the update PRs
           permission-pull-requests: write   # open, update and close them
@@ -59,21 +74,22 @@ jobs:
           permission-workflows: write       # bump the actions pinned in .github/workflows/
           permission-statuses: write        # the renovate/stability-days status (minimumReleaseAge)
 
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
+      # No checkout: Renovate clones the repository itself, with the App's token.
       - name: Renovate
         uses: renovatebot/github-action@acdd6bda8b035c99ce59d5675816af2aa65a1774 # v46.3.14
         env:
           RENOVATE_REPOSITORIES: ${{ github.repository }}
           RENOVATE_PLATFORM_COMMIT: enabled
-          # Empty on a schedule: false.
-          RENOVATE_DRY_RUN: ${{ inputs.dry-run == true && 'lookup' || '' }}
-          LOG_LEVEL: ${{ inputs.log-level || 'info' }}
+          # Only repositories with a config file: never an onboarding pull request.
+          RENOVATE_ONBOARDING: 'false'
+          RENOVATE_REQUIRE_CONFIG: required
+          # Empty when not a dry run: Renovate then writes.
+          RENOVATE_DRY_RUN: ${{ inputs.dry-run && 'lookup' || '' }}
+          LOG_LEVEL: ${{ inputs.log-level }}
         with:
           token: ${{ steps.app.outputs.token }}
           # The image tag, pinned: the action's default is a moving major tag.
-          # renovate: datasource=docker depName=ghcr.io/renovatebot/renovate
+          # Read from Renovate's GitHub releases, which carry a date: a ghcr.io
+          # image has none, so minimumReleaseAge would hold its bump forever.
+          # renovate: datasource=github-releases depName=renovatebot/renovate
           renovate-version: 44.257.9
