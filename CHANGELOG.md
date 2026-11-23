@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.56.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.56.0...v0.56.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* **check-docs-external-links:** check broken links again before failing ([c31dee8](https://github.com/KevinDeBenedetti/github-workflows/commit/c31dee89506a4aaea74cd62c1c04db72c7d2f79b))
+
 ## [0.56.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.55.0...v0.56.0) (2026-11-23)
 
 
