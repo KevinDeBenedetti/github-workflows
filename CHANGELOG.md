@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.56.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.56.1...v0.56.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* **renovate:** let the App token read Dependabot alerts ([1d23023](https://github.com/KevinDeBenedetti/github-workflows/commit/1d2302317c431743452ffff549841295bbdbc509))
+
 ## [0.56.1](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.56.0...v0.56.1) (2026-11-23)
 
 
