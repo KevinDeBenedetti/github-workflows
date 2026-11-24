@@ -75,10 +75,11 @@ get one on Docker Hub only. For an image of another registry, such as
 ## Set up
 
 1. A GitHub App with **Contents**, **Issues**, **Pull requests**, **Workflows** and
-   **Commit statuses** set to *Read and write*, installed on the repository. Commit
-   statuses carry Renovate's `renovate/stability-days` check: without them the token is
-   refused, with "The permissions requested are not granted to this installation".
-   After adding a permission to the App, accept it on the installation.
+   **Commit statuses** set to *Read and write*, and **Dependabot alerts** set to *Read-only*,
+   installed on the repository. Commit statuses carry Renovate's `renovate/stability-days`
+   check, and Dependabot alerts let it open security pull requests: without either, the
+   token is refused, with "The permissions requested are not granted to this
+   installation". After adding a permission to the App, accept it on the installation.
 2. In the repository, the App's client ID as a variable and its private key as a
    secret. The usage above takes those of the App of
    [`propagate-release`](./propagate-release.md).
@@ -109,7 +110,7 @@ get one on Docker Hub only. For an image of another registry, such as
 
 - The calling job grants nothing: Renovate works with the App's token, created for the
   calling repository only, with `contents`, `issues`, `pull-requests`, `statuses` and
-  `workflows` write, and expiring with the job.
+  `workflows` write and `vulnerability-alerts` read, and expiring with the job.
 
 ## Notes
 

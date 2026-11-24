@@ -73,6 +73,7 @@ jobs:
           permission-issues: write          # the Dependency Dashboard issue
           permission-workflows: write       # bump the actions pinned in .github/workflows/
           permission-statuses: write        # the renovate/stability-days status (minimumReleaseAge)
+          permission-vulnerability-alerts: read  # Dependabot alerts, for Renovate's security PRs
 
       # No checkout: Renovate clones the repository itself, with the App's token.
       - name: Renovate
