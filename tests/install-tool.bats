@@ -53,6 +53,11 @@ SH
     tar -cf "stage/xz-$arch.tar" -C "stage/xz-$arch" xztool-v1.2.3
     python3 -c "import lzma, sys; open(sys.argv[2], 'wb').write(lzma.compress(open(sys.argv[1], 'rb').read()))" \
       "stage/xz-$arch.tar" "dist/xztool-v1.2.3.$arch.tar.xz"
+    mkdir -p "stage/zip-$arch"
+    program "stage/zip-$arch/ziptool"
+    echo "# $arch" >> "stage/zip-$arch/ziptool"
+    python3 -c "import sys, zipfile; zipfile.ZipFile(sys.argv[1], 'w').write(sys.argv[2], 'ziptool')" \
+      "dist/ziptool_$arch.zip" "stage/zip-$arch/ziptool"
     program "dist/1.2.3/$arch/rawtool"
     echo "# $arch" >> "dist/1.2.3/$arch/rawtool"
     # The download is not executable: the install makes it so.
@@ -87,6 +92,14 @@ SH
     "extract": "tar.xz",
     "member": "xztool-v{v}/xztool",
     "sha256": {"amd64": "$(sha dist/xztool-v1.2.3.x86_64.tar.xz)", "arm64": "$(sha dist/xztool-v1.2.3.aarch64.tar.xz)"}
+  },
+  "ziptool": {
+    "version": "1.2.3",
+    "url": "file://$PWD/dist/ziptool_{a}.zip",
+    "arch": {"amd64": "x86_64", "arm64": "aarch64"},
+    "extract": "zip",
+    "member": "ziptool",
+    "sha256": {"amd64": "$(sha dist/ziptool_x86_64.zip)", "arm64": "$(sha dist/ziptool_aarch64.zip)"}
   },
   "rawtool": {
     "version": "1.2.3",
@@ -138,6 +151,14 @@ on_path() { PATH="$(paste -sd: "$GITHUB_PATH"):$PATH" "$1"; }
   [ "$(ls "$RUNNER_TEMP/xztool")" = xztool ]
 }
 
+@test "a zip tool is taken out of its archive and made executable" {
+  TOOL=ziptool run bash "$SCRIPT"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"✅ ziptool 1.2.3 installed"* ]]
+  [ "$(on_path ziptool)" = "ziptool runs" ]
+  [ "$(ls "$RUNNER_TEMP")" = ziptool ]
+}
+
 @test "a binary tool is the download itself, made executable" {
   TOOL=rawtool run bash "$SCRIPT"
   [ "$status" -eq 0 ]
@@ -187,7 +208,7 @@ on_path() { PATH="$(paste -sd: "$GITHUB_PATH"):$PATH" "$1"; }
 @test "fails on an unknown tool, an unusable name or an unsupported architecture" {
   TOOL=nope run bash "$SCRIPT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"unknown tool 'nope' (the manifest lists: gittool, gztool, rawtool, xztool)"* ]]
+  [[ "$output" == *"unknown tool 'nope' (the manifest lists: gittool, gztool, rawtool, xztool, ziptool)"* ]]
   [[ "$output" == *"::error::install-tool cannot install 'nope'"* ]]
   TOOL='../x' run bash "$SCRIPT"
   [ "$status" -eq 1 ]
@@ -203,10 +224,10 @@ on_path() { PATH="$(paste -sd: "$GITHUB_PATH"):$PATH" "$1"; }
 }
 
 @test "refuses a manifest entry it cannot install safely" {
-  edit 'm["gztool"]["extract"] = "zip"'
+  edit 'm["gztool"]["extract"] = "rar"'
   TOOL=gztool run bash "$SCRIPT"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"gztool: unsupported extract 'zip'"* ]]
+  [[ "$output" == *"gztool: unsupported extract 'rar'"* ]]
   edit 'm["xztool"]["member"] = "../../xztool"'
   TOOL=xztool run bash "$SCRIPT"
   [ "$status" -eq 1 ]
@@ -223,7 +244,7 @@ on_path() { PATH="$(paste -sd: "$GITHUB_PATH"):$PATH" "$1"; }
 import json, sys
 for name, tool in json.load(open(sys.argv[1])).items():
     kind = tool["extract"]
-    assert kind in ("tar.gz", "tar.xz", "binary", "git"), (name, kind)
+    assert kind in ("tar.gz", "tar.xz", "zip", "binary", "git"), (name, kind)
     if kind == "git":
         assert len(tool["commit"]) == 40 and tool["git"].startswith("https://") and tool["installer"], name
     else:

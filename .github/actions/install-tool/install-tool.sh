@@ -6,7 +6,8 @@
 #
 #   version   the release (Renovate bumps it)
 #   extract   how the download becomes a program:
-#               tar.gz, tar.xz   `member` is the program's path in the archive
+#               tar.gz, tar.xz, zip
+#                                `member` is the program's path in the archive
 #               binary           the download is the program, named `member`
 #               git              clone the `version` tag of `git`, run its
 #                                `installer` with the install directory, and
@@ -21,7 +22,7 @@
 #
 # Environment: TOOL (an entry of the manifest), RUNNER_TEMP, GITHUB_PATH.
 # TOOLS_MANIFEST replaces the manifest (tests). Needs python3 (reads the
-# manifest, opens .tar.xz: the runner image has no jq and no xz), curl,
+# manifest, opens .tar.xz and .zip: the runner image has no jq and no xz), curl,
 # sha256sum and tar; git for a git install.
 set -euo pipefail
 
@@ -54,7 +55,7 @@ kind = tool.get("extract")
 version = tool["version"]
 if kind == "git":
     values = [kind, version, tool["git"], tool["commit"], tool["installer"], tool.get("path", "")]
-elif kind in ("tar.gz", "tar.xz", "binary"):
+elif kind in ("tar.gz", "tar.xz", "zip", "binary"):
     key = {"x86_64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(machine)
     if key is None or key not in tool["arch"]:
         sys.exit(f"unsupported arch for {name}: {machine}")
@@ -117,6 +118,10 @@ case "$KIND" in
     python3 -c "import lzma, shutil, sys; shutil.copyfileobj(lzma.open(sys.argv[1]), open(sys.argv[2], 'wb'))" \
       "$WORK/asset" "$WORK/asset.tar"
     tar -xf "$WORK/asset.tar" -C "$WORK/out" "$MEMBER"
+    ;;
+  zip)
+    python3 -c "import sys, zipfile; zipfile.ZipFile(sys.argv[1]).extract(sys.argv[3], sys.argv[2])" \
+      "$WORK/asset" "$WORK/out" "$MEMBER"
     ;;
   binary)
     mv "$WORK/asset" "$WORK/out/$MEMBER"

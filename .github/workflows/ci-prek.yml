@@ -60,37 +60,6 @@ on:
         type: string
         required: false
         default: '"ubuntu-26.04"'
-  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
-  # Keep them in sync manually — GitHub does not support shared input definitions.
-  workflow_dispatch:
-    inputs:
-      extra-args:
-        description: Arguments passed to `prek run` — e.g. '--all-files' or a hook id
-        type: string
-        default: --all-files
-      working-directory:
-        description: Directory holding the prek config
-        type: string
-        default: .
-      prek-version:
-        description: prek release to install, without the leading v (or 'latest')
-        type: string
-        # renovate: datasource=github-releases depName=j178/prek
-        default: 0.4.12
-      cache:
-        description: Cache the prek hook environments between runs
-        type: boolean
-        default: true
-      timeout-minutes:
-        description: Minutes before the job is cancelled
-        type: number
-        default: 20
-
-      runner:
-        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
-        type: string
-        required: false
-        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}

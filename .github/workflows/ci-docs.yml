@@ -1,0 +1,140 @@
+# Checks a repository's Markdown docs: relative links (offline), links that
+# escape the docs folder, the external links of the pages a change touches, and
+# the Vue interpolations that break a VitePress build. Each check is a job with
+# its own switch. ci-shell.yml and ci-node.yml carried these checks before: the
+# inputs they still declare for them are deprecated.
+name: CI — Docs
+
+on:
+  workflow_call:
+    inputs:
+      run-link-check:
+        description: Check markdown files for broken relative links (offline, no HTTP requests)
+        type: boolean
+        required: false
+        default: true
+      link-check-paths:
+        description: Space-separated glob patterns of markdown files to check
+        type: string
+        required: false
+        default: 'docs/**/*.md'
+      run-docs-link-check:
+        description: Check that no relative links in docs/ escape the docs/ directory
+        type: boolean
+        required: false
+        default: false
+      run-docs-external-link-check:
+        description: Check the http(s) links of the docs/ markdown files changed by the push or pull request (lychee)
+        type: boolean
+        required: false
+        default: false
+      run-vitepress-check:
+        description: Check docs/ markdown for unescaped Vue interpolations that break the VitePress SSR build
+        type: boolean
+        required: false
+        default: false
+      docs-directory:
+        description: Path to the docs folder checked by docs-link-check, docs-external-link-check and vitepress-check
+        type: string
+        required: false
+        default: docs
+      runner:
+        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
+        type: string
+        required: false
+        default: '"ubuntu-26.04"'
+
+# The group carries the path input(s) so that one caller invoking this workflow
+# several times in the same run (e.g. one call per directory) gets one group per
+# call — with a shared group, cancel-in-progress makes the calls cancel each other.
+concurrency:
+  group: ci-docs-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.docs-directory }}-${{ inputs.link-check-paths }}
+  cancel-in-progress: true
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+jobs:
+  # ── Markdown link check ──────────────────────────────────────────────────────
+  link-check:
+    name: Link check
+    if: inputs.run-link-check
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check markdown links
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --offline --no-progress ${{ inputs.link-check-paths }}
+          fail: true
+          failIfEmpty: false
+
+  # ── Docs relative-link check ─────────────────────────────────────────────────
+  docs-link-check:
+    name: Docs link check
+    if: inputs.run-docs-link-check
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check docs links
+        uses: $/.github/actions/check-docs-links
+        with:
+          docs-directory: ${{ inputs.docs-directory }}
+
+  # ── Docs external-link check ─────────────────────────────────────────────────
+  # Only the files the push or pull request changed: a page that rotted
+  # elsewhere is reported by the central site's weekly crawl instead.
+  docs-external-link-check:
+    name: Docs external link check
+    if: inputs.run-docs-external-link-check
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check docs external links
+        uses: $/.github/actions/check-docs-external-links
+        with:
+          docs-directory: ${{ inputs.docs-directory }}
+
+  # ── VitePress markdown check ─────────────────────────────────────────────────
+  vitepress-check:
+    name: VitePress markdown check
+    if: inputs.run-vitepress-check
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check VitePress markdown
+        uses: $/.github/actions/check-vitepress-md
+        with:
+          docs-directory: ${{ inputs.docs-directory }}

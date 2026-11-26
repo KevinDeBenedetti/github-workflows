@@ -8,23 +8,31 @@ name: Security
 on:
   workflow_call:
     inputs:
+      run-osv-scan:
+        description: >
+          Audit the dependencies of every lockfile of the checkout, whatever
+          the ecosystem, with OSV-Scanner. Replaces run-node-audit and
+          run-python-audit.
+        type: boolean
+        required: false
+        default: false
       run-node-audit:
-        description: Run pnpm audit on Node.js apps
+        description: Deprecated, use run-osv-scan. Run pnpm audit on Node.js apps
         type: boolean
         required: false
         default: true
       node-working-directory:
-        description: Path to Node.js app
+        description: Deprecated, see run-node-audit. Path to Node.js app
         type: string
         required: false
         default: '.'
       run-python-audit:
-        description: Run pip-audit on Python apps
+        description: Deprecated, use run-osv-scan. Run pip-audit on Python apps
         type: boolean
         required: false
         default: false
       python-working-directory:
-        description: Path to Python app
+        description: Deprecated, see run-python-audit. Path to Python app
         type: string
         required: false
         default: '.'
@@ -96,69 +104,34 @@ on:
         type: string
         required: false
         default: '"ubuntu-26.04"'
-  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
-  # Keep them in sync manually — GitHub does not support shared input definitions.
-  workflow_dispatch:
-    inputs:
-      run-node-audit:
-        description: Run pnpm audit on Node.js apps
-        type: boolean
-        default: true
-      node-working-directory:
-        description: Path to Node.js app
-        type: string
-        default: '.'
-      run-python-audit:
-        description: Run pip-audit on Python apps
-        type: boolean
-        default: false
-      python-working-directory:
-        description: Path to Python app
-        type: string
-        default: '.'
-      run-secret-scan:
-        description: Run Gitleaks secret scanning
-        type: boolean
-        default: true
-      secret-scan-fetch-depth:
-        description: Clone depth for the secret scan (0 = full history)
-        type: number
-        default: 0
-      secret-scan-ignore-inline-allow:
-        description: Ignore inline `gitleaks:allow` comments (gitleaks --ignore-gitleaks-allow)
-        type: boolean
-        default: false
-      secret-scan-upload-sarif:
-        description: Upload the Gitleaks SARIF report to code scanning when a leak is found
-        type: boolean
-        default: true
-      run-dependency-review:
-        description: On pull requests, fail when the change adds a vulnerable dependency
-        type: boolean
-        default: false
-      dependency-review-fail-on-severity:
-        description: Lowest advisory severity that fails the review (low, moderate, high, critical)
-        type: string
-        default: moderate
-      run-codeql:
-        description: Run CodeQL SAST analysis
-        type: boolean
-        default: true
-      codeql-languages:
-        description: 'JSON array of CodeQL languages (e.g. ''["javascript-typescript","python"]'')'
-        type: string
-        default: '["javascript-typescript"]'
-
-      runner:
-        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
-        type: string
-        required: false
-        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
 
 jobs:
+  # ── Dependency audit (every ecosystem) ──────────────────────────────────────
+  # One job for every lockfile of the checkout (npm, pnpm, bun, PyPI, Go,
+  # Cargo, …) against the OSV database, which Renovate's vulnerability alerts
+  # read too. Nothing is installed: the lockfiles are read as they are.
+  osv-scan:
+    name: Audit dependencies (OSV)
+    if: inputs.run-osv-scan
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: OSV-Scanner
+        uses: $/.github/actions/osv-scan
+
+  # The two jobs below are deprecated: osv-scan audits the same lockfiles. They
+  # stay, with a warning, until the next breaking release.
   # ── Dependency audit (Node) ─────────────────────────────────────────────────
   audit-node:
     name: Audit Node.js dependencies
@@ -170,6 +143,9 @@ jobs:
       contents: read
 
     steps:
+      - name: Deprecated input
+        run: echo "::warning title=Deprecated input::run-node-audit is deprecated, set run-osv-scan to true and run-node-audit to false. The per-ecosystem audits leave security.yml in the next breaking release."
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -207,6 +183,9 @@ jobs:
       contents: read
 
     steps:
+      - name: Deprecated input
+        run: echo "::warning title=Deprecated input::run-python-audit is deprecated, set run-osv-scan to true and run-python-audit to false. The per-ecosystem audits leave security.yml in the next breaking release."
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

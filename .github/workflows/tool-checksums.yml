@@ -1,0 +1,110 @@
+# Refreshes the checksums of install-tool's tools.json on Renovate's pull
+# requests. Renovate bumps a tool's version there and leaves the SHA-256 pinned
+# next to it, so ci-cd.yml's `CI — Tool checksums` fails until
+# scripts/update-tool-checksums.py has run on the branch: this workflow runs it
+# and commits the result.
+#
+# Two jobs, so that no job both runs code and holds a write credential:
+#   refresh — runs the script of the pull request (it downloads every release
+#             asset) with a read-only token and no secret;
+#   commit  — writes tools.json to the branch through the GitHub API with a
+#             token of the release GitHub App. It checks nothing out and runs
+#             nothing from the repository.
+# The App's token, unlike the job's, starts CI on the new commit, and the
+# commit is authored by the App like Renovate's own (platformCommit): Renovate
+# keeps managing the branch. When it rebuilds the branch, this runs again.
+#
+# Only on Renovate's branches of this repository: a fork's pull request never
+# starts a job. Not a reusable workflow: it serves this repository only.
+name: Tool checksums (Renovate)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/actions/install-tool/tools.json
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+# A newer push to the pull request supersedes the run in progress.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    name: Refresh the checksums
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+      && startsWith(github.head_ref, 'renovate/')
+    runs-on: ubuntu-26.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      changed: ${{ steps.refresh.outputs.changed }}
+      manifest: ${{ steps.refresh.outputs.manifest }}
+    steps:
+      # The pull request's head, not its merge commit: the file committed back
+      # must be the branch's own.
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      # The script fails, and nothing is committed, when a computed checksum
+      # is not the one the project publishes.
+      - name: Refresh the pinned checksums
+        id: refresh
+        env:
+          MANIFEST: .github/actions/install-tool/tools.json
+        run: |
+          python3 scripts/update-tool-checksums.py
+          if git diff --quiet -- "$MANIFEST"; then
+            echo "The pinned checksums are current."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git diff -- "$MANIFEST"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "manifest=$(base64 -w0 "$MANIFEST")" >> "$GITHUB_OUTPUT"
+          fi
+
+  commit:
+    name: Commit tools.json
+    needs: [refresh]
+    if: needs.refresh.outputs.changed == 'true'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 5
+    # The job token is not used: the commit goes through the App's token below.
+    permissions: {}
+    steps:
+      - name: Mint the App token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write   # one commit on the pull request's branch
+
+      # A commit made through the API is signed by GitHub. The blob SHA makes
+      # the write conditional: when the branch moved since the refresh job
+      # read it, GitHub refuses and the run of the newer commit takes over.
+      - name: Commit the refreshed checksums
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.head_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MANIFEST: .github/actions/install-tool/tools.json
+          CONTENT: ${{ needs.refresh.outputs.manifest }}
+        run: |
+          blob=$(gh api "repos/${REPOSITORY}/contents/${MANIFEST}?ref=${HEAD_SHA}" --jq .sha)
+          gh api --method PUT "repos/${REPOSITORY}/contents/${MANIFEST}" \
+            -f message='chore(deps): refresh the pinned tool checksums' \
+            -f branch="$BRANCH" \
+            -f sha="$blob" \
+            -f content="$CONTENT" \
+            --jq '"Committed \(.commit.sha) on " + env.BRANCH'

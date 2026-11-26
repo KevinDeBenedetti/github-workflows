@@ -1,0 +1,171 @@
+name: CI — Docker
+
+# Builds a Docker image and pushes nothing: the build check of a pull request,
+# a fork's included, since the job needs `contents: read` only. No registry
+# login, no deployment record, no attestation: cd-docker.yml does those, and
+# its callers must grant the write scopes it declares.
+#
+# Same wiring as cd-docker.yml (tags and labels from actions/image-tags,
+# Buildx, the GitHub Actions layer cache under the same scope), so an image
+# that builds here builds there: keep the two build steps in step.
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        description: Image name (e.g. my-api). Defaults to repo name.
+        type: string
+        required: false
+        default: ''
+      context:
+        description: Docker build context (e.g. apps/api)
+        type: string
+        required: false
+        default: '.'
+      dockerfile:
+        description: Dockerfile path relative to context
+        type: string
+        required: false
+        default: Dockerfile
+      platforms:
+        description: Target platforms (comma-separated). Anything other than the runner's own architecture runs under QEMU.
+        type: string
+        required: false
+        default: linux/amd64
+      target:
+        description: Build target stage (e.g. dev, prod)
+        type: string
+        required: false
+        default: ''
+      build-args:
+        description: >
+          List of Docker build-args (one per line, KEY=VALUE). Never secrets:
+          use the BUILD_SECRETS secret instead.
+        type: string
+        required: false
+        default: ''
+      run-image-scan:
+        description: >
+          Scan the image for known vulnerabilities (Trivy) before the build check passes: the
+          image is first built for the runner's platform and loaded, then
+          scanned; a finding at image-scan-fail-on or above fails the job.
+        type: boolean
+        required: false
+        default: false
+      image-scan-fail-on:
+        description: 'Lowest severity that fails the image scan: low | medium | high | critical'
+        type: string
+        required: false
+        default: critical
+      runner:
+        description: Runner labels as JSON — a Linux VM runner with a Docker daemon, GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
+        type: string
+        required: false
+        default: '"ubuntu-26.04"'
+      timeout-minutes:
+        description: Minutes before the build job is cancelled (GitHub's default is 360)
+        type: number
+        required: false
+        default: 30
+    secrets:
+      BUILD_SECRETS:
+        description: >
+          BuildKit secrets, one `id=value` per line, read in the Dockerfile with
+          `RUN --mount=type=secret,id=<id>`. Empty on a fork's pull request,
+          which gets no secret.
+        required: false
+
+# Deny-all default: each job grants only the permissions it needs.
+permissions: {}
+
+concurrency:
+  group: ci-docker-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-${{ inputs.context }}-${{ inputs.target }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Docker build (${{ inputs.context }})
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The tags and labels cd-docker.yml would apply: nothing is pushed, but a
+      # name or a label the build refuses fails here.
+      - name: Image tags
+        id: image
+        uses: $/.github/actions/image-tags
+        with:
+          image-name: ${{ inputs.image-name }}
+
+      - name: Docker meta (names)
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ steps.image.outputs.image }}
+          tags: ${{ steps.image.outputs.raw-tags }}
+
+      # Only for a foreign architecture: an amd64-only build on the amd64
+      # runner needs no emulator, and registering one costs a container pull.
+      - name: Set up QEMU (multi-platform)
+        if: inputs.platforms != 'linux/amd64'
+        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # The scan reads an image of the Docker daemon, which holds one platform:
+      # the runner's own is built and loaded first. The build below
+      # reuses its layers from the builder.
+      - name: Build for the scan
+        if: inputs.run-image-scan
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+          platforms: linux/${{ runner.arch == 'ARM64' && 'arm64' || 'amd64' }}
+          load: true
+          push: false
+          tags: ${{ steps.image.outputs.image }}:scan
+          target: ${{ inputs.target }}
+          build-args: ${{ inputs.build-args }}
+          secrets: ${{ secrets.BUILD_SECRETS }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha,scope=${{ inputs.context }}-${{ inputs.target }}
+
+      # Findings go to the job summary. No SARIF upload: a job that declared
+      # security-events: write would force every caller to grant it.
+      - name: Scan the image
+        if: inputs.run-image-scan
+        uses: $/.github/actions/image-scan
+        with:
+          image: ${{ steps.image.outputs.image }}:scan
+          fail-on: ${{ inputs.image-scan-fail-on }}
+
+      - name: Build
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+          platforms: ${{ inputs.platforms }}
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.image.outputs.labels }}
+          target: ${{ inputs.target }}
+          build-args: ${{ inputs.build-args }}
+          secrets: ${{ secrets.BUILD_SECRETS }}
+          # Nothing is pushed: an attestation would be built and thrown away.
+          provenance: false
+          sbom: false
+          # The scope of cd-docker.yml's cache, so a pull request's build
+          # starts from the layers of the last pushed image. A failed export
+          # (a token that cannot write the cache) does not fail the build.
+          cache-from: type=gha,scope=${{ inputs.context }}-${{ inputs.target }}
+          cache-to: type=gha,scope=${{ inputs.context }}-${{ inputs.target }},mode=max,ignore-error=true

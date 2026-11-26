@@ -1,0 +1,7 @@
+# Fixture of ci-cd.yml's ci-kubernetes job: a chart rendered with helm
+# template, then validated by kubeconform.
+apiVersion: v2
+name: ci-selftest
+description: Fixture chart of the CI self-test
+type: application
+version: 0.1.0

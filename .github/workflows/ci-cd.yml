@@ -13,14 +13,17 @@
 # (it does not know `$/` yet — see .github/actionlint.yaml).
 #
 # Jobs:
-#   ci-shell     — shellcheck + actionlint + bats + docs checks (ci-shell.yml) [push + PR]
+#   ci-shell     — shellcheck + actionlint + bats (ci-shell.yml)        [push + PR]
+#   ci-docs      — docs checks (ci-docs.yml)                            [push + PR]
 #   ci-zizmor    — GitHub Actions security lint (zizmor)                [push + PR]
 #   ci-actions   — same checks through the local composite actions            [push + PR]
 #   ci-checksums — pinned tool checksums match their release assets      [push + PR]
 #   ci-prek      — this repo's prek hooks, server-side (ci-prek.yml)     [push + PR]
-#   ci-image     — test image built without a push (cd-docker.yml)      [push + PR]
+#   ci-kubernetes — manifests, a chart and a kustomization validated (ci-kubernetes.yml) [push + PR]
+#   ci-terraform — validate, fmt, tflint and config scan on a fixture (ci-terraform.yml) [push + PR]
+#   ci-image     — test image built without a push (ci-docker.yml)      [push + PR]
 #   ci-commits   — Conventional Commits on every new commit             [push + PR]
-#   security     — Gitleaks + dependency review + CodeQL (security.yml)  [push + PR]
+#   security     — Gitleaks + OSV + dependency review + CodeQL (security.yml)  [push + PR]
 #   ci-gate      — single required check: all CI jobs above passed      [push + PR]
 #   pr-description — PR body written by Claude Code (pr-description.yml) [PR, outside the gate]
 #   release      — release-please PR + tags (release.yml)                [push to main only]
@@ -67,16 +70,24 @@ jobs:
       run-bats: true
       bats-tests-dir: tests/
       bats-submodules: false
-      # Verify this repo's own docs/ stay VitePress-safe and self-contained,
-      # and that the external links of the pages a change touches answer:
-      # the central docs site polls this repo and rebuilds from these files.
-      run-docs-link-check: true
-      run-docs-external-link-check: true
-      run-vitepress-check: true
       # actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3
       # and falsely flags the `client-id` input / a "missing app-id". Ignore those
       # messages so a future actionlint bump doesn't break CI on release.yml.
       actionlint-flags: -ignore create-github-app-token
+    permissions:
+      contents: read
+
+  # ── CI — Docs ────────────────────────────────────────────────────────────────
+  # Verify this repo's own docs/ stay VitePress-safe and self-contained, and
+  # that the external links of the pages a change touches answer: the central
+  # docs site polls this repo and rebuilds from these files.
+  ci-docs:
+    name: CI — Docs
+    uses: ./.github/workflows/ci-docs.yml
+    with:
+      run-docs-link-check: true
+      run-docs-external-link-check: true
+      run-vitepress-check: true
     permissions:
       contents: read
 
@@ -90,15 +101,6 @@ jobs:
     permissions:
       contents: read
     steps:
-      # Audit mode: records every outbound connection of the job (visible in
-      # the run's StepSecurity insights) without blocking anything yet. Once
-      # the baseline is known, switch to `egress-policy: block` with an
-      # allowed-endpoints list. Note: audit mode reports to the StepSecurity API.
-      - name: Harden runner
-        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-        with:
-          egress-policy: audit
-
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -174,15 +176,6 @@ jobs:
     permissions:
       contents: read
     steps:
-      # Audit mode: records every outbound connection of the job (visible in
-      # the run's StepSecurity insights) without blocking anything yet. Once
-      # the baseline is known, switch to `egress-policy: block` with an
-      # allowed-endpoints list. Note: audit mode reports to the StepSecurity API.
-      - name: Harden runner
-        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
-        with:
-          egress-policy: audit
-
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -213,35 +206,66 @@ jobs:
     permissions:
       contents: read
 
+  # ── CI — Kubernetes ──────────────────────────────────────────────────────────
+  # Self-test of ci-kubernetes.yml: a manifest, a rendered chart and a rendered
+  # kustomization validated against one Kubernetes version's schemas, then
+  # checked for APIs the next one removed. Also proves install-tool's helm and
+  # kustomize entries. The built-in schemas only: no catalog fetch.
+  ci-kubernetes:
+    name: CI — Kubernetes
+    uses: ./.github/workflows/ci-kubernetes.yml
+    with:
+      kubeconform-paths: tests/fixtures/kubernetes/
+      kubeconform-include-crds-catalog: false
+      kubeconform-helm-charts: tests/fixtures/helm-chart tests/fixtures/helm-chart/values.yaml
+      kubeconform-kustomizations: tests/fixtures/kustomization
+      kubernetes-version: '1.34'
+      deprecated-api-version: '1.35'
+    permissions:
+      contents: read
+
+  # ── CI — Terraform ───────────────────────────────────────────────────────────
+  # Self-test of ci-terraform.yml on a fixture module with no provider to
+  # download: validate and fmt, then tflint and the configuration scan, which
+  # also prove install-tool's tflint and trivy entries.
+  ci-terraform:
+    name: CI — Terraform
+    uses: ./.github/workflows/ci-terraform.yml
+    with:
+      tf-dir: tests/fixtures/terraform
+      run-tflint: true
+      run-config-scan: true
+    permissions:
+      contents: read
+
   # ── CI — Image build ─────────────────────────────────────────────────────────
-  # Self-test of cd-docker.yml: builds the fixture image for the runner's own
-  # platform and pushes nothing, so a change that breaks the build (tags,
-  # labels, Buildx wiring) fails here instead of in a caller's release. With
-  # `push: false` there is no registry login, no deployment record and no
-  # attestation; the permissions below are still required, since GitHub refuses
-  # a call that grants less than the called jobs declare.
+  # Self-test of ci-docker.yml: builds the fixture image for the runner's own
+  # platform with a read-only token, so a change that breaks the build (tags,
+  # labels, Buildx wiring) fails here. cd-docker.yml shares that wiring and
+  # adds the push, the deployment record and the attestation, which only a
+  # caller's release exercises.
   ci-image:
     name: CI — Image build
-    uses: ./.github/workflows/cd-docker.yml
+    uses: ./.github/workflows/ci-docker.yml
     with:
       image-name: ci-selftest
       context: tests/fixtures/image
       target: prod
-      platforms: linux/amd64
-      push: false
+      # Also the image scan, on the fixture: it proves the step and install-tool's
+      # trivy entry on an image with nothing to report.
+      run-image-scan: true
       timeout-minutes: 10
     permissions:
       contents: read
-      packages: write      # declared by the build job, unused without a push
-      deployments: write   # declared by the build job, unused without a push
-      id-token: write      # declared by the attest job, skipped without a push
-      attestations: write  # declared by the attest job, skipped without a push
 
   # ── Security ─────────────────────────────────────────────────────────────────
   security:
     name: Security
     uses: ./.github/workflows/security.yml
     with:
+      # This repository has no lockfile: the OSV job proves the scanner's
+      # install and run, and reports that nothing was found to audit.
+      run-osv-scan: true
       run-node-audit: false
       run-python-audit: false
       run-secret-scan: true
@@ -348,7 +372,7 @@ jobs:
   # are named "Caller / Callee job"). Passes only when every job succeeded.
   ci-gate:
     name: CI — Gate
-    needs: [ci-shell, ci-actions, ci-zizmor, ci-prek, ci-image, ci-checksums, ci-commits, security]
+    needs: [ci-shell, ci-docs, ci-actions, ci-zizmor, ci-prek, ci-kubernetes, ci-terraform, ci-image, ci-checksums, ci-commits, security]
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 5
@@ -389,6 +413,7 @@ jobs:
       notify-reviewers: KevinDeBenedetti
       # Move only v0.<minor>: breaking changes ship as minor bumps before 1.0,
       # so this repo's callers must never be carried across one by an alias.
+      # Ignored from 1.0.0 on, where v<major> moves (CONTRIBUTING.md, Releases).
       pre-major-alias: minor
 
   # ── Propagate the release ────────────────────────────────────────────────────

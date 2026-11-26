@@ -47,6 +47,8 @@ jobs:
 | `provenance`      | string  | `mode=max`                | SLSA provenance attached by BuildKit (`mode=max`, `mode=min`, `false`)                                   |
 | `sbom`            | boolean | `true`                    | Attach an SBOM attestation to the image                                                                  |
 | `attest`          | boolean | `true`                    | Sign a GitHub artifact attestation for the pushed image (only when `push`)                               |
+| `run-image-scan`  | boolean | `false`                   | Scan the image for known vulnerabilities (Trivy) before it is pushed                                     |
+| `image-scan-fail-on` | string | `critical`             | Lowest severity that fails the image scan: `low`, `medium`, `high` or `critical`                         |
 | `registry-cache`  | boolean | `false`                   | Keep the layer cache in GHCR (`<image>-cache:buildcache`) instead of the GitHub Actions cache            |
 | `deployment`      | boolean | `true`                    | Run the build in the `production` or `preview` environment, which records a deployment                   |
 | `runner`          | string  | `'"ubuntu-26.04"'`        | Runner labels as JSON: a Linux VM runner with Docker, GitHub's or Ubicloud's                             |
@@ -88,7 +90,8 @@ The [`image-tags`](../actions/image-tags.md) action computes them:
 - `timeout-minutes` cuts off a build stuck on a pull or an emulated step: without it the job holds the runner (and bills the minutes) for up to 6 hours.
 - Each build adds a `sha-*` tag, and each platform image and attestation is an untagged version in GHCR: [`cleanup-ghcr`](./cleanup-ghcr.md) deletes the old ones on a schedule without breaking multi-arch images.
 - With a push, the job runs in the `production` environment on `main`, otherwise `preview`, and GitHub records a deployment. `deployment: false` runs it in no environment.
-- **Caller permissions** — a reusable workflow gets at most what its caller grants, and GitHub refuses the run if a job asks for more (even when `attest` is false). Grant on the calling job:
+- `run-image-scan: true` builds the image for the runner's platform, loads it and scans it with the [`image-scan`](../actions/image-scan.md) action before the push: a vulnerability at `image-scan-fail-on` or above fails the job, and nothing is pushed or attested. The findings are in the job summary; the vulnerability database is cached for the day. The other platforms of a multi-platform build are not scanned. A vulnerability counts whether a fix exists or not: silence one in a `.trivyignore` file at the root of the repository.
+- **Caller permissions** — a reusable workflow gets at most what its caller grants, and GitHub refuses the run if a job asks for more (even when `attest` or `push` is false). To build an image on a pull request without these scopes, a fork's included, call [`ci-docker`](./ci-docker.md) instead. Grant on the calling job:
   ```yaml
   permissions:
     contents: read

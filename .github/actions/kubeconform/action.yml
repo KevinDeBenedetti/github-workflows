@@ -1,9 +1,13 @@
 name: kubeconform
-description: Validate Kubernetes manifests with kubeconform
+description: >
+  Validate Kubernetes manifests with kubeconform, strictly: the files of a
+  directory and what Helm charts and kustomizations render to. Optionally
+  fails on a built-in API a target Kubernetes version no longer serves. The
+  rules are at the top of kubeconform.sh.
 
 inputs:
   paths:
-    description: Directory containing Kubernetes manifests
+    description: Directory containing Kubernetes manifests; empty validates only what is rendered
     required: false
     default: kubernetes/
   exclude:
@@ -24,6 +28,27 @@ inputs:
       not present in the CRDs-catalog such as Tetragon TracingPolicy).
     required: false
     default: 'false'
+  kubernetes-version:
+    description: Kubernetes version of the schemas (1.33 or 1.33.2); empty uses kubeconform's default, the latest
+    required: false
+    default: ''
+  helm-charts:
+    description: >
+      Charts to render with `helm template` and validate, one per line: the
+      chart's directory, then its values files, separated by spaces.
+    required: false
+    default: ''
+  kustomizations:
+    description: Kustomization directories to render with `kustomize build` and validate, one per line
+    required: false
+    default: ''
+  deprecated-api-version:
+    description: >
+      Kubernetes version (1.34 or 1.34.1) to check for removed APIs: a
+      resource of a built-in API group that version no longer serves fails.
+      Empty runs no such check.
+    required: false
+    default: ''
 
 runs:
   using: composite
@@ -35,6 +60,18 @@ runs:
       with:
         tool: kubeconform
 
+    - name: Install Helm
+      if: inputs.helm-charts != ''
+      uses: $/.github/actions/install-tool
+      with:
+        tool: helm
+
+    - name: Install kustomize
+      if: inputs.kustomizations != ''
+      uses: $/.github/actions/install-tool
+      with:
+        tool: kustomize
+
     - name: Validate Kubernetes manifests
       shell: bash
       # Inputs go through env, never interpolated into the script body.
@@ -43,4 +80,8 @@ runs:
         EXCLUDE: ${{ inputs.exclude }}
         INCLUDE_CRDS_CATALOG: ${{ inputs.include-crds-catalog }}
         IGNORE_MISSING_SCHEMAS: ${{ inputs.ignore-missing-schemas }}
+        KUBERNETES_VERSION: ${{ inputs.kubernetes-version }}
+        HELM_CHARTS: ${{ inputs.helm-charts }}
+        KUSTOMIZATIONS: ${{ inputs.kustomizations }}
+        DEPRECATED_API_VERSION: ${{ inputs.deprecated-api-version }}
       run: bash "$GITHUB_ACTION_PATH/kubeconform.sh"

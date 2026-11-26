@@ -7,14 +7,14 @@
 ## Features
 
 - CI pipelines for Node.js (lint → typecheck → test → build), Python (lint → format → test), and shell (ShellCheck → actionlint → Bats)
-- CI pipelines for **Kubernetes** (kubeconform validation), **Terraform** (validate + fmt check) and **Prometheus** (PromQL check + alert unit tests)
-- CD workflows for Docker/GHCR and centralized docs sync
+- CI pipelines for **Kubernetes** (kubeconform on manifests, Helm charts and kustomizations), **Terraform** (validate, fmt, tflint, configuration scan), **docs** (links, VitePress-safe Markdown) and **Prometheus** (PromQL check + alert unit tests)
+- Docker image builds: a read-only build check for pull requests, and the GHCR push with provenance, both with an optional vulnerability scan; centralized docs sync
 - Composite actions for Node.js/Python setup with caching, ShellCheck, Bats, actionlint, kubeconform, monorepo change detection, and a checksum-pinned Claude Code setup
 - Pull request descriptions written by Claude Code from the commits and the diff, on your Claude subscription
 - Scheduled GHCR cleanup that keeps releases and recent images, safe for multi-arch images and attestations
 - Scheduled workflow-run cleanup that keeps recent runs and the last runs of each workflow, clears deleted workflows from the Actions sidebar, and can delete old artifacts on their own, the runs kept included, to save Actions storage
 - Automated releases via release-please, and release propagation: each release opens a pull request in every consumer repository that moves its pins, merged once its checks pass
-- Security scanning: dependency audit, CodeQL, and secret detection
+- Security scanning: dependency audit of every lockfile (OSV-Scanner), CodeQL, and secret detection
 - Pre-commit hooks via [prek](https://prek.j178.dev) for local validation
 
 ## Prerequisites
@@ -58,10 +58,12 @@ Pass a workflow only the secrets it declares and grant the calling job only the 
 | `ci-node.yml` | Node.js CI (lint → typecheck → test → build) | [→](docs/workflows/ci-node.md) |
 | `ci-python.yml` | Python CI (lint → format → test) | [→](docs/workflows/ci-python.md) |
 | `ci-shell.yml` | Shell CI (ShellCheck → actionlint → Bats) | [→](docs/workflows/ci-shell.md) |
-| `ci-kubernetes.yml` | Kubernetes CI (kubeconform manifest validation) | [→](docs/workflows/ci-kubernetes.md) |
-| `ci-terraform.yml` | Terraform CI (validate + fmt check) | [→](docs/workflows/ci-terraform.md) |
+| `ci-docs.yml` | Docs CI (relative and external links, VitePress-safe Markdown) | [→](docs/workflows/ci-docs.md) |
+| `ci-kubernetes.yml` | Kubernetes CI (kubeconform on manifests, charts, kustomizations) | [→](docs/workflows/ci-kubernetes.md) |
+| `ci-terraform.yml` | Terraform CI (validate, fmt, tflint, config scan) | [→](docs/workflows/ci-terraform.md) |
 | `ci-prometheus.yml` | Prometheus CI (PromQL check + alert unit tests) | [→](docs/workflows/ci-prometheus.md) |
 | `ci-prek.yml` | prek / pre-commit hooks run server-side (`prek run --all-files`) | [→](docs/workflows/ci-prek.md) |
+| `ci-docker.yml` | Build a Docker image without pushing it, with a read-only token | [→](docs/workflows/ci-docker.md) |
 | `cd-docker.yml` | Build & push a Docker image to GHCR, for one or several platforms | [→](docs/workflows/cd-docker.md) |
 | `cd-docs.yml` | Sync docs to a centralized docs repository | [→](docs/workflows/cd-docs.md) |
 | `cleanup-deployments.yml` | Scheduled cleanup of old deployment records, keeping the recent ones of each environment | [→](docs/workflows/cleanup-deployments.md) |

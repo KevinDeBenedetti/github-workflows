@@ -1,0 +1,34 @@
+name: tflint
+description: >
+  Lint a Terraform module with tflint, pinned and checked against a SHA-256:
+  deprecated syntax, unused declarations and, with the plugins of the module's
+  .tflint.hcl, provider-specific mistakes. Fails when tflint finds an issue.
+  The rules are at the top of tflint.sh.
+
+inputs:
+  tf-dir:
+    description: Directory of the Terraform module (its .tflint.hcl is read from there)
+    required: false
+    default: terraform
+  token:
+    description: Token for tflint's plugin downloads from GitHub releases (lifts the API rate limit)
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    # Pinned in ../install-tool/tools.json and checked against its SHA-256
+    # before it is installed.
+    - name: Install tflint
+      uses: $/.github/actions/install-tool
+      with:
+        tool: tflint
+
+    - name: tflint
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        TF_DIR: ${{ inputs.tf-dir }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+      run: bash "$GITHUB_ACTION_PATH/tflint.sh"

@@ -1,0 +1,30 @@
+name: OSV scan
+description: >
+  Audit the dependencies of every lockfile of a directory, whatever the
+  ecosystem, against the OSV advisory database with OSV-Scanner, pinned and
+  checked against a SHA-256. Fails on a known vulnerability; a directory
+  without any lockfile passes with a notice. The rules are at the top of
+  osv-scan.sh.
+
+inputs:
+  path:
+    description: Directory to scan, recursively
+    required: false
+    default: .
+
+runs:
+  using: composite
+  steps:
+    # Pinned in ../install-tool/tools.json and checked against its SHA-256
+    # before it is installed.
+    - name: Install OSV-Scanner
+      uses: $/.github/actions/install-tool
+      with:
+        tool: osv-scanner
+
+    - name: OSV-Scanner
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+      run: bash "$GITHUB_ACTION_PATH/osv-scan.sh"

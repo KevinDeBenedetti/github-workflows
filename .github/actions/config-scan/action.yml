@@ -1,0 +1,40 @@
+name: Configuration scan
+description: >
+  Scan infrastructure-as-code files (Terraform, Kubernetes manifests, Helm
+  charts, Dockerfiles) for misconfigurations with Trivy, pinned and checked
+  against a SHA-256. Each finding at the threshold or above is an error
+  annotation on its file and line, and fails the step. Optionally writes a
+  SARIF report. The rules are at the top of config-scan.sh.
+
+inputs:
+  path:
+    description: Directory to scan
+    required: false
+    default: .
+  fail-on:
+    description: 'Lowest severity that fails the step: low | medium | high | critical'
+    required: false
+    default: high
+  report-path:
+    description: SARIF report to write; empty writes none
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    # Pinned in ../install-tool/tools.json and checked against its SHA-256
+    # before it is installed.
+    - name: Install Trivy
+      uses: $/.github/actions/install-tool
+      with:
+        tool: trivy
+
+    - name: Trivy config
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        REPORT_PATH: ${{ inputs.report-path }}
+      run: bash "$GITHUB_ACTION_PATH/config-scan.sh"

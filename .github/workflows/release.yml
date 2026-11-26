@@ -91,32 +91,6 @@ on:
         type: string
         required: false
         default: both
-      app-client-id:
-        description: >
-          DEPRECATED, ignored (a warning is printed): the release runs on the
-          job's GITHUB_TOKEN. Kept declared so callers that still pass it do
-          not fail.
-        type: string
-        required: false
-        default: ''
-      app-workflows-permission:
-        description: >
-          DEPRECATED, ignored (see app-client-id).
-        type: boolean
-        required: false
-        default: false
-    secrets:
-      RELEASE_TOKEN:
-        description: >
-          DEPRECATED, ignored (a warning is printed): the release runs on the
-          job's GITHUB_TOKEN, so no token has to be created or rotated. Needs
-          "Allow GitHub Actions to create and approve pull requests" in the
-          repository settings; CI runs on release PRs opened this way wait for a
-          manual "Approve workflows to run".
-        required: false
-      APP_PRIVATE_KEY:
-        description: DEPRECATED, ignored (see app-client-id).
-        required: false
     outputs:
       released:
         description: Whether a release was created
@@ -208,19 +182,6 @@ jobs:
         run: |
           if [ ! -f "$MANIFEST_FILE" ]; then
             echo "::warning::${MANIFEST_FILE} is not committed, and release-please only reads it from the branch. To start the releases at ${INITIAL_VERSION}, commit ${MANIFEST_FILE} containing {} and set \"initial-version\": \"${INITIAL_VERSION}\" in ${CONFIG_FILE}."
-          fi
-
-      - name: Warn about deprecated token inputs
-        # The release only uses the job's GITHUB_TOKEN. Callers that still pass
-        # the App inputs or RELEASE_TOKEN keep working, with this warning.
-        env:
-          APP_INPUTS: ${{ inputs.app-client-id != '' || inputs.app-workflows-permission }}
-          RELEASE_TOKEN_SET: ${{ secrets.RELEASE_TOKEN != '' }}
-          APP_KEY_SET: ${{ secrets.APP_PRIVATE_KEY != '' }}
-        shell: bash
-        run: |
-          if [ "$APP_INPUTS" = "true" ] || [ "$RELEASE_TOKEN_SET" = "true" ] || [ "$APP_KEY_SET" = "true" ]; then
-            echo "::warning::app-client-id, app-workflows-permission, APP_PRIVATE_KEY and RELEASE_TOKEN are deprecated and ignored: the release runs on GITHUB_TOKEN. Drop them from the caller (and enable 'Allow GitHub Actions to create and approve pull requests')."
           fi
 
       - name: Release Please

@@ -39,15 +39,6 @@ jobs:
 | `notify-reviewers`| string | `''`               | Comma-separated GitHub usernames to request a review from when a release PR is opened, so each gets one GitHub notification. A user already asked to review that PR (by an earlier run, or by GitHub through CODEOWNERS) is skipped. Leave empty to disable. |
 | `release-pending-label` | string | `'autorelease: pending'` | Label used to find the open release PR on runs where release-please didn't create/update it (the fallback path for `notify-reviewers`). Override only if you customized `pull-request-label` in your release-please config. |
 | `pre-major-alias` | string | `both`             | Alias tag(s) moved while at 0.x: `both` (`v0` + `v0.<minor>`), `minor` (`v0.<minor>` only) or `major` (`v0` only). Ignored from 1.0. |
-| `app-client-id`   | string | `''`               | **Deprecated, ignored** (a warning is printed): the release runs on `GITHUB_TOKEN`. Still declared so existing callers don't fail. |
-| `app-workflows-permission` | boolean | `false` | **Deprecated, ignored.** |
-
-## Secrets
-
-| Secret            | Required | Description                                                                          |
-| ----------------- | -------- | ------------------------------------------------------------------------------------ |
-| `RELEASE_TOKEN`   | no       | **Deprecated, ignored** (a warning is printed): the release runs on `GITHUB_TOKEN`. |
-| `APP_PRIVATE_KEY` | no       | **Deprecated, ignored.** |
 
 ## Outputs
 
@@ -154,4 +145,4 @@ The release runs on the job's `GITHUB_TOKEN` — no PAT or GitHub App to create,
 - **No workflows triggered by the release itself**: tags and releases created with `GITHUB_TOKEN` don't fire `on: release` / `on: push: tags` workflows.
 - Release commits are authored by `github-actions[bot]`: if you run `check-bot-commits` on release PRs, allow that login.
 
-`app-client-id`, `app-workflows-permission`, `APP_PRIVATE_KEY` and `RELEASE_TOKEN` were supported until this change. They are still accepted and ignored with a warning: drop them from the caller, then delete the matching repository variables and secrets.
+The inputs `app-client-id` and `app-workflows-permission` and the secrets `APP_PRIVATE_KEY` and `RELEASE_TOKEN` are removed: a caller that still passes one is refused by GitHub when the run starts (an unexpected input, or an undefined secret). Drop them from the caller, then delete the matching repository variables and secrets.

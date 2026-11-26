@@ -28,6 +28,22 @@ job of `ci-cd.yml` pins:
 uvx zizmor==<version> --persona pedantic --config .github/zizmor.yml .
 ```
 
+## What belongs here
+
+A workflow or an action enters this repository once two repositories need it;
+until then it stays in the caller. A reusable workflow nothing outside this
+repository calls any more is removed, with the actions, tests, docs page,
+example and README row only it uses, as a breaking change. The one exception
+is `propagate-release.yml`, which this repository's own `ci-cd.yml` and
+`propagate.yml` share.
+
+To list the callers of a workflow across an account, private repositories
+included:
+
+```sh
+gh search code "KevinDeBenedetti/github-workflows/.github/workflows/<name>.yml" --owner <account>
+```
+
 ## Make a change
 
 1. Branch from `main`, one topic per pull request.
@@ -36,8 +52,8 @@ uvx zizmor==<version> --persona pedantic --config .github/zizmor.yml .
    from them. The `commit-msg` hook and CI enforce it.
 3. In a workflow, reference this repository's actions with
    `uses: $/.github/actions/<name>`; pin third-party actions by full commit
-   SHA with a version comment. Declare a new input in both `workflow_call` and
-   `workflow_dispatch` (`scripts/check-workflow-consistency.py` checks it).
+   SHA with a version comment. A reusable workflow has `workflow_call` as its
+   only trigger: `ci-cd.yml` runs it on every push and pull request.
 4. **Tests:** a new or changed script ships with its Bats tests in `tests/`
    (`bats tests/`). A script that calls the GitHub API is tested against the
    fake curl of `tests/helpers/fake-github.bash`.
@@ -49,9 +65,30 @@ uvx zizmor==<version> --persona pedantic --config .github/zizmor.yml .
    `.github/actions/install-tool/tools.json`, the only place a pin lives: the
    `install-tool` action reads it at run time. After changing a version
    there, run `scripts/update-tool-checksums.py` to refresh the checksums.
+   On a Renovate pull request, `tool-checksums.yml` does it and commits the
+   result.
 
 ## Review
 
 A pull request merges once the `CI — Gate` check passes (ShellCheck, actionlint,
 Bats, zizmor, prek hooks, a test image build, Conventional Commits, Gitleaks,
 dependency review, CodeQL) and a Code Owner has approved it.
+
+## Releases
+
+release-please keeps a release pull request open on `main`; merging it tags the
+release, and `ci-cd.yml` then opens a pull request in every consumer
+repository, each of which runs that repository's whole CI.
+
+- **Cadence:** merge the release pull request once a week, so consumers get
+  one propagation pull request a week. Merge it earlier only for a fix a
+  caller waits for.
+- **Before 1.0:** a breaking change ships as a minor, so `ci-cd.yml` passes
+  `pre-major-alias: minor` and only `v0.<minor>` moves.
+- **1.0.0:** the interface is declared stable once the last 0.x removals have
+  shipped: the duplicated `workflow_dispatch` triggers, the deprecated token
+  parameters of `release.yml`, and the deprecated docs and audit inputs of
+  `ci-shell.yml`, `ci-node.yml` and `security.yml`. The release after them is
+  `1.0.0`, cut with a `Release-As: 1.0.0` footer on a commit to `main`. From
+  then on a breaking change is a major, `release.yml` moves `v<major>` and
+  ignores `pre-major-alias`.
