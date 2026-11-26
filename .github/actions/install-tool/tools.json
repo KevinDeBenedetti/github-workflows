@@ -21,7 +21,7 @@
     "datasource": "github-releases",
     "package": "yannh/kubeconform",
     "extractVersion": "^v(?<version>.+)$",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "url": "https://github.com/yannh/kubeconform/releases/download/v{v}/kubeconform-linux-{a}.tar.gz",
     "arch": {
       "amd64": "amd64",
