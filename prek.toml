@@ -42,7 +42,7 @@ hooks = [
 [[repos]]
 repo = "https://github.com/renovatebot/pre-commit-hooks"
 # renovate: datasource=github-tags depName=renovatebot/pre-commit-hooks
-rev = "44.13.1"
+rev = "44.258.0"
 hooks = [
   { id = "renovate-config-validator" },
 ]
