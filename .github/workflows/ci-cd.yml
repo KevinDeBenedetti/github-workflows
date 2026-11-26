@@ -194,7 +194,7 @@ jobs:
         uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
         with:
           # renovate: datasource=pypi depName=zizmor
-          version: 1.31.1
+          version: 1.33.1
           # Strictest persona: the repo is clean at this level, so any new
           # finding (even code-quality ones) fails the job. Exceptions are
           # justified in .github/zizmor.yml or inline.
