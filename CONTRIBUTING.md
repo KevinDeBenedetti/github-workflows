@@ -54,6 +54,9 @@ gh search code "KevinDeBenedetti/github-workflows/.github/workflows/<name>.yml" 
    `uses: $/.github/actions/<name>`; pin third-party actions by full commit
    SHA with a version comment. A reusable workflow has `workflow_call` as its
    only trigger: `ci-cd.yml` runs it on every push and pull request.
+   `cd-docker.yml` is the exception: CI runs `ci-docker.yml`, which repeats
+   its build steps, so a change to those steps goes into both files
+   (`scripts/check-workflow-consistency.py` compares them).
 4. **Tests:** a new or changed script ships with its Bats tests in `tests/`
    (`bats tests/`). A script that calls the GitHub API is tested against the
    fake curl of `tests/helpers/fake-github.bash`.
@@ -61,6 +64,12 @@ gh search code "KevinDeBenedetti/github-workflows/.github/workflows/<name>.yml" 
    workflow or action also needs its page and its row in the tables of
    `README.md` and `docs/getting-started.md`: the same script checks them, and
    the `with:` keys passed to this repository's actions.
+   A usage snippet references this repository at the current release with
+   the `# x-release-please-version` marker, as the examples do, and its page
+   is listed in the `extra-files` of
+   `.github/release/release-please-config.json`: release-please then moves
+   it on every release. The same script checks the pin, the marker and the
+   entry.
 6. **Downloaded tools** (actionlint, Gitleaks, lychee, …) are pinned in
    `.github/actions/install-tool/tools.json`, the only place a pin lives: the
    `install-tool` action reads it at run time. After changing a version

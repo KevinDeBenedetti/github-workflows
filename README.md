@@ -30,12 +30,11 @@ Reference any workflow from your caller workflow file.
 
 | Stability need | Recommended pin | Example |
 |---|---|---|
-| Development / fast-moving | `@main` | `ci-node.yml@main` |
 | Follow a release line | Minor alias (pre-1.0) | `ci-node.yml@v0.<minor>` (e.g. `@v0.25`) |
 | Production / reproducible | Release tag | `ci-node.yml@vX.Y.Z` (see [releases](https://github.com/KevinDeBenedetti/github-workflows/releases)) |
 | Maximum reproducibility | Commit SHA | `ci-node.yml@abc1234` |
 
-> The README and docs always reflect `@main`. When releasing, consumers should pin to a tag for reproducible builds.
+> The snippets of the README and the docs are pinned to the latest release, and each release moves them. Never reference `@main`: a push to `main` would run in your repository at once (see [SECURITY.md](SECURITY.md)).
 >
 > The workflows reach the composite actions they use (`setup-node`, `shellcheck`, …) with `uses: $/…`, which GitHub resolves to the workflow's own commit: pinning a workflow to a tag or SHA pins the actions it runs too, and `@main` runs `@main`'s actions.
 >
@@ -44,7 +43,7 @@ Reference any workflow from your caller workflow file.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.56.2 # x-release-please-version
 ```
 
 Pass a workflow only the secrets it declares and grant the calling job only the permissions its docs list (never `secrets: inherit`) — see [SECURITY.md](SECURITY.md).

@@ -26,7 +26,7 @@ permissions: {}
 
 jobs:
   cleanup:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-deployments.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-deployments.yml@v0.56.2 # x-release-please-version
     permissions:
       deployments: write
     with:

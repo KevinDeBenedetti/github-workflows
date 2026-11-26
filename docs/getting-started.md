@@ -19,12 +19,12 @@ Workflows are called with `workflow_call` and referenced from your own workflow 
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/<name>.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/<name>.yml@v0.56.2 # x-release-please-version
 ```
 
 Pass a workflow only the secrets it declares (a `secrets:` block naming each one) and grant the calling job only the permissions its page lists — never `secrets: inherit`. A reusable workflow gets at most what its caller grants. See the [security policy](https://github.com/KevinDeBenedetti/github-workflows/blob/main/SECURITY.md).
 
-> **Production tip:** Pin to a release tag (`@vX.Y.Z`) or the minor alias (`@v0.<minor>`) instead of `@main`. The workflows call their composite actions with `uses: $/…`, resolved to the workflow's own commit, so a pin covers the actions too.
+> **Pinning:** the snippets of these pages are pinned to the latest release tag, and each release moves them. Pin to a release tag (`@vX.Y.Z`), the minor alias (`@v0.<minor>`) or a commit SHA, never to `@main`. The workflows call their composite actions with `uses: $/…`, resolved to the workflow's own commit, so a pin covers the actions too.
 
 GitHub-hosted jobs run on `ubuntu-26.04`, a pinned image rather than `ubuntu-latest`: when GitHub moves `ubuntu-latest` to a new Ubuntu release, your jobs only change image with a release of these workflows, like any other change. A workflow with a `runner` input runs on any other label — another image (`runner: '["ubuntu-24.04"]'`), an arm64 runner or an Ubicloud runner (`runner: '"ubicloud-standard-2"'`).
 
@@ -48,7 +48,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.56.2 # x-release-please-version
 ```
 
 Auto-detects `pnpm` or `bun` from your lockfile. Runs lint → typecheck → test → build.
@@ -69,7 +69,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@v0.56.2 # x-release-please-version
 ```
 
 Uses `uv` and `ruff`. Runs lint → format check → test.
@@ -90,7 +90,7 @@ on:
 
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@v0.56.2 # x-release-please-version
 ```
 
 Runs ShellCheck → actionlint → Bats.
@@ -103,7 +103,7 @@ Runs ShellCheck → actionlint → Bats.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@v0.56.2 # x-release-please-version
     with:
       kubeconform-paths: kubernetes/
 ```
@@ -117,7 +117,7 @@ Validates Kubernetes manifests with kubeconform (CRDs-catalog enabled by default
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-terraform.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-terraform.yml@v0.56.2 # x-release-please-version
     with:
       tf-dir: terraform
 ```
@@ -131,7 +131,7 @@ Runs `terraform validate` and `terraform fmt -check -diff`.
 ```yaml
 jobs:
   deploy:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.56.2 # x-release-please-version
     permissions:
       contents: read
       packages: write      # push the image to GHCR
@@ -156,7 +156,7 @@ public repos for `docs/` changes on a schedule, so no token, App or secret is ne
 ```yaml
 jobs:
   docs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@v0.56.2 # x-release-please-version
     with:
       docs-directory: docs
 ```
@@ -170,7 +170,7 @@ jobs:
 ```yaml
 jobs:
   release:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.56.2 # x-release-please-version
     # No token secret: release-please runs on GITHUB_TOKEN (enable "Allow
     # GitHub Actions to create and approve pull requests" in the repo settings).
     permissions:
@@ -189,7 +189,7 @@ Uses [release-please](https://github.com/googleapis/release-please). Automatical
 ```yaml
 jobs:
   security:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@v0.56.2 # x-release-please-version
     permissions:
       security-events: write  # upload the Gitleaks and CodeQL results to code scanning
       actions: read           # code scanning reads the workflow run metadata
@@ -214,7 +214,7 @@ on:
 
 jobs:
   describe:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.56.2 # x-release-please-version
     permissions:
       contents: read
       pull-requests: write
@@ -239,7 +239,7 @@ on:
 
 jobs:
   cleanup:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@v0.56.2 # x-release-please-version
     permissions:
       packages: write
     with:
@@ -267,7 +267,7 @@ on:
 
 jobs:
   cleanup:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-runs.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-runs.yml@v0.56.2 # x-release-please-version
     permissions:
       actions: write
       pull-requests: read
@@ -313,7 +313,7 @@ Actions can be used individually inside your own workflow steps:
 
 ```yaml
 steps:
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-node@v0.56.2 # x-release-please-version
     with:
       node-version: '24'
 ```

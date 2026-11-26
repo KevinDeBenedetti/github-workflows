@@ -115,3 +115,146 @@ YAML
   [ "$status" -eq 1 ]
   [[ "$output" == *"\`uses: \$/.github/actions/gone\` — no such action"* ]]
 }
+
+# The usage snippets of the docs are copied into other repositories, like the
+# examples: same pin, same marker, same extra-files entry.
+pinned_snippet() { # $1: file, $2: ref and what follows it
+  printf '```yaml\njobs:\n  ci:\n    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-lint.yml@%s\n```\n' "$2" >> "$1"
+}
+
+list_extra_files() {
+  local entries
+  entries=$(printf '"%s",' "$@")
+  printf '{"packages": {".": {"extra-files": [%s]}}}\n' "${entries%,}" > .github/release/release-please-config.json
+}
+
+@test "a docs snippet pinned to the current release, marked and listed, passes" {
+  pinned_snippet docs/workflows/ci-lint.md 'v1.2.3 # x-release-please-version'
+  pinned_snippet README.md 'v1.2.3 # x-release-please-version'
+  list_extra_files docs/workflows/ci-lint.md README.md
+  check
+  [ "$status" -eq 0 ]
+}
+
+@test "a docs snippet on @main fails" {
+  pinned_snippet docs/workflows/ci-lint.md 'main'
+  check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"docs/workflows/ci-lint.md:5: internal reference pinned to @main, expected @v1.2.3"* ]]
+  [[ "$output" == *"docs/workflows/ci-lint.md:5: missing '# x-release-please-version' marker"* ]]
+  [[ "$output" == *"docs/workflows/ci-lint.md is not listed in extra-files"* ]]
+}
+
+@test "a README snippet behind the current release fails" {
+  pinned_snippet README.md 'v1.2.2 # x-release-please-version'
+  list_extra_files README.md
+  check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"README.md:7: internal reference pinned to @v1.2.2, expected @v1.2.3"* ]]
+}
+
+@test "a docs page given as an argument is checked on its own" {
+  pinned_snippet docs/actions/lint.md 'main'
+  check docs/actions/lint.md
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"docs/actions/lint.md:5: internal reference pinned to @main"* ]]
+}
+
+@test "a mention of @main outside a uses: line is not a reference" {
+  printf 'A caller on `ci-lint.yml@main` follows the branch.\n' >> docs/workflows/ci-lint.md
+  check
+  [ "$status" -eq 0 ]
+}
+
+# ci-docker.yml is the only run of cd-docker.yml's build wiring in this
+# repository's CI: its steps must stay those of cd-docker.yml.
+docker_workflows() {
+  cat > .github/workflows/ci-docker.yml <<'YAML'
+name: CI docker
+on:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU (multi-platform)
+        if: inputs.platforms != 'linux/amd64'
+        uses: docker/setup-qemu-action@aaa # v1
+      - name: Build
+        uses: docker/build-push-action@bbb # v1
+        with:
+          context: ${{ inputs.context }}
+          push: false
+          target: ${{ inputs.target }}
+YAML
+  cat > .github/workflows/cd-docker.yml <<'YAML'
+name: CD docker
+on:
+  push:
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up QEMU (multi-platform)
+        if: inputs.platforms != 'linux/amd64'
+        uses: docker/setup-qemu-action@aaa # v1
+      - name: Login
+        uses: docker/login-action@ccc # v1
+      - name: Build and push
+        uses: docker/build-push-action@bbb # v1
+        with:
+          context: ${{ inputs.context }}
+          push: ${{ inputs.push }}
+          target: ${{ inputs.target }}
+YAML
+}
+
+@test "ci-docker.yml with the build steps of cd-docker.yml passes" {
+  docker_workflows
+  check
+  [ "$status" -eq 0 ]
+}
+
+@test "a build input that differs between ci-docker.yml and cd-docker.yml fails" {
+  docker_workflows
+  sed -i.bak 's/target: ${{ inputs.target }}/target: prod/' .github/workflows/cd-docker.yml
+  check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"cd-docker.yml: step 'Build and push' passes \`target\` differently from 'Build' in .github/workflows/ci-docker.yml"* ]]
+}
+
+@test "a build input cd-docker.yml adds without ci-docker.yml fails" {
+  docker_workflows
+  printf '          ulimit: nofile=1024\n' >> .github/workflows/cd-docker.yml
+  check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"step 'Build and push' passes \`ulimit\` differently from 'Build'"* ]]
+}
+
+@test "an action version or a condition that differs between the two fails" {
+  docker_workflows
+  sed -i.bak -e 's/build-push-action@bbb/build-push-action@ddd/' -e "s/!= 'linux\/amd64'/!= 'linux\/arm64'/" .github/workflows/cd-docker.yml
+  check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"step 'Build and push' has a different \`uses\` from 'Build'"* ]]
+  [[ "$output" == *"step 'Set up QEMU (multi-platform)' has a different \`if\`"* ]]
+}
+
+@test "a ci-docker.yml step that cd-docker.yml does not run fails" {
+  docker_workflows
+  sed -i.bak 's/name: Set up QEMU (multi-platform)/name: Emulator/' .github/workflows/cd-docker.yml
+  check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"cd-docker.yml: no step 'Set up QEMU (multi-platform)', which .github/workflows/ci-docker.yml runs"* ]]
+}
+
+@test "the steps of cd-docker.yml in another order fail" {
+  docker_workflows
+  cat >> .github/workflows/ci-docker.yml <<'YAML'
+      - name: Login
+        uses: docker/login-action@ccc # v1
+YAML
+  check
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"step 'Login' does not come in the same order as 'Login'"* ]]
+}

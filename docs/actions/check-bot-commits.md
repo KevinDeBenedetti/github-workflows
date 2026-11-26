@@ -20,7 +20,7 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-      - uses: KevinDeBenedetti/github-workflows/.github/actions/check-bot-commits@main
+      - uses: KevinDeBenedetti/github-workflows/.github/actions/check-bot-commits@v0.56.2 # x-release-please-version
         with:
           allowed-bots: '["dependabot[bot]"]'
 ```

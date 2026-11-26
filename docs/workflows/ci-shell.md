@@ -12,7 +12,7 @@ Each stage is independently toggleable.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-shell.yml@v0.56.2 # x-release-please-version
     with:
       run-shellcheck: true
       run-actionlint: true

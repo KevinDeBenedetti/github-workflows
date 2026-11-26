@@ -15,7 +15,7 @@ with [Trivy](https://github.com/aquasecurity/trivy). It is the scan step of
 steps:
   - run: docker build -t my-api:scan .
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/image-scan@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/image-scan@v0.56.2 # x-release-please-version
     with:
       image: my-api:scan
       fail-on: critical

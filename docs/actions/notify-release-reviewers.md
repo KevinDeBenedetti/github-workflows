@@ -13,7 +13,7 @@ steps:
   - id: rp
     uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/notify-release-reviewers@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/notify-release-reviewers@v0.56.2 # x-release-please-version
     with:
       reviewers: octocat,hubot
       prs: ${{ steps.rp.outputs.prs }}

@@ -14,10 +14,9 @@ steps:
 
   # The commits of the push or pull request, also on a new or force-pushed branch.
   - id: base
-    uses: KevinDeBenedetti/github-workflows/.github/actions/change-base@main
-
+    uses: KevinDeBenedetti/github-workflows/.github/actions/change-base@v0.56.2 # x-release-please-version
   - if: steps.base.outputs.mode != 'none'
-    uses: KevinDeBenedetti/github-workflows/.github/actions/check-commit-msg@main
+    uses: KevinDeBenedetti/github-workflows/.github/actions/check-commit-msg@v0.56.2 # x-release-please-version
     with:
       range: ${{ steps.base.outputs.base }}..HEAD
 ```

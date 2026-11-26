@@ -21,9 +21,8 @@ steps:
       persist-credentials: false
 
   - id: base
-    uses: KevinDeBenedetti/github-workflows/.github/actions/change-base@main
-
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/secret-scan@main
+    uses: KevinDeBenedetti/github-workflows/.github/actions/change-base@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/secret-scan@v0.56.2 # x-release-please-version
     with:
       base: ${{ steps.base.outputs.base }}
 ```

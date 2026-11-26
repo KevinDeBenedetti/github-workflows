@@ -13,7 +13,7 @@ request. [`cd-docker`](./cd-docker.md) builds the same image and pushes it.
 ```yaml
 jobs:
   image:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-docker.yml@v0.56.2 # x-release-please-version
     permissions:
       contents: read
     with:

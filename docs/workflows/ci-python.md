@@ -12,7 +12,7 @@ Uses **uv** for dependency management, **ruff** for lint/format, and **ty** for 
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-python.yml@v0.56.2 # x-release-please-version
     with:
       python-version: '3.12'
       working-directory: '.'

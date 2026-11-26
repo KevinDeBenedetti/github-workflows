@@ -12,7 +12,7 @@ Auto-detects **pnpm**, **bun** or **npm** from the lockfile.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.56.2 # x-release-please-version
     with:
       node-version: '24'
       working-directory: '.'
