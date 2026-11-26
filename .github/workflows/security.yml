@@ -276,7 +276,7 @@ jobs:
       - name: Upload SARIF report
         if: failure() && inputs.secret-scan-upload-sarif && hashFiles('results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: results.sarif
           category: gitleaks
@@ -327,12 +327,12 @@ jobs:
       # java-kotlin stays on autobuild: build-mode none extracts Java only and
       # would silently drop Kotlin sources.
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ contains(fromJson('["c-cpp","cpp","c","go","swift","java-kotlin","java","kotlin"]'), matrix.language) && 'autobuild' || 'none' }}
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           category: /language:${{ matrix.language }}
