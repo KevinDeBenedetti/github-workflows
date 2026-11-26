@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.57.0](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.56.2...v0.57.0) (2026-11-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* release.yml no longer declares app-client-id, app-workflows-permission, RELEASE_TOKEN and APP_PRIVATE_KEY.
+
+### Features
+
+* add docs, image, Terraform, Kubernetes and OSV checks, drop deprecated release inputs ([dc6b311](https://github.com/KevinDeBenedetti/github-workflows/commit/dc6b3112910f8ceb2dfd421f282825a0dc7cfa92)), closes [#135](https://github.com/KevinDeBenedetti/github-workflows/issues/135) [#191](https://github.com/KevinDeBenedetti/github-workflows/issues/191) [#192](https://github.com/KevinDeBenedetti/github-workflows/issues/192) [#193](https://github.com/KevinDeBenedetti/github-workflows/issues/193) [#194](https://github.com/KevinDeBenedetti/github-workflows/issues/194) [#195](https://github.com/KevinDeBenedetti/github-workflows/issues/195) [#196](https://github.com/KevinDeBenedetti/github-workflows/issues/196) [#197](https://github.com/KevinDeBenedetti/github-workflows/issues/197) [#198](https://github.com/KevinDeBenedetti/github-workflows/issues/198) [#199](https://github.com/KevinDeBenedetti/github-workflows/issues/199) [#200](https://github.com/KevinDeBenedetti/github-workflows/issues/200) [#201](https://github.com/KevinDeBenedetti/github-workflows/issues/201)
+
 ## [0.56.2](https://github.com/KevinDeBenedetti/github-workflows/compare/v0.56.1...v0.56.2) (2026-11-24)
 
 
