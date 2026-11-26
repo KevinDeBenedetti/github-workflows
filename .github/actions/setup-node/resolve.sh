@@ -91,7 +91,7 @@ if [[ "$pm" == pnpm && -z "$pnpm_version" ]]; then
   # A pinned release rather than `latest`, so a freshly published (or
   # compromised) pnpm never reaches CI unreviewed. Renovate bumps it.
   # renovate: datasource=npm depName=pnpm
-  PNPM_VERSION="12.14.0"
+  PNPM_VERSION="12.23.0"
   pnpm_version="$PNPM_VERSION"
   for f in "$DIR/package.json" "package.json"; do
     if [[ -f "$f" ]] && grep -qE '"packageManager"[[:space:]]*:[[:space:]]*"pnpm@' "$f"; then
