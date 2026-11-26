@@ -11,7 +11,7 @@ steps:
     with:
       submodules: true  # required if using bats helpers (bats-support, bats-assert, etc.)
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/bats@v0.57.0 # x-release-please-version
     with:
       tests-dir: tests/
 ```

@@ -23,7 +23,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: KevinDeBenedetti/github-workflows/.github/actions/detect-changes@v0.56.2 # x-release-please-version
+      - uses: KevinDeBenedetti/github-workflows/.github/actions/detect-changes@v0.57.0 # x-release-please-version
         id: changes
         with:
           apps-directory: apps

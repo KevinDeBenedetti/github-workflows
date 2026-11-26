@@ -24,7 +24,7 @@ steps:
       permission-contents: write
       permission-pull-requests: write
       permission-workflows: write
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/propagate-release@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/propagate-release@v0.57.0 # x-release-please-version
     with:
       repositories: |
         web-app:dev

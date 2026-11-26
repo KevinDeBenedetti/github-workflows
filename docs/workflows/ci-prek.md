@@ -17,7 +17,7 @@ server-side, turning the hooks into a gate instead of a convenience.
 ```yaml
 jobs:
   prek:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-prek.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-prek.yml@v0.57.0 # x-release-please-version
     with:
       runner: '"ubuntu-26.04"'
 ```

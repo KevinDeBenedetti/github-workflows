@@ -13,7 +13,7 @@ Installs [promtool](https://prometheus.io/docs/prometheus/latest/command-line/pr
 
 ```yaml
 steps:
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-promtool@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-promtool@v0.57.0 # x-release-please-version
     with:
       promtool-version: X.Y.Z    # no leading v
       yq-version: vX.Y.Z         # with the leading v

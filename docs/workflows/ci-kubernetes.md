@@ -14,7 +14,7 @@ CRDs-catalog for CRD-backed resources (cert-manager, Traefik, …).
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@v0.57.0 # x-release-please-version
     with:
       kubeconform-paths: kubernetes/
       kubeconform-include-crds-catalog: true
@@ -26,7 +26,7 @@ minor checked for removed APIs:
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-kubernetes.yml@v0.57.0 # x-release-please-version
     with:
       kubeconform-paths: kubernetes/manifests/
       kubeconform-helm-charts: |

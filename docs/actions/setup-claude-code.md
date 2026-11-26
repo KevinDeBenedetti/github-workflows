@@ -12,7 +12,7 @@ by `pr-description.yml`.
 
 ```yaml
 steps:
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-claude-code@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-claude-code@v0.57.0 # x-release-please-version
   - run: claude --version
 ```
 

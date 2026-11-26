@@ -24,7 +24,7 @@ permissions: {}
 
 jobs:
   describe:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.57.0 # x-release-please-version
     permissions:
       contents: read
       pull-requests: write
@@ -53,7 +53,7 @@ once. A caller can still override it:
 ```yaml
 jobs:
   describe:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.57.0 # x-release-please-version
     with:
       model: sonnet
 ```
@@ -72,7 +72,7 @@ changelog, so the prompt asks for the narrowest true type and never `refactor`.
 ```yaml
 jobs:
   describe:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/pr-description.yml@v0.57.0 # x-release-please-version
     with:
       update-title: true
 ```

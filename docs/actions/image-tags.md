@@ -13,7 +13,7 @@ uses it, and a workflow of your own can, to tag and label an image the same way.
 ```yaml
 steps:
   - id: image
-    uses: KevinDeBenedetti/github-workflows/.github/actions/image-tags@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/actions/image-tags@v0.57.0 # x-release-please-version
     with:
       version: v1.2.3
 
