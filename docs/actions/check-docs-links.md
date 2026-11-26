@@ -10,7 +10,7 @@ GitHub URLs instead.
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-links@v0.57.0 # x-release-please-version
     with:
       docs-directory: docs # optional — defaults to docs
 ```

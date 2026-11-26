@@ -9,7 +9,7 @@ Composite action that generates a GitHub Job Summary with deployment details, en
 ```yaml
 - name: Notify Deployment
   if: always()
-  uses: KevinDeBenedetti/github-workflows/.github/actions/notify-deployment@v0.56.2 # x-release-please-version
+  uses: KevinDeBenedetti/github-workflows/.github/actions/notify-deployment@v0.57.0 # x-release-please-version
   with:
     app-name: 'my-app-dev'
     environment: 'development'

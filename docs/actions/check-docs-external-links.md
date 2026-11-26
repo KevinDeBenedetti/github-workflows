@@ -17,7 +17,7 @@ steps:
     with:
       persist-credentials: false
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-external-links@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/check-docs-external-links@v0.57.0 # x-release-please-version
     with:
       docs-directory: docs # optional — defaults to docs
 ```

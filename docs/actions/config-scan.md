@@ -18,7 +18,7 @@ steps:
     with:
       persist-credentials: false
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/config-scan@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/config-scan@v0.57.0 # x-release-please-version
     with:
       path: terraform
       fail-on: high

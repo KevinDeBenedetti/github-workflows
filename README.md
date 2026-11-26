@@ -43,7 +43,7 @@ Reference any workflow from your caller workflow file.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-node.yml@v0.57.0 # x-release-please-version
 ```
 
 Pass a workflow only the secrets it declares and grant the calling job only the permissions its docs list (never `secrets: inherit`) — see [SECURITY.md](SECURITY.md).

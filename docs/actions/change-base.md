@@ -22,9 +22,9 @@ steps:
       persist-credentials: false
 
   - id: base
-    uses: KevinDeBenedetti/github-workflows/.github/actions/change-base@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/actions/change-base@v0.57.0 # x-release-please-version
   - if: steps.base.outputs.mode != 'none'
-    uses: KevinDeBenedetti/github-workflows/.github/actions/check-commit-msg@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/actions/check-commit-msg@v0.57.0 # x-release-please-version
     with:
       range: ${{ steps.base.outputs.base }}..HEAD
 ```

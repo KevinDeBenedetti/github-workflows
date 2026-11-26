@@ -23,7 +23,7 @@ permissions: {}
 
 jobs:
   cleanup:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@v0.57.0 # x-release-please-version
     permissions:
       packages: write
     with:

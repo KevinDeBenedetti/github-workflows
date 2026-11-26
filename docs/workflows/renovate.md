@@ -29,7 +29,7 @@ permissions: {}
 
 jobs:
   renovate:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/renovate.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/renovate.yml@v0.57.0 # x-release-please-version
     permissions: {}
     with:
       app-client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}

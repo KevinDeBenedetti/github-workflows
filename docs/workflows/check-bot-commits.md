@@ -20,7 +20,7 @@ on:
 
 jobs:
   bot-guard:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.57.0 # x-release-please-version
 ```
 
 ### Allow-listing specific bots
@@ -28,7 +28,7 @@ jobs:
 ```yaml
 jobs:
   bot-guard:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.57.0 # x-release-please-version
     with:
       allowed-bots: '["dependabot[bot]"]'
 ```
@@ -38,7 +38,7 @@ jobs:
 ```yaml
 jobs:
   bot-guard:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/check-bot-commits.yml@v0.57.0 # x-release-please-version
     with:
       fail-on-bot-commits: false
 ```

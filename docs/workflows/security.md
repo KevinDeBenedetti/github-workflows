@@ -12,7 +12,7 @@ Each job is independently toggleable.
 ```yaml
 jobs:
   security:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@v0.57.0 # x-release-please-version
     with:
       run-osv-scan: true
       run-node-audit: false   # deprecated, on by default until its removal

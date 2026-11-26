@@ -14,7 +14,7 @@ the docs are valid before they are published.
 ```yaml
 jobs:
   docs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@v0.56.2 # x-release-please-version
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@v0.57.0 # x-release-please-version
 ```
 
 ## Inputs
@@ -61,7 +61,7 @@ secret:
 
 ```diff
    docs:
-     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@v0.56.2 # x-release-please-version
+     uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docs.yml@v0.57.0 # x-release-please-version
 -    with:
 -      client-id: ${{ vars.DOCS_APP_CLIENT_ID }}
 -    secrets:
