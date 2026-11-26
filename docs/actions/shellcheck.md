@@ -8,7 +8,7 @@ Runs [ShellCheck](https://www.shellcheck.net/) on all `.sh` files in the reposit
 steps:
   - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/shellcheck@v0.56.2 # x-release-please-version
     with:
       severity: warning
 ```

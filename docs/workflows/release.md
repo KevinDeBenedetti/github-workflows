@@ -12,7 +12,7 @@ Opens release PRs, creates GitHub Releases, and keeps the `v<major>` tag alias i
 ```yaml
 jobs:
   release:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.56.2 # x-release-please-version
     with:
       config-file: release-please-config.json
       manifest-file: .release-please-manifest.json
@@ -92,7 +92,7 @@ To cut the pre-releases of a long-lived `dev` branch through a pull request, the
 jobs:
   release-dev:
     if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.56.2 # x-release-please-version
     with:
       target-branch: dev
       config-file: .github/release/release-please-config.dev.json

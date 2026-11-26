@@ -16,7 +16,7 @@ workflow runs it.
 permissions:
   deployments: write
 steps:
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/cleanup-deployments@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/cleanup-deployments@v0.56.2 # x-release-please-version
     with:
       dry-run: true
 ```

@@ -47,6 +47,210 @@
         {
           "type": "generic",
           "path": "examples/vue-react.yml"
+        },
+        {
+          "type": "generic",
+          "path": "README.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/actionlint.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/bats.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/change-base.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/check-bot-commits.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/check-commit-msg.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/check-docs-external-links.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/check-docs-links.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/check-vitepress-md.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/cleanup-deployments.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/cleanup-runs.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/config-scan.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/detect-changes.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/image-scan.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/image-tags.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/install-tool.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/kubeconform.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/move-release-aliases.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/notify-deployment.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/notify-release-reviewers.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/osv-scan.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/pr-description.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/propagate-release.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/secret-scan.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/setup-claude-code.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/setup-node.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/setup-promtool.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/setup-python.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/shellcheck.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/actions/tflint.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/getting-started.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/cd-docker.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/cd-docs.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/check-bot-commits.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-docker.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-docs.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-kubernetes.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-node.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-prek.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-prometheus.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-python.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-shell.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/ci-terraform.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/cleanup-deployments.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/cleanup-ghcr.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/cleanup-runs.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/pr-description.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/propagate-release.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/release.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/renovate.md"
+        },
+        {
+          "type": "generic",
+          "path": "docs/workflows/security.md"
         }
       ]
     }

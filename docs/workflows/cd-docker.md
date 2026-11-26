@@ -11,7 +11,7 @@ Builds a Docker image with **Docker Buildx** and pushes it to **GitHub Container
 ```yaml
 jobs:
   docker:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.56.2 # x-release-please-version
     with:
       image-name: my-api
       platforms: linux/amd64,linux/arm64
@@ -22,7 +22,7 @@ One platform, on an Ubicloud runner, with the layer cache in GHCR and no deploym
 ```yaml
 jobs:
   docker:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.56.2 # x-release-please-version
     with:
       image-name: my-api
       platforms: linux/amd64
@@ -111,7 +111,7 @@ call as follows:
 ```yaml
 jobs:
   build:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cd-docker.yml@v0.56.2 # x-release-please-version
     permissions:
       contents: read
       packages: write

@@ -17,7 +17,7 @@ steps:
     with:
       persist-credentials: false
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/tflint@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/tflint@v0.56.2 # x-release-please-version
     with:
       tf-dir: terraform
 ```

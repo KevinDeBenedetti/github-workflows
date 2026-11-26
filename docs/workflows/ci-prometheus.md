@@ -18,7 +18,7 @@ gap offline.
 ```yaml
 jobs:
   prometheus-rules:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-prometheus.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-prometheus.yml@v0.56.2 # x-release-please-version
     with:
       runner: '"ubuntu-26.04"'
 ```

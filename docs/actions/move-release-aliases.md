@@ -19,7 +19,7 @@ steps:
     with:
       persist-credentials: false
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/move-release-aliases@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/move-release-aliases@v0.56.2 # x-release-please-version
     with:
       tag: v1.2.3
 ```

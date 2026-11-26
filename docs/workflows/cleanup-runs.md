@@ -25,7 +25,7 @@ permissions: {}
 
 jobs:
   cleanup:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-runs.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-runs.yml@v0.56.2 # x-release-please-version
     permissions:
       actions: write
       pull-requests: read
@@ -45,12 +45,12 @@ A repository that publishes images can run both cleanups from one weekly file:
 ```yaml
 jobs:
   runs:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-runs.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-runs.yml@v0.56.2 # x-release-please-version
     permissions:
       actions: write
       pull-requests: read
   images:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/cleanup-ghcr.yml@v0.56.2 # x-release-please-version
     permissions:
       packages: write
 ```

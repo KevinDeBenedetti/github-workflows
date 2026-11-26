@@ -7,7 +7,8 @@ name: CI — Docker
 #
 # Same wiring as cd-docker.yml (tags and labels from actions/image-tags,
 # Buildx, the GitHub Actions layer cache under the same scope), so an image
-# that builds here builds there: keep the two build steps in step.
+# that builds here builds there. scripts/check-workflow-consistency.py keeps
+# the steps of the two files the same: this repository's CI runs this one only.
 
 on:
   workflow_call:

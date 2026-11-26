@@ -18,7 +18,7 @@ permissions:
   pull-requests: read
 
 steps:
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/cleanup-runs@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/cleanup-runs@v0.56.2 # x-release-please-version
     with:
       keep-runs: 5
       artifacts-older-than-days: 3

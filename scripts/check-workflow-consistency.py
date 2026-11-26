@@ -9,11 +9,12 @@
    is an error: it would have to be bumped in .github/workflows/ on every
    release, which the release job's GITHUB_TOKEN can never push.
 
-2. Every reference to this repo's workflows or actions from an example (copied
-   into other repositories) must be pinned to the current release
+2. Every reference to this repo's workflows or actions from an example or a
+   usage snippet of the docs (README.md, docs/**/*.md), both copied into other
+   repositories, must be pinned to the current release
    (`@v<manifest version>`), carry the `# x-release-please-version` marker, and
    live in a file listed in the release-please `extra-files` — otherwise
-   release-please stops bumping it and callers copy an example that tracks the
+   release-please stops bumping it and callers copy a snippet that tracks the
    mutable `main`.
 
 3. Catalogs (full run only): every reusable workflow (`workflow_call`) has its
@@ -26,6 +27,13 @@
    repo's actions (`uses: $/.github/actions/<name>` or `./.github/actions/…`)
    must be inputs that action declares. actionlint does not read `$/` yet, and
    GitHub only warns about an unknown input at run time.
+
+5. ci-docker.yml and cd-docker.yml build an image with the same steps, written
+   twice. Since this repository's CI only runs ci-docker.yml, every step of
+   its build job must be in cd-docker.yml's, in the same order, with the same
+   `uses`, `if` and `with` — except the keys of DOCKER_DIVERGENT, where a
+   build that pushes has to differ. A change to cd-docker.yml's build wiring
+   then fails here until ci-docker.yml, which CI runs, carries it too.
 
 Usage: check-workflow-consistency.py [files...]   (no args → all workflows)
 Run from the repository root.
@@ -42,6 +50,7 @@ import yaml
 WORKFLOWS = Path(".github/workflows")
 ACTIONS = Path(".github/actions")
 EXAMPLES = Path("examples")
+DOCS = Path("docs")
 README = Path("README.md")
 GETTING_STARTED = Path("docs/getting-started.md")
 LOCAL_ACTION = re.compile(r"^(?:\$|\.)/\.github/actions/(?P<name>[\w-]+)$")
@@ -50,10 +59,25 @@ MANIFEST = Path(".github/release/.release-please-manifest.json")
 ACTION_REF = re.compile(
     r"uses:\s*KevinDeBenedetti/github-workflows/\.github/actions/[\w-]+@(?P<ref>\S+)(?P<rest>.*)$"
 )
-# Examples are copied into other repos: their workflow refs are pinned too.
+# Examples and docs snippets are copied into other repos: their workflow refs
+# are pinned too.
 EXAMPLE_REF = re.compile(
     r"uses:\s*KevinDeBenedetti/github-workflows/\.github/(?:actions|workflows)/[\w.-]+@(?P<ref>\S+)(?P<rest>.*)$"
 )
+
+CI_DOCKER = WORKFLOWS / "ci-docker.yml"
+CD_DOCKER = WORKFLOWS / "cd-docker.yml"
+# (job of ci-docker.yml, job of cd-docker.yml) whose steps are compared.
+DOCKER_JOBS = ("build", "docker")
+# A step of ci-docker.yml named differently in cd-docker.yml.
+DOCKER_STEP_NAMES = {"Build": "Build and push"}
+# `with:` keys that differ on purpose, by ci-docker.yml step name: cd-docker.yml
+# pushes (registry, version tags, attestations) and can keep its cache in GHCR.
+DOCKER_DIVERGENT = {
+    "Image tags": {"version", "tag-latest", "registry"},
+    "Build for the scan": {"cache-from"},
+    "Build": {"push", "provenance", "sbom", "cache-from", "cache-to"},
+}
 
 
 def triggers(doc: dict) -> dict:
@@ -152,12 +176,49 @@ def check_with_keys(path: Path, doc: dict) -> list[str]:
     return errors
 
 
+def job_steps(path: Path, job: str) -> dict[str, dict]:
+    doc = yaml.safe_load(path.read_text()) or {}
+    steps = ((doc.get("jobs") or {}).get(job) or {}).get("steps") or []
+    return {s["name"]: s for s in steps if isinstance(s, dict) and "name" in s}
+
+
+def check_docker_steps() -> list[str]:
+    errors = []
+    ci, cd = job_steps(CI_DOCKER, DOCKER_JOBS[0]), job_steps(CD_DOCKER, DOCKER_JOBS[1])
+    order = list(cd)
+    last = -1
+    for name, step in ci.items():
+        cd_name = DOCKER_STEP_NAMES.get(name, name)
+        if cd_name not in cd:
+            errors.append(f"{CD_DOCKER}: no step '{cd_name}', which {CI_DOCKER} runs as '{name}'")
+            continue
+        other = cd[cd_name]
+        where = f"{CD_DOCKER}: step '{cd_name}'"
+        same_as = f"'{name}' in {CI_DOCKER}"
+        if order.index(cd_name) < last:
+            errors.append(f"{where} does not come in the same order as {same_as}")
+        last = max(last, order.index(cd_name))
+        for key in ("uses", "if"):
+            if step.get(key) != other.get(key):
+                errors.append(f"{where} has a different `{key}` from {same_as}")
+        ci_with, cd_with = step.get("with") or {}, other.get("with") or {}
+        for key in sorted((set(ci_with) | set(cd_with)) - DOCKER_DIVERGENT.get(name, set())):
+            if ci_with.get(key) != cd_with.get(key):
+                errors.append(f"{where} passes `{key}` differently from {same_as}")
+    return errors
+
+
 def main(argv: list[str]) -> int:
     files = [Path(a) for a in argv] if argv else sorted(WORKFLOWS.glob("*.y*ml"))
     files = [f for f in files if f.parent == WORKFLOWS and f.suffix in (".yml", ".yaml")]
     examples = sorted(EXAMPLES.glob("*.y*ml")) if not argv else [
         Path(a) for a in argv if Path(a).parent == EXAMPLES and Path(a).suffix in (".yml", ".yaml")
     ]
+
+    docs = [README, *sorted(DOCS.rglob("*.md"))] if not argv else [
+        Path(a) for a in argv if Path(a).suffix == ".md" and (Path(a) == README or DOCS in Path(a).parents)
+    ]
+    docs = [d for d in docs if d.exists()]
 
     version = json.loads(MANIFEST.read_text())["."]
     config = json.loads(RELEASE_CONFIG.read_text())
@@ -180,7 +241,9 @@ def main(argv: list[str]) -> int:
             action_file = next((ACTIONS / name).glob("action.y*ml"))
             errors += check_with_keys(action_file, yaml.safe_load(action_file.read_text()) or {})
         errors += check_catalogs(reusable, actions)
-    for path in examples:
+    if CI_DOCKER.exists() and CD_DOCKER.exists() and {CI_DOCKER, CD_DOCKER} & set(files):
+        errors += check_docker_steps()
+    for path in examples + docs:
         errors += check_action_refs(path, version, extra_files, EXAMPLE_REF)
 
     for e in errors:

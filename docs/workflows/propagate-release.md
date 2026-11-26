@@ -18,7 +18,7 @@ move are always those of the calling repository.
 ```yaml
 jobs:
   release:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/release.yml@v0.56.2 # x-release-please-version
     permissions:
       contents: write
       issues: write
@@ -27,7 +27,7 @@ jobs:
   propagate:
     needs: [release]
     if: needs.release.outputs.released == 'true' && needs.release.outputs.prerelease != 'true'
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/propagate-release.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/propagate-release.yml@v0.56.2 # x-release-please-version
     permissions:
       contents: read
     with:

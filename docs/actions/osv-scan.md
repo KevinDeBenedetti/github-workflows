@@ -18,7 +18,7 @@ steps:
     with:
       persist-credentials: false
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/osv-scan@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/osv-scan@v0.56.2 # x-release-please-version
 ```
 
 ## Inputs

@@ -23,9 +23,8 @@ steps:
       fetch-depth: 0
       persist-credentials: false
 
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-claude-code@main
-
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/pr-description@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/setup-claude-code@v0.56.2 # x-release-please-version
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/pr-description@v0.56.2 # x-release-please-version
     with:
       claude-code-oauth-token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
       model: opus

@@ -72,7 +72,7 @@ name = "Reusable workflows stay consistent"
 language = "python"
 entry = "python scripts/check-workflow-consistency.py"
 additional_dependencies = ["pyyaml"]
-files = "^(\\.github/workflows/.*\\.ya?ml|\\.github/actions/.*/action\\.ya?ml|examples/.*\\.ya?ml|\\.github/release/.*\\.json|README\\.md|docs/getting-started\\.md|docs/(workflows|actions)/.*\\.md)$"
+files = "^(\\.github/workflows/.*\\.ya?ml|\\.github/actions/.*/action\\.ya?ml|examples/.*\\.ya?ml|\\.github/release/.*\\.json|README\\.md|docs/.*\\.md)$"
 pass_filenames = false
 
 [[repos.hooks]]

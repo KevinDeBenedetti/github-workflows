@@ -13,7 +13,7 @@ caches providers between runs.
 ```yaml
 jobs:
   ci:
-    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-terraform.yml@main
+    uses: KevinDeBenedetti/github-workflows/.github/workflows/ci-terraform.yml@v0.56.2 # x-release-please-version
     with:
       tf-dir: terraform
       terraform-version: 1.10.0

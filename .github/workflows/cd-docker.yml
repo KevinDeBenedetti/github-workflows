@@ -17,6 +17,10 @@ name: Deploy — Docker
 #     its deployment record.
 #
 # Tags and OCI labels come from actions/image-tags.
+#
+# This repository's CI runs ci-docker.yml, not this workflow: a change to the
+# build steps goes into both, which scripts/check-workflow-consistency.py
+# checks.
 
 on:
   workflow_call:

@@ -20,7 +20,7 @@ a pinned checksum.
 
 ```yaml
 steps:
-  - uses: KevinDeBenedetti/github-workflows/.github/actions/install-tool@main
+  - uses: KevinDeBenedetti/github-workflows/.github/actions/install-tool@v0.56.2 # x-release-please-version
     with:
       tool: shellcheck
 
