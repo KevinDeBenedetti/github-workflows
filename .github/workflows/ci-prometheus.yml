@@ -42,13 +42,13 @@ on:
         type: string
         required: false
         # renovate: datasource=github-releases depName=prometheus/prometheus
-        default: 3.13.2
+        default: 3.16.0
       yq-version:
         description: mikefarah/yq release tag (with the leading v)
         type: string
         required: false
         # renovate: datasource=github-releases depName=mikefarah/yq
-        default: v4.53.3
+        default: v4.54.3
 
       runner:
         description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
@@ -79,12 +79,12 @@ on:
         description: Prometheus release providing promtool (without the leading v)
         type: string
         # renovate: datasource=github-releases depName=prometheus/prometheus
-        default: 3.13.2
+        default: 3.16.0
       yq-version:
         description: mikefarah/yq release tag (with the leading v)
         type: string
         # renovate: datasource=github-releases depName=mikefarah/yq
-        default: v4.53.3
+        default: v4.54.3
 
       runner:
         description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
