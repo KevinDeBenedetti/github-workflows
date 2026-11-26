@@ -91,7 +91,7 @@
   "claude-code": {
     "datasource": "npm",
     "package": "@anthropic-ai/claude-code",
-    "version": "2.1.308",
+    "version": "2.1.330",
     "url": "https://downloads.claude.ai/claude-code-releases/{v}/{a}/claude",
     "arch": {
       "amd64": "linux-x64",
