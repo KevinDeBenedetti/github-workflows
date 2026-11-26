@@ -101,8 +101,8 @@
     "member": "claude",
     "releaseManifest": "https://downloads.claude.ai/claude-code-releases/{v}/manifest.json",
     "sha256": {
-      "amd64": "356733f185fa988e6bf3aa9a555269fdd167982a2e2a80d3c8a78037bb92ad58",
-      "arm64": "fdd22e6cbb734d580f5664c48df4294eeec850218ff07f186f9af30426396ee1"
+      "amd64": "f390eaa0814e6a1bff74cbb47acb74cb9c89d30ced809fe0af5af00c7bfe8ebb",
+      "arm64": "6016f90cac783e367fb1aa97c768a2efb94a0128a5b46b70fb3d8fcbbd9dd444"
     }
   },
   "bats": {
