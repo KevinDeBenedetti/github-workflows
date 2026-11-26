@@ -15,6 +15,23 @@ on:
         type: boolean
         required: false
         default: true
+      # ── tflint ────────────────────────────────────────────────────────────
+      run-tflint:
+        description: Lint the module with tflint (reads the module's .tflint.hcl). Off by default for now; on by default in a later release.
+        type: boolean
+        required: false
+        default: false
+      # ── Configuration scan ────────────────────────────────────────────────
+      run-config-scan:
+        description: Scan the module for misconfigurations with Trivy (open firewall rules, unencrypted volumes, …), as annotations
+        type: boolean
+        required: false
+        default: false
+      config-scan-fail-on:
+        description: 'Lowest severity that fails the configuration scan: low | medium | high | critical'
+        type: string
+        required: false
+        default: high
       # ── Config ────────────────────────────────────────────────────────────
       tf-dir:
         description: Path to the Terraform root module directory
@@ -25,33 +42,6 @@ on:
         description: Terraform version to install (e.g. 1.10.0, or 'latest')
         type: string
         required: false
-        # renovate: datasource=github-releases depName=hashicorp/terraform
-        default: 1.17.0
-
-      runner:
-        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
-        type: string
-        required: false
-        default: '"ubuntu-26.04"'
-  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
-  # Keep them in sync manually — GitHub does not support shared input definitions.
-  workflow_dispatch:
-    inputs:
-      run-validate:
-        description: Run `terraform validate`
-        type: boolean
-        default: true
-      run-fmt-check:
-        description: Run `terraform fmt -check -diff`
-        type: boolean
-        default: true
-      tf-dir:
-        description: Path to the Terraform root module directory
-        type: string
-        default: terraform
-      terraform-version:
-        description: Terraform version to install (e.g. 1.10.0, or 'latest')
-        type: string
         # renovate: datasource=github-releases depName=hashicorp/terraform
         default: 1.17.0
 
@@ -136,3 +126,51 @@ jobs:
       - name: Terraform fmt check
         if: inputs.run-fmt-check
         run: terraform fmt -check -diff
+
+  # ── tflint ───────────────────────────────────────────────────────────────
+  # What validate does not catch: deprecated syntax, unused declarations and,
+  # with the plugins of the module's .tflint.hcl, provider-specific mistakes.
+  # Needs no terraform init: tflint reads the module's files.
+  tflint:
+    name: tflint
+    if: inputs.run-tflint
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: tflint
+        uses: $/.github/actions/tflint
+        with:
+          tf-dir: ${{ inputs.tf-dir }}
+
+  # ── Configuration scan ───────────────────────────────────────────────────
+  # Insecure resources, as error annotations on the file and line. No SARIF
+  # upload here: a job that declared security-events: write would force every
+  # caller to grant it. The config-scan action can write the report for a
+  # caller that uploads it from a job of its own.
+  config-scan:
+    name: Configuration scan
+    if: inputs.run-config-scan
+    runs-on: ${{ fromJson(inputs.runner) }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configuration scan
+        uses: $/.github/actions/config-scan
+        with:
+          path: ${{ inputs.tf-dir }}
+          fail-on: ${{ inputs.config-scan-fail-on }}

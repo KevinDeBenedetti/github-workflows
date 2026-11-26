@@ -4,7 +4,7 @@ title: Security
 
 # Security
 
-Runs **dependency audits → secret scanning → CodeQL SAST** for Node.js and/or Python projects.
+Runs **dependency audit → secret scanning → CodeQL SAST**. The audit reads every lockfile of the repository, whatever the ecosystem.
 Each job is independently toggleable.
 
 ## Usage
@@ -14,7 +14,8 @@ jobs:
   security:
     uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@main
     with:
-      run-node-audit: true
+      run-osv-scan: true
+      run-node-audit: false   # deprecated, on by default until its removal
       run-codeql: true
       codeql-languages: '["javascript-typescript"]'
 ```
@@ -23,10 +24,11 @@ jobs:
 
 | Input                      | Type    | Default                         | Description                                                                 |
 | -------------------------- | ------- | ------------------------------- | --------------------------------------------------------------------------- |
-| `run-node-audit`           | boolean | `true`                          | Run `pnpm audit --audit-level=high`                                         |
-| `node-working-directory`   | string  | `'.'`                           | Path to the Node.js app                                                     |
-| `run-python-audit`         | boolean | `false`                         | Run `pip-audit` on the locked dependencies (`uv export` → `uvx pip-audit`)  |
-| `python-working-directory` | string  | `'.'`                           | Path to the Python app                                                      |
+| `run-osv-scan`             | boolean | `false`                         | Audit the dependencies of every lockfile of the checkout with [OSV-Scanner](https://github.com/google/osv-scanner) |
+| `run-node-audit`           | boolean | `true`                          | **Deprecated**, use `run-osv-scan`. Run `pnpm audit --audit-level=high`     |
+| `node-working-directory`   | string  | `'.'`                           | **Deprecated** with `run-node-audit`. Path to the Node.js app               |
+| `run-python-audit`         | boolean | `false`                         | **Deprecated**, use `run-osv-scan`. Run `pip-audit` on the locked dependencies (`uv export` → `uvx pip-audit`)  |
+| `python-working-directory` | string  | `'.'`                           | **Deprecated** with `run-python-audit`. Path to the Python app              |
 | `run-secret-scan`          | boolean | `true`                          | Run [Gitleaks](https://github.com/gitleaks/gitleaks) secret scanning        |
 | `secret-scan-fetch-depth`  | number  | `0`                             | Clone depth for the secret scan (`0` = full history)                        |
 | `secret-scan-ignore-inline-allow` | boolean | `false`                  | Ignore inline `gitleaks:allow` comments                                     |
@@ -41,13 +43,16 @@ jobs:
 
 | Job            | Condition                                |
 | -------------- | ---------------------------------------- |
-| `audit-node`   | `run-node-audit: true`                   |
-| `audit-python` | `run-python-audit: true`                 |
+| `osv-scan`     | `run-osv-scan: true`                     |
+| `audit-node`   | `run-node-audit: true` (deprecated)      |
+| `audit-python` | `run-python-audit: true` (deprecated)    |
 | `secret-scan`  | `run-secret-scan: true`                  |
 | `codeql`       | `run-codeql: true` (matrix per language) |
 
 ## Notes
 
+- `osv-scan` uses the [`osv-scan`](../actions/osv-scan.md) action: one job audits every lockfile of the checkout (npm, pnpm, bun, PyPI, Go, Cargo, …) against the OSV database, without installing anything. A known vulnerability fails the job; a repository without any lockfile passes with a notice. Ignore an advisory in an `osv-scanner.toml`.
+- `audit-node` and `audit-python` are deprecated: they print a warning and leave in the next breaking release, with their four inputs. Move to `run-osv-scan: true` and `run-node-audit: false`.
 - Secret scanning uses `actions/checkout` with `fetch-depth: 0` (full history) by default — see `secret-scan-fetch-depth`.
 - Scanned range and Gitleaks configuration: the job is the [`change-base`](../actions/change-base.md) and [`secret-scan`](../actions/secret-scan.md) actions, whose pages hold the rules. In short: a pull request or a push scans the commits it brings (`base..HEAD`, from the fork point with the default branch for a new or force-pushed branch), anything else scans all fetched history; `.gitleaks.toml` and `.gitleaksignore` are read from a trusted commit, never from the commits under scan, so a change cannot allowlist its own leak.
 - A finite `secret-scan-fetch-depth` can leave the change base (and the default branch) out of the clone: the scan then covers all fetched history with Gitleaks' default rules and no ignore list, and warns. Every finding `.gitleaksignore` had triaged is reported again.

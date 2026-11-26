@@ -30,7 +30,7 @@
     },
     {
       "customType": "jsonata",
-      "description": "The tools the composite actions download and verify (actionlint, kubeconform, shellcheck, lychee, gitleaks, claude-code, bats): one entry each in the install-tool action's tools.json, with its datasource and tag format; the action reads it at run time. scripts/update-tool-checksums.py then refreshes the checksums.",
+      "description": "The tools the composite actions download and verify (actionlint, kubeconform, shellcheck, lychee, gitleaks, claude-code, tflint, trivy, helm, kustomize, osv-scanner, bats): one entry each in the install-tool action's tools.json, with its datasource and tag format; the action reads it at run time. scripts/update-tool-checksums.py then refreshes the checksums.",
       "fileFormat": "json",
       "managerFilePatterns": ["/^\\.github/actions/install-tool/tools\\.json$/"],
       "matchStrings": [
@@ -66,9 +66,9 @@
       "extractVersion": "^v(?<version>.+)$"
     },
     {
-      "description": "The tools of install-tool's tools.json are downloaded and verified against a SHA-256 (or commit) pinned next to the version: Renovate bumps the version only, so CI fails closed until the pins are refreshed.",
+      "description": "The tools of install-tool's tools.json are downloaded and verified against a SHA-256 (or commit) pinned next to the version: Renovate bumps the version only, and tool-checksums.yml commits the refreshed pins on the branch. Until then CI fails closed.",
       "matchFileNames": [".github/actions/install-tool/tools.json"],
-      "prBodyNotes": ["⚠️ Pinned checksums: run `scripts/update-tool-checksums.py` on this branch and commit the result (`tools.json` only) — CI fails until then."]
+      "prBodyNotes": ["ℹ️ Pinned checksums: the `Tool checksums (Renovate)` workflow refreshes them in a commit of its own (`tools.json` only). If it fails, run `scripts/update-tool-checksums.py` on this branch and commit the result."]
     },
     {
       "description": "actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3 (false positives on `client-id`): callers of the actionlint action that do not pass `-ignore create-github-app-token` would break. Bumps need a deliberate approval from the dependency dashboard.",

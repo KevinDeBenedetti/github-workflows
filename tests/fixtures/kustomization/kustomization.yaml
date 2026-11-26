@@ -1,0 +1,7 @@
+# Fixture of ci-cd.yml's ci-kubernetes job: a kustomization rendered with
+# kustomize build, then validated by kubeconform.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namePrefix: ci-
+resources:
+  - service.yaml

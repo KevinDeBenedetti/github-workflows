@@ -22,11 +22,14 @@ on:
 
 | Job              | Runs when       | Calls                               | Purpose                                                                                 |
 | ---------------- | --------------- | ----------------------------------- | --------------------------------------------------------------------------------------- |
-| `ci-shell`       | push + PR       | `ci-shell.yml`                      | ShellCheck, actionlint, Bats and docs checks, with the actions of this commit           |
+| `ci-shell`       | push + PR       | `ci-shell.yml`                      | ShellCheck, actionlint and Bats, with the actions of this commit                        |
+| `ci-docs`        | push + PR       | `ci-docs.yml`                       | Relative links, links escaping `docs/`, external links of changed pages, VitePress      |
 | `ci-actions`     | push + PR       | `./.github/actions/*`               | Same checks with this checkout's actions, plus kubeconform on a fixture, notify-deployment and the pinned Claude Code |
 | `ci-zizmor`      | push + PR       | `zizmorcore/zizmor-action`          | GitHub Actions security lint, pedantic persona                                          |
 | `ci-prek`        | push + PR       | `ci-prek.yml`                       | This repo's prek hooks                                                                  |
-| `ci-image`       | push + PR       | `./…/cd-docker.yml` (local)         | A fixture image built for `linux/amd64` without a push: the build workflow's self-test  |
+| `ci-kubernetes`  | push + PR       | `ci-kubernetes.yml`                 | A manifest, a rendered chart and a rendered kustomization validated, removed APIs checked |
+| `ci-terraform`   | push + PR       | `ci-terraform.yml`                  | validate, fmt, tflint and the configuration scan on a fixture module                    |
+| `ci-image`       | push + PR       | `./…/ci-docker.yml` (local)         | A fixture image built for `linux/amd64` with a read-only token, then scanned             |
 | `security`       | push + PR       | `security.yml`                      | Gitleaks, dependency review and CodeQL (`actions`, `python`)                            |
 | `ci-checksums`   | push + PR       | `scripts/update-tool-checksums.py`  | `install-tool`'s `tools.json` matches the release assets, when a pin changed            |
 | `ci-commits`     | push + PR       | `change-base`, `check-commit-msg`   | Conventional Commits on every commit since the change base                              |
@@ -42,4 +45,5 @@ on:
 - `release` uses a local ref: GitHub validates `with:` inputs against the referenced workflow at parse time, so a remote `@main` ref would reject inputs a branch adds to `release.yml` before they are merged.
 - `propagate` runs only when the `PROPAGATE_REPOSITORIES` variable is set, with the GitHub App of `RELEASE_APP_CLIENT_ID` and `RELEASE_APP_PRIVATE_KEY`; `propagate.yml` runs it by hand as a dry run. See [`propagate-release`](./propagate-release.md).
 - Dependency updates come from `dependencies.yml`, outside this pipeline: it runs Renovate every day through the reusable [`renovate`](./renovate.md) workflow, with a token of the same GitHub App, so its pull requests run CI like any other. `renovate.json`, on top of the shared preset `KevinDeBenedetti/renovate-config`, decides what is updated and when. A manual run is a dry run unless unticked.
-- Docs are not pushed anywhere: the central docs site polls this repo on a schedule (see [`cd-docs.md`](./cd-docs.md)). `ci-shell` verifies them.
+- A Renovate pull request that bumps a tool of `install-tool`'s `tools.json` gets its checksums from `tool-checksums.yml`, also outside this pipeline: one job runs `scripts/update-tool-checksums.py` with a read-only token, a second one commits `tools.json` to the branch through the API with a token of the same GitHub App (`contents: write` only), which starts CI again. It runs on `renovate/` branches of this repository only, never on a fork's pull request.
+- Docs are not pushed anywhere: the central docs site polls this repo on a schedule (see [`cd-docs.md`](./cd-docs.md)). `ci-docs` verifies them.

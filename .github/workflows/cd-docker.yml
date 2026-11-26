@@ -11,6 +11,8 @@ name: Deploy — Docker
 #   - The layer cache is the GitHub Actions cache by default, or with
 #     `registry-cache` a `<image>-cache:buildcache` image in GHCR, which
 #     outlives the Actions cache's eviction and is shared by every runner.
+#   - `run-image-scan` scans the image for known vulnerabilities before the
+#     push, and fails the job on a finding at `image-scan-fail-on` or above.
 #   - `deployment: false` leaves out the production/preview environment and
 #     its deployment record.
 #
@@ -87,6 +89,19 @@ on:
         type: boolean
         required: false
         default: true
+      run-image-scan:
+        description: >
+          Scan the image for known vulnerabilities (Trivy) before it is pushed: the
+          image is first built for the runner's platform and loaded, then
+          scanned; a finding at image-scan-fail-on or above fails the job.
+        type: boolean
+        required: false
+        default: false
+      image-scan-fail-on:
+        description: 'Lowest severity that fails the image scan: low | medium | high | critical'
+        type: string
+        required: false
+        default: critical
       registry-cache:
         description: >
           Keep the layer cache in GHCR (<image>-cache:buildcache, mode=max)
@@ -200,6 +215,35 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The scan reads an image of the Docker daemon, which holds one platform:
+      # the runner's own is built and loaded first. The build and push below
+      # reuses its layers from the builder.
+      - name: Build for the scan
+        if: inputs.run-image-scan
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.context }}/${{ inputs.dockerfile }}
+          platforms: linux/${{ runner.arch == 'ARM64' && 'arm64' || 'amd64' }}
+          load: true
+          push: false
+          tags: ${{ steps.image.outputs.image }}:scan
+          target: ${{ inputs.target }}
+          build-args: ${{ inputs.build-args }}
+          secrets: ${{ secrets.BUILD_SECRETS }}
+          provenance: false
+          sbom: false
+          cache-from: ${{ inputs.registry-cache && format('type=registry,ref={0}', steps.image.outputs.cache) || format('type=gha,scope={0}-{1}', inputs.context, inputs.target) }}
+
+      # Findings go to the job summary. No SARIF upload: a job that declared
+      # security-events: write would force every caller to grant it.
+      - name: Scan the image
+        if: inputs.run-image-scan
+        uses: $/.github/actions/image-scan
+        with:
+          image: ${{ steps.image.outputs.image }}:scan
+          fail-on: ${{ inputs.image-scan-fail-on }}
 
       - name: Build and push
         id: build

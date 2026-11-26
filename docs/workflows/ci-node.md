@@ -33,8 +33,8 @@ jobs:
 | `run-build`           | boolean | `true`              | Run `build` script                                                                                                |
 | `upload-build`        | boolean | `false`             | Upload build output as a workflow artifact                                                                        |
 | `build-artifact-name` | string  | `build`             | Name of the uploaded artifact                                                                                     |
-| `run-link-check`      | boolean | `false`             | Check markdown files for broken relative links (offline, no HTTP requests)                                        |
-| `link-check-paths`    | string  | `docs/`             | Space-separated paths or directories of markdown files to check                                                   |
+| `run-link-check`      | boolean | `false`             | **Deprecated**, use [`ci-docs`](./ci-docs.md). Check markdown files for broken relative links (offline, no HTTP requests)                                        |
+| `link-check-paths`    | string  | `docs/`             | **Deprecated**, use [`ci-docs`](./ci-docs.md). Space-separated paths or directories of markdown files to check                                                   |
 | `runner`              | string  | `'"ubuntu-26.04"'`  | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"ubicloud-standard-2"'`       |
 | `timeout-minutes`     | number  | `30`                | Minutes before the job is cancelled (GitHub's default is 360) — raise it for a slow build                         |
 
@@ -53,7 +53,7 @@ jobs:
 5. Test (with `test-args`, default `--passWithNoTests`)
 6. Build
 7. Upload artifact *(only when `upload-build: true`)*
-8. Link check *(only when `run-link-check: true`)*; Markdown without any link passes
+8. Link check *(only when `run-link-check: true`, deprecated: a warning is printed, use [`ci-docs`](./ci-docs.md))*; Markdown without any link passes
 
 ## Notes
 

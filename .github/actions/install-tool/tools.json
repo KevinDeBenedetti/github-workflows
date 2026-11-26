@@ -105,6 +105,95 @@
       "arm64": "fdd22e6cbb734d580f5664c48df4294eeec850218ff07f186f9af30426396ee1"
     }
   },
+  "tflint": {
+    "datasource": "github-releases",
+    "package": "terraform-linters/tflint",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "0.66.0",
+    "url": "https://github.com/terraform-linters/tflint/releases/download/v{v}/tflint_linux_{a}.zip",
+    "arch": {
+      "amd64": "amd64",
+      "arm64": "arm64"
+    },
+    "extract": "zip",
+    "member": "tflint",
+    "sums": "https://github.com/terraform-linters/tflint/releases/download/v{v}/checksums.txt",
+    "sha256": {
+      "amd64": "22be11cadc25cd02401e94c0ccc91aa63467debb8485c2a755d98f4c0a9d1e2e",
+      "arm64": "1105a0a5ddee7cdac7957a3475571a946b839192ea1bc0c722c6c4686001067e"
+    }
+  },
+  "trivy": {
+    "datasource": "github-releases",
+    "package": "aquasecurity/trivy",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "0.76.2",
+    "url": "https://github.com/aquasecurity/trivy/releases/download/v{v}/trivy_{v}_Linux-{a}.tar.gz",
+    "arch": {
+      "amd64": "64bit",
+      "arm64": "ARM64"
+    },
+    "extract": "tar.gz",
+    "member": "trivy",
+    "sums": "https://github.com/aquasecurity/trivy/releases/download/v{v}/trivy_{v}_checksums.txt",
+    "sha256": {
+      "amd64": "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf",
+      "arm64": "ab9d51f86e6a5fb936f605faff6b593ac51bc378fff4d3e8b9d58358b9c367c3"
+    }
+  },
+  "helm": {
+    "datasource": "github-releases",
+    "package": "helm/helm",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "4.3.2",
+    "url": "https://get.helm.sh/helm-v{v}-linux-{a}.tar.gz",
+    "arch": {
+      "amd64": "amd64",
+      "arm64": "arm64"
+    },
+    "extract": "tar.gz",
+    "member": "linux-{a}/helm",
+    "sha256": {
+      "amd64": "d1c0278d46beab79582d7e50f5b3dc206944ba8e577cde618513fd07daa53983",
+      "arm64": "df31cb61680ef728f82c770e5280dd565617bee6b039d37e85c677288be4bbb0"
+    }
+  },
+  "kustomize": {
+    "datasource": "github-releases",
+    "package": "kubernetes-sigs/kustomize",
+    "extractVersion": "^kustomize/v(?<version>.+)$",
+    "version": "5.8.3",
+    "url": "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv{v}/kustomize_v{v}_linux_{a}.tar.gz",
+    "arch": {
+      "amd64": "amd64",
+      "arm64": "arm64"
+    },
+    "extract": "tar.gz",
+    "member": "kustomize",
+    "sums": "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv{v}/checksums.txt",
+    "sha256": {
+      "amd64": "cb9e31198d3f63b44848bd0afc4c8efc56e6cfef9c93a4a39a211940e6decd61",
+      "arm64": "9867b76482cfc6d25b546abc1d2b5a32bd137505aba640649b4b378f64f6d68f"
+    }
+  },
+  "osv-scanner": {
+    "datasource": "github-releases",
+    "package": "google/osv-scanner",
+    "extractVersion": "^v(?<version>.+)$",
+    "version": "2.7.1",
+    "url": "https://github.com/google/osv-scanner/releases/download/v{v}/osv-scanner_linux_{a}",
+    "arch": {
+      "amd64": "amd64",
+      "arm64": "arm64"
+    },
+    "extract": "binary",
+    "member": "osv-scanner",
+    "sums": "https://github.com/google/osv-scanner/releases/download/v{v}/osv-scanner_SHA256SUMS",
+    "sha256": {
+      "amd64": "fb7dab19a8bd9bbe5c3189f09d4b7ee1820c9553a23bac202648a56efd2f6ee8",
+      "arm64": "983d22fbad9724514e3fcc6acc83b5fa64c5ffa6b0d9f510028f22c1b223ff81"
+    }
+  },
   "bats": {
     "datasource": "github-tags",
     "package": "bats-core/bats-core",

@@ -10,7 +10,7 @@ on:
         required: false
         default: true
       kubeconform-paths:
-        description: Directory containing manifests to validate
+        description: Directory containing manifests to validate; empty validates only the rendered charts and kustomizations
         type: string
         required: false
         default: kubernetes/
@@ -34,6 +34,31 @@ on:
         type: boolean
         required: false
         default: false
+      kubeconform-helm-charts:
+        description: >
+          Charts to render with `helm template` and validate, one per line:
+          the chart's directory, then its values files, separated by spaces.
+        type: string
+        required: false
+        default: ''
+      kubeconform-kustomizations:
+        description: Kustomization directories to render with `kustomize build` and validate, one per line
+        type: string
+        required: false
+        default: ''
+      kubernetes-version:
+        description: Kubernetes version of the schemas (e.g. '1.33'); empty uses kubeconform's default, the latest
+        type: string
+        required: false
+        default: ''
+      deprecated-api-version:
+        description: >
+          Kubernetes version (e.g. the cluster's next minor, '1.34') to check
+          for removed APIs: a resource of a built-in API group that version no
+          longer serves fails the job. Empty runs no such check.
+        type: string
+        required: false
+        default: ''
 
       # ── .env.example ───────────────────────────────────────────────────────
       run-env-example:
@@ -50,48 +75,6 @@ on:
         description: Path to the .env.example file
         type: string
         required: false
-        default: .env.example
-
-      runner:
-        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
-        type: string
-        required: false
-        default: '"ubuntu-26.04"'
-  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
-  # Keep them in sync manually — GitHub does not support shared input definitions.
-  workflow_dispatch:
-    inputs:
-      run-kubeconform:
-        description: Validate Kubernetes manifests with kubeconform
-        type: boolean
-        default: true
-      kubeconform-paths:
-        description: Directory containing manifests to validate
-        type: string
-        default: kubernetes/
-      kubeconform-exclude:
-        description: Filename pattern to exclude from validation (e.g. '.*-values\.yaml')
-        type: string
-        default: '.*-values\.yaml'
-      kubeconform-include-crds-catalog:
-        description: Also validate against the Datree CRDs-catalog
-        type: boolean
-        default: true
-      kubeconform-ignore-missing-schemas:
-        description: Skip resources whose schema is not found in any configured schema location
-        type: boolean
-        default: false
-      run-env-example:
-        description: Check that .env.example contains all required keys
-        type: boolean
-        default: false
-      env-example-required-keys:
-        description: Space-separated list of keys that must be present in .env.example
-        type: string
-        default: ''
-      env-example-file:
-        description: Path to the .env.example file
-        type: string
         default: .env.example
 
       runner:
@@ -133,6 +116,10 @@ jobs:
           exclude: ${{ inputs.kubeconform-exclude }}
           include-crds-catalog: ${{ inputs.kubeconform-include-crds-catalog }}
           ignore-missing-schemas: ${{ inputs.kubeconform-ignore-missing-schemas }}
+          kubernetes-version: ${{ inputs.kubernetes-version }}
+          helm-charts: ${{ inputs.kubeconform-helm-charts }}
+          kustomizations: ${{ inputs.kubeconform-kustomizations }}
+          deprecated-api-version: ${{ inputs.deprecated-api-version }}
 
   # ── .env.example completeness check ──────────────────────────────────────
   env-example:

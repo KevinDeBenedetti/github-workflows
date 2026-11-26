@@ -55,42 +55,6 @@ on:
         type: string
         required: false
         default: '"ubuntu-26.04"'
-  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
-  # Keep them in sync manually — GitHub does not support shared input definitions.
-  workflow_dispatch:
-    inputs:
-      run-check:
-        description: Run the PromQL syntax check script
-        type: boolean
-        default: true
-      run-test:
-        description: Run the alert unit-test script
-        type: boolean
-        default: true
-      check-script:
-        description: Path to the syntax-check script in the calling repo
-        type: string
-        default: scripts/promtool-check.sh
-      test-script:
-        description: Path to the unit-test script in the calling repo
-        type: string
-        default: scripts/promtool-test.sh
-      promtool-version:
-        description: Prometheus release providing promtool (without the leading v)
-        type: string
-        # renovate: datasource=github-releases depName=prometheus/prometheus
-        default: 3.13.2
-      yq-version:
-        description: mikefarah/yq release tag (with the leading v)
-        type: string
-        # renovate: datasource=github-releases depName=mikefarah/yq
-        default: v4.53.3
-
-      runner:
-        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
-        type: string
-        required: false
-        default: '"ubuntu-26.04"'
 
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}

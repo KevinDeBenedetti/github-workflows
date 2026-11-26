@@ -61,55 +61,6 @@ on:
         required: false
         default: 30
 
-  # NOTE: inputs are duplicated between workflow_call and workflow_dispatch.
-  # Keep them in sync manually — GitHub does not support shared input definitions.
-  workflow_dispatch:
-    inputs:
-      python-version:
-        description: Python version
-        type: string
-        default: '3.12'
-      working-directory:
-        description: Path to the app (e.g. apps/api)
-        type: string
-        default: '.'
-      run-lint:
-        description: Run ruff linter
-        type: boolean
-        default: true
-      run-format:
-        description: Check formatting with ruff format
-        type: boolean
-        default: true
-      run-typecheck:
-        description: Run ty type checker
-        type: boolean
-        default: false
-      run-test:
-        description: Run pytest
-        type: boolean
-        default: true
-      run-coverage:
-        description: Enable test coverage report (pytest-cov)
-        type: boolean
-        default: false
-      coverage-fail-under:
-        description: Minimum coverage percentage to pass
-        type: number
-        default: 80
-      test-command:
-        description: Custom pytest command (ignored when run-coverage is true)
-        type: string
-        default: 'uv run pytest --tb=short -q'
-      runner:
-        description: Runner labels as JSON — GitHub's (e.g. '"ubuntu-26.04"') or Ubicloud's (e.g. '"ubicloud-standard-2"')
-        type: string
-        default: '"ubuntu-26.04"'
-      timeout-minutes:
-        description: Minutes before the job is cancelled (GitHub's default is 360)
-        type: number
-        default: 30
-
 # Deny-all default: each job grants only the permissions it needs.
 permissions: {}
 

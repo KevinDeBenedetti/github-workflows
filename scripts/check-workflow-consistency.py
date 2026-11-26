@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 """Consistency checks for the reusable workflows of this repository.
 
-1. Inputs duplicated between `workflow_call` and `workflow_dispatch` must stay
-   in sync (same names, types and defaults). GitHub has no shared input
-   definition, so the two blocks are maintained by hand and drift silently.
-   Descriptions and `required` may differ.
-
-2. A workflow references this repo's composite actions with the
+1. A workflow references this repo's composite actions with the
    self-repository syntax (`uses: $/.github/actions/<name>`), which GitHub
    resolves to the commit the workflow itself runs from — so a caller pinned
    to a release runs that release's actions, with no pin to bump. A remote
@@ -14,20 +9,20 @@
    is an error: it would have to be bumped in .github/workflows/ on every
    release, which the release job's GITHUB_TOKEN can never push.
 
-3. Every reference to this repo's workflows or actions from an example (copied
+2. Every reference to this repo's workflows or actions from an example (copied
    into other repositories) must be pinned to the current release
    (`@v<manifest version>`), carry the `# x-release-please-version` marker, and
    live in a file listed in the release-please `extra-files` — otherwise
    release-please stops bumping it and callers copy an example that tracks the
    mutable `main`.
 
-4. Catalogs (full run only): every reusable workflow (`workflow_call`) has its
+3. Catalogs (full run only): every reusable workflow (`workflow_call`) has its
    page in docs/workflows/ and a row in the workflow tables of README.md and
    docs/getting-started.md; every composite action has its page in
    docs/actions/ and a row in the actions table of docs/getting-started.md.
    Nothing else reminds a contributor of these files.
 
-5. The `with:` keys a workflow or a composite action passes to one of this
+4. The `with:` keys a workflow or a composite action passes to one of this
    repo's actions (`uses: $/.github/actions/<name>` or `./.github/actions/…`)
    must be inputs that action declares. actionlint does not read `$/` yet, and
    GitHub only warns about an unknown input at run time.
@@ -64,41 +59,6 @@ EXAMPLE_REF = re.compile(
 def triggers(doc: dict) -> dict:
     # PyYAML (YAML 1.1) parses the bare key `on` as the boolean True.
     return doc.get("on", doc.get(True)) or {}
-
-
-def norm_default(value):
-    if value is None:
-        return ""
-    if isinstance(value, bool):
-        return str(value).lower()
-    return str(value)
-
-
-def check_inputs(path: Path, doc: dict) -> list[str]:
-    on = triggers(doc)
-    if not isinstance(on, dict):
-        return []
-    call = (on.get("workflow_call") or {}).get("inputs") or {}
-    dispatch = (on.get("workflow_dispatch") or {}).get("inputs") or {}
-    if not call or not dispatch:
-        return []
-    errors = []
-    for name in sorted(set(call) ^ set(dispatch)):
-        where = "workflow_call" if name in call else "workflow_dispatch"
-        errors.append(f"{path}: input '{name}' only declared under {where}")
-    for name in sorted(set(call) & set(dispatch)):
-        c, d = call[name], dispatch[name]
-        if c.get("type") != d.get("type"):
-            errors.append(
-                f"{path}: input '{name}' type differs "
-                f"(workflow_call: {c.get('type')}, workflow_dispatch: {d.get('type')})"
-            )
-        if norm_default(c.get("default")) != norm_default(d.get("default")):
-            errors.append(
-                f"{path}: input '{name}' default differs "
-                f"(workflow_call: {c.get('default')!r}, workflow_dispatch: {d.get('default')!r})"
-            )
-    return errors
 
 
 def check_action_refs(
@@ -210,7 +170,6 @@ def main(argv: list[str]) -> int:
     reusable = []
     for path in files:
         doc = yaml.safe_load(path.read_text()) or {}
-        errors += check_inputs(path, doc)
         errors += check_self_refs(path)
         errors += check_with_keys(path, doc)
         if is_reusable(doc):

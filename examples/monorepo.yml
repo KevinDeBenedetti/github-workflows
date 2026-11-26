@@ -84,7 +84,5 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     uses: KevinDeBenedetti/github-workflows/.github/workflows/security.yml@v0.56.2 # x-release-please-version
     with:
-      run-node-audit: true
-      run-python-audit: true
-      node-working-directory: apps/web
-      python-working-directory: apps/api
+      run-osv-scan: true
+      run-node-audit: false

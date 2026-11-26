@@ -17,8 +17,6 @@ jobs:
       run-shellcheck: true
       run-actionlint: true
       run-bats: true
-      run-link-check: true
-      link-check-paths: 'docs/**/*.md'
       run-docker: false
 ```
 
@@ -40,12 +38,12 @@ jobs:
 | `run-docker`               | boolean | `false`                        | Run Docker integration tests                                                 |
 | `docker-file`              | string  | `tests/docker/Dockerfile.test` | Path to the test Dockerfile                                                  |
 | `docker-targets`           | string  | `'[]'`                         | JSON array of `--target` names to build (e.g. `'["test-bats","test-init"]'`) |
-| `run-link-check`           | boolean | `false`                        | Check markdown files for broken relative links (offline, no HTTP requests)   |
-| `link-check-paths`         | string  | `docs/**/*.md`                 | Space-separated glob patterns of markdown files to check                     |
-| `run-docs-link-check`      | boolean | `false`                        | Check that no relative links in `docs/` escape the `docs/` directory         |
-| `run-vitepress-check`      | boolean | `false`                        | Check `docs/` markdown for unescaped Vue interpolations that break the VitePress SSR build |
-| `run-docs-external-link-check` | boolean | `false`                    | Check the `http(s)` links of the `docs/` markdown files changed by the push or pull request (lychee) |
-| `docs-directory`           | string  | `docs`                         | Path to the docs folder checked by `docs-link-check`, `docs-external-link-check` and `vitepress-check` |
+| `run-link-check`           | boolean | `false`                        | **Deprecated**, use [`ci-docs`](./ci-docs.md). Check markdown files for broken relative links (offline, no HTTP requests)   |
+| `link-check-paths`         | string  | `docs/**/*.md`                 | **Deprecated**, use [`ci-docs`](./ci-docs.md). Space-separated glob patterns of markdown files to check                     |
+| `run-docs-link-check`      | boolean | `false`                        | **Deprecated**, use [`ci-docs`](./ci-docs.md). Check that no relative links in `docs/` escape the `docs/` directory         |
+| `run-vitepress-check`      | boolean | `false`                        | **Deprecated**, use [`ci-docs`](./ci-docs.md). Check `docs/` markdown for unescaped Vue interpolations that break the VitePress SSR build |
+| `run-docs-external-link-check` | boolean | `false`                    | **Deprecated**, use [`ci-docs`](./ci-docs.md). Check the `http(s)` links of the `docs/` markdown files changed by the push or pull request (lychee) |
+| `docs-directory`           | string  | `docs`                         | **Deprecated**, use [`ci-docs`](./ci-docs.md). Path to the docs folder checked by `docs-link-check`, `docs-external-link-check` and `vitepress-check` |
 | `runner`                   | string  | `'"ubuntu-26.04"'`             | Runner labels as JSON — e.g. `'"ubuntu-26.04"'` or `'"ubicloud-standard-2"'`  |
 
 ## Secrets
@@ -62,10 +60,10 @@ jobs:
 | `validate-yaml` | `run-actionlint: true`                            |
 | `bats`          | `run-bats: true`                                  |
 | `docker-test`   | `run-docker: true` (matrix over `docker-targets`) |
-| `link-check`    | `run-link-check: true`                            |
-| `docs-link-check` | `run-docs-link-check: true`                     |
-| `docs-external-link-check` | `run-docs-external-link-check: true`   |
-| `vitepress-check` | `run-vitepress-check: true`                     |
+| `link-check`    | `run-link-check: true` (deprecated)               |
+| `docs-link-check` | `run-docs-link-check: true` (deprecated)        |
+| `docs-external-link-check` | `run-docs-external-link-check: true` (deprecated) |
+| `vitepress-check` | `run-vitepress-check: true` (deprecated)        |
 
 ## Notes
 
@@ -73,6 +71,4 @@ jobs:
 - The `bats-submodules` flag applies to both the `bats` and `docker-test` jobs, and so does the `token` secret: a private submodule is checked out with it in both.
 - Every job is cut off after 15 minutes (`docker-test`: 30), so a hung check never holds a runner for GitHub's default 6 hours.
 - ShellCheck and actionlint use their own composite actions: [`shellcheck`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/shellcheck), [`actionlint`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/actionlint). actionlint covers YAML syntax, expression type checking, and action input validation — no separate yamllint needed.
-- `link-check` runs [lychee](https://github.com/lycheeverse/lychee) in offline mode — no external HTTP requests are made.
-- `docs-external-link-check` uses the [`check-docs-external-links`](../actions/check-docs-external-links.md) action — lychee online, on the `docs/` files the push or pull request changed only, with github.com links checked through the job token.
-- `vitepress-check` uses the [`check-vitepress-md`](https://github.com/KevinDeBenedetti/github-workflows/tree/main/.github/actions/check-vitepress-md) action — guards against <code v-pre>{{ }}</code> interpolations that crash the VitePress SSR build (see [cd-docs](./cd-docs.md)).
+- The four docs jobs (`link-check`, `docs-link-check`, `docs-external-link-check`, `vitepress-check`) are deprecated: [`ci-docs`](./ci-docs.md) runs the same checks with the same inputs. Here they print a warning and leave in the next breaking release.

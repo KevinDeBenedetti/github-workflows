@@ -8,9 +8,9 @@ Installs one of the tools this repository's actions download, at the version pin
 in the action's `tools.json`, after checking the download against the SHA-256 (or
 commit) pinned next to it. The [`actionlint`](actionlint.md), [`bats`](bats.md),
 [`check-docs-external-links`](check-docs-external-links.md),
-[`kubeconform`](kubeconform.md), [`secret-scan`](secret-scan.md),
-[`setup-claude-code`](setup-claude-code.md) and [`shellcheck`](shellcheck.md) actions
-call it.
+[`config-scan`](config-scan.md), [`image-scan`](image-scan.md), [`kubeconform`](kubeconform.md) (also for Helm and kustomize), [`osv-scan`](osv-scan.md),
+[`secret-scan`](secret-scan.md), [`setup-claude-code`](setup-claude-code.md),
+[`shellcheck`](shellcheck.md) and [`tflint`](tflint.md) actions call it.
 
 It is internal: it installs the tools of its manifest only, and takes no URL or
 version from the caller. A version chosen by the caller could not be checked against
@@ -31,7 +31,7 @@ steps:
 
 | Input  | Default      | Description                                                                                                   |
 | ------ | ------------ | ------------------------------------------------------------------------------------------------------------- |
-| `tool` | *(required)* | The tool to install: `actionlint`, `bats`, `claude-code`, `gitleaks`, `kubeconform`, `lychee` or `shellcheck` |
+| `tool` | *(required)* | The tool to install: `actionlint`, `bats`, `claude-code`, `gitleaks`, `helm`, `kubeconform`, `kustomize`, `lychee`, `osv-scanner`, `shellcheck`, `tflint` or `trivy` |
 
 ## Steps
 
@@ -45,7 +45,7 @@ against the pinned commit, and its own installer runs.
 
 ## Notes
 
-- Needs `bash`, `python3` (reads the manifest and opens `.tar.xz` archives), `curl`,
+- Needs `bash`, `python3` (reads the manifest and opens `.tar.xz` and `.zip` archives), `curl`,
   `sha256sum` and `tar` on the runner, and `git` for Bats. No checkout, no `sudo`.
 - Linux runners, `amd64` or `arm64`.
 - The manifest, `.github/actions/install-tool/tools.json`, is the only place a pin

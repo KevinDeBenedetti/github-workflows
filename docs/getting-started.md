@@ -287,10 +287,12 @@ jobs:
 | `ci-node.yml`             | Node.js CI (lint → typecheck → test → build)                                                                                           | [→](workflows/ci-node.md)             |
 | `ci-python.yml`           | Python CI (lint → format → test)                                                                                                       | [→](workflows/ci-python.md)           |
 | `ci-shell.yml`            | Shell CI (ShellCheck → actionlint → Bats)                                                                                              | [→](workflows/ci-shell.md)            |
-| `ci-kubernetes.yml`       | Kubernetes CI (kubeconform manifest validation)                                                                                        | [→](workflows/ci-kubernetes.md)       |
-| `ci-terraform.yml`        | Terraform CI (validate + fmt check)                                                                                                    | [→](workflows/ci-terraform.md)        |
+| `ci-docs.yml`             | Docs CI (relative and external links, VitePress-safe Markdown)                                                                         | [→](workflows/ci-docs.md)             |
+| `ci-kubernetes.yml`       | Kubernetes CI (kubeconform on manifests, charts, kustomizations)                                                                       | [→](workflows/ci-kubernetes.md)       |
+| `ci-terraform.yml`        | Terraform CI (validate, fmt, tflint, config scan)                                                                                      | [→](workflows/ci-terraform.md)        |
 | `ci-prometheus.yml`       | Prometheus CI (PromQL check + alert unit tests)                                                                                        | [→](workflows/ci-prometheus.md)       |
 | `ci-prek.yml`             | prek / pre-commit hooks run server-side (`prek run --all-files`)                                                                       | [→](workflows/ci-prek.md)             |
+| `ci-docker.yml`           | Build a Docker image without pushing it, with a read-only token                                                                        | [→](workflows/ci-docker.md)           |
 | `cd-docker.yml`           | Build & push a Docker image to GHCR, for one or several platforms                                                                      | [→](workflows/cd-docker.md)           |
 | `cd-docs.yml`             | Sync docs to a centralized docs repository                                                                                             | [→](workflows/cd-docs.md)             |
 | `release.yml`             | Automated releases via release-please                                                                                                  | [→](workflows/release.md)             |
@@ -327,6 +329,10 @@ steps:
 | [`secret-scan`](actions/secret-scan.md)                             | Scan the commits a run brings with Gitleaks, with the config of a trusted commit                 |
 | [`actionlint`](actions/actionlint.md)                               | Validate GitHub Actions workflow files                                                           |
 | [`kubeconform`](actions/kubeconform.md)                             | Validate Kubernetes manifests                                                                    |
+| [`tflint`](actions/tflint.md)                                       | Lint a Terraform module with tflint                                                              |
+| [`config-scan`](actions/config-scan.md)                             | Scan infrastructure-as-code files for misconfigurations with Trivy                               |
+| [`image-scan`](actions/image-scan.md)                               | Scan a container image for known vulnerabilities with Trivy                                      |
+| [`osv-scan`](actions/osv-scan.md)                                   | Audit the dependencies of every lockfile with OSV-Scanner                                        |
 | [`check-commit-msg`](actions/check-commit-msg.md)                   | Conventional Commits on commit messages (CI + commit-msg hook)                                   |
 | [`setup-claude-code`](actions/setup-claude-code.md)                 | Install the Claude Code CLI, pinned and checked against a SHA-256                                |
 | [`install-tool`](actions/install-tool.md)                           | Install one of the tools the actions download, pinned and checked (internal)                     |

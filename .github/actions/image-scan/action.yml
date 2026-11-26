@@ -1,0 +1,50 @@
+name: Image scan
+description: >
+  Scan a container image of the runner's Docker daemon for known
+  vulnerabilities with Trivy, pinned and checked against a SHA-256. Every
+  vulnerability at the threshold or above is listed in the job summary and
+  fails the step. The vulnerability database is cached for the day. The rules
+  are at the top of image-scan.sh.
+
+inputs:
+  image:
+    description: Image reference to scan, loaded in the runner's Docker daemon (e.g. my-api:scan)
+    required: true
+  fail-on:
+    description: 'Lowest severity that fails the step: low | medium | high | critical'
+    required: false
+    default: critical
+
+runs:
+  using: composite
+  steps:
+    # Pinned in ../install-tool/tools.json and checked against its SHA-256
+    # before it is installed.
+    - name: Install Trivy
+      uses: $/.github/actions/install-tool
+      with:
+        tool: trivy
+
+    - name: Cache key of the day
+      id: day
+      shell: bash
+      run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+    # The database is rebuilt upstream several times a day: one download per
+    # day and per runner architecture, and yesterday's as a start otherwise.
+    - name: Cache the vulnerability database
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/trivy-cache
+        key: trivy-db-${{ runner.os }}-${{ runner.arch }}-${{ steps.day.outputs.date }}
+        restore-keys: |
+          trivy-db-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Trivy image
+      shell: bash
+      # Inputs go through env, never interpolated into the script body.
+      env:
+        IMAGE: ${{ inputs.image }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        TRIVY_CACHE_DIR: ${{ runner.temp }}/trivy-cache
+      run: bash "$GITHUB_ACTION_PATH/image-scan.sh"
