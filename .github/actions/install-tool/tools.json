@@ -31,8 +31,8 @@
     "member": "kubeconform",
     "sums": "https://github.com/yannh/kubeconform/releases/download/v{v}/CHECKSUMS",
     "sha256": {
-      "amd64": "c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3",
-      "arm64": "cc907ccf9e3c34523f0f32b69745265e0a6908ca85b92f41931d4537860eb83c"
+      "amd64": "9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883",
+      "arm64": "1f53fc8e81258197a35e8603054162a5af1de8c5af13746c71ab680d9534ed87"
     }
   },
   "shellcheck": {

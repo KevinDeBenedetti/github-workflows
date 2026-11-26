@@ -26,7 +26,7 @@ steps:
 
 ## Steps
 
-1. Install the pinned `kubeconform` (`0.7.0`) to `$RUNNER_TEMP/kubeconform` (added to `PATH`) with [`install-tool`](install-tool.md)
+1. Install the pinned `kubeconform` (`0.8.0`) to `$RUNNER_TEMP/kubeconform` (added to `PATH`) with [`install-tool`](install-tool.md)
 2. Run `kubeconform -strict -summary` on manifests under `paths` (excluding files matching `exclude`)
 
 ## Notes
