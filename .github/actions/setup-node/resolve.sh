@@ -117,7 +117,7 @@ if [[ "$pm" == bun ]]; then
   fi
   if [[ -z "$bun_version" ]]; then
     # renovate: datasource=npm depName=bun
-    BUN_VERSION="1.4.3"
+    BUN_VERSION="1.4.5"
     bun_version="$BUN_VERSION"
   fi
 fi
