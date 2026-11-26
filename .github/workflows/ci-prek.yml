@@ -39,7 +39,7 @@ on:
         type: string
         required: false
         # renovate: datasource=github-releases depName=j178/prek
-        default: 0.4.12
+        default: 0.5.11
       cache:
         description: Cache the prek hook environments between runs, in the GitHub cache
         type: boolean
@@ -76,7 +76,7 @@ on:
         description: prek release to install, without the leading v (or 'latest')
         type: string
         # renovate: datasource=github-releases depName=j178/prek
-        default: 0.4.12
+        default: 0.5.11
       cache:
         description: Cache the prek hook environments between runs
         type: boolean
