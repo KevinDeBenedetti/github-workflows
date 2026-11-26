@@ -64,7 +64,9 @@ its `main` branch.
 
 The repository's `renovate.json` adds what is its own: the base branch, groups, commit
 types. Its `packageRules` come after the preset's, so they win: a `groupName` there
-takes its packages out of the weekly pull request into one of their own.
+takes its packages out of the weekly pull request into one of their own. A package
+held with `dependencyDashboardApproval` needs `"groupName": null` next to it: left in
+the group, its approval holds every other update of the weekly pull request with it.
 
 ::: warning Release dates
 With `minimumReleaseAge`, an update whose datasource gives no release date never

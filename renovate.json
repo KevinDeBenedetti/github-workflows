@@ -71,8 +71,9 @@
       "prBodyNotes": ["ℹ️ Pinned checksums: the `Tool checksums (Renovate)` workflow refreshes them in a commit of its own (`tools.json` only). If it fails, run `scripts/update-tool-checksums.py` on this branch and commit the result."]
     },
     {
-      "description": "actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3 (false positives on `client-id`): callers of the actionlint action that do not pass `-ignore create-github-app-token` would break. Bumps need a deliberate approval from the dependency dashboard.",
+      "description": "actionlint >= 1.7.12 ships stale metadata for actions/create-github-app-token@v3 (false positives on `client-id`): callers of the actionlint action that do not pass `-ignore create-github-app-token` would break. Bumps need a deliberate approval from the dependency dashboard, in a pull request of their own: inside the preset's single group, the approval would hold every other update with it.",
       "matchPackageNames": ["rhysd/actionlint"],
+      "groupName": null,
       "dependencyDashboardApproval": true
     },
     {
