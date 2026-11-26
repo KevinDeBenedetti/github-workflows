@@ -111,7 +111,7 @@
     "version": "v1.14.0",
     "git": "https://github.com/bats-core/bats-core.git",
     "extract": "git",
-    "commit": "5da66876b8b619235aee1eb3e54954eaca88059b",
+    "commit": "eb7f42f8d608ac693d7a4b67474f6714ea68cfc5",
     "installer": "install.sh",
     "path": "bin"
   }
