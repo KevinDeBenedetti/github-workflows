@@ -56,13 +56,15 @@ under load, and a run after 6am Paris time opens nothing that week.
 [`KevinDeBenedetti/renovate-config`](https://github.com/KevinDeBenedetti/renovate-config),
 a public repository, so the App token minted for the calling repository can read it.
 Its README lists what it sets: Renovate's best practices, the Monday-morning window in
-Paris time, a 3-day release age, OSV security updates, prek hook revs, labels, majors
+Paris time, a 3-day release age, OSV security updates, prek hook revs, every update
+(majors included, security fixes aside) in one weekly pull request, labels, majors
 of data-owning images held for approval, and `KevinDeBenedetti/github-workflows` left
 to [`propagate-release`](./propagate-release.md). Without a tag, Renovate reads it from
 its `main` branch.
 
 The repository's `renovate.json` adds what is its own: the base branch, groups, commit
-types. Its `packageRules` come after the preset's, so they win.
+types. Its `packageRules` come after the preset's, so they win: a `groupName` there
+takes its packages out of the weekly pull request into one of their own.
 
 ::: warning Release dates
 With `minimumReleaseAge`, an update whose datasource gives no release date never

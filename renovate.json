@@ -76,16 +76,14 @@
       "dependencyDashboardApproval": true
     },
     {
-      "description": "promtool and yq are installed by the same step in ci-prometheus.yml — one PR, one review.",
+      "description": "promtool and yq are installed by the same step in ci-prometheus.yml: labelled so they stand out in the preset's single weekly pull request.",
       "matchPackageNames": ["prometheus/prometheus", "mikefarah/yq"],
-      "groupName": "prometheus tooling",
-      "addLabels": ["dependencies", "prometheus"]
+      "addLabels": ["prometheus"]
     },
     {
-      "description": "A runner image bump moves every label at once — the literal `runs-on` (github-actions manager), the `runner` input defaults and the docs (custom managers above) — in one pull request, since callers get the image of the release they pin.",
+      "description": "A runner image bump moves every label at once — the literal `runs-on` (github-actions manager), the `runner` input defaults and the docs (custom managers above) — and callers get the image of the release they pin: read the announcement before merging the preset's single weekly pull request.",
       "matchDatasources": ["github-runners"],
-      "groupName": "GitHub-hosted runner image",
-      "addLabels": ["dependencies", "github-actions"],
+      "addLabels": ["github-actions"],
       "prBodyNotes": ["⚠️ New runner image: read its announcement in actions/runner-images (removed tools, changed defaults) before merging."]
     }
   ]
